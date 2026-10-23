@@ -397,3 +397,12 @@ Nenhum teste no carro nesta etapa. Não alterados comandos seguros, CAN/SDK, ver
 Validação da #14: 129 testes JVM passando (12 novos), `lintRelease` com 0 erros/109 avisos e
 `assembleDebug` concluído. Consulta OSRM com coordenadas públicas de exemplo retornou `Ok`.
 Entrega de intents, GPS/recálculo em execução e projeção precisam do roteiro Android/carro acima.
+
+### Issue #16 — rota de outros apps pelas notificações
+
+Implementado opt-in desligado, atalho de acesso, debug bruto e regressões sintéticas PT-BR.
+Pendente no carro parado: habilitar acesso e opção; iniciar Maps/Waze na central; conferir seta,
+rua, distância e ETA; testar mudanças só de ícone, fim de rota, desligar/religar opção e revogar acesso.
+Conferir que navegador fica na central e modo manual é respeitado. Com debug ligado, registrar
+formatos não reconhecidos para novos testes (remover dados pessoais antes de compartilhar).
+Captura das Configurações e validação no emulador/carro pendentes; não houve acesso ao carro.

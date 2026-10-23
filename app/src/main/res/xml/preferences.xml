@@ -22,6 +22,17 @@
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Painel de instrumentos" app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat
+            app:key="external_navigation"
+            app:title="Mostrar rota de outros apps no painel"
+            app:summary="Lê as manobras do Maps/Waze pelas notificações. Use o mapa integrado para manter o navegador na central."
+            app:defaultValue="false"
+            app:iconSpaceReserved="false" />
+        <Preference
+            app:key="notification_access"
+            app:title="Permitir acesso às notificações"
+            app:summary="Na lista do Android, habilite Painel Livre. Depois inicie uma rota no Maps ou Waze. Só lemos as instruções; não controlamos esses apps."
+            app:iconSpaceReserved="false" />
         <ListPreference
             app:key="panel_content"
             app:title="O que mostrar no painel"

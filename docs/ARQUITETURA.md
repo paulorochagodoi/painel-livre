@@ -374,3 +374,29 @@ de base; depois só o que mudou, com ★ nos candidatos). Receptores para as aç
 digitadas pelo motorista mostram os extras. Sem ADB, só o SDK continua e o ADB é tentado a cada 30 s;
 a coleta pelo ADB para em 30 min (Retomar na tela). Registro separado do `AppLog` (`DebugLog`), também
 usado pelo telefone (issue #15). A fotografia completa esconde números de telefone e MACs.
+
+### Notificações externas — issue #16
+
+`Prefs.externalNavigation` (`external_navigation`, false) controla a publicação de Maps/Waze no
+`NavRepository`. `NavNotificationListener` já declarado no manifesto usa o acesso habilitado pelo
+motorista; o atalho `notification_access` abre `ACTION_NOTIFICATION_LISTENER_SETTINGS`.
+O listener observa a preferência: ao desligar, limpa só fontes externas; ao ligar, relê as notificações
+ativas. Desconexão/destruição não encerra sessão nativa. Remoção só encerra a notificação guia.
+
+Campos title/text/bigText/subText e, como alternativa a bigText, textLines alimentam `NavParser`.
+A classificação textual tem prioridade; nomes semânticos de recursos largeIcon podem fornecer
+`iconHint`. Não há tabela de IDs de terceiros nem classificação de pixels. Manobras reconhecidas
+usam os vetores próprios de `ManeuverView`; desconhecidas usam largeIcon (Icon/Bitmap) quando presente.
+Cada atualização é processada, inclusive com texto idêntico e imagem diferente. O estado existente
+alimenta os cartões de `ClusterActivity` com distância/rua/ETA/restante. A seleção segura do display
+existente permanece; não se fixa um ID que possa apontar para a central.
+
+`PanelContent.externalPackage(..., notificationRoute=true)` força integrado, mantendo Maps/Waze na
+central. Não muda comandos AutoContainer nem o modo manual. `DebugLog`, somente com debug ligado,
+recebe extras brutos e metadados antes do filtro de navegação, apenas dos pacotes permitidos.
+Imagens aparecem como dimensões; nenhum PendingIntent é executado. Registro pode conter dados de
+trajeto e deve ser revisado antes de compartilhar.
+
+`ExternalNavigationTest` cobre exemplos sintéticos PT-BR Maps/Waze (rua, rotatória, chegada/restante,
+status GPS, resumo isolado e recursos de ícones). `PrefsTest` verifica opt-in e `PanelContentTest`
+verifica que esse modo não move o navegador. Falta validação Android/emulador e no carro.

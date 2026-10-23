@@ -4,6 +4,20 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
+## Não publicado
+
+- Issue #16: opção **Mostrar rota de outros apps no painel**, desligada por padrão,
+  com atalho e instruções para habilitar o acesso às notificações do Android.
+- Maps/Waze continuam na central; a opção prioriza a ClusterActivity integrada, com
+  seta própria quando reconhecida, distância, rua e chegada/restante das notificações.
+  Ícone sem classificação usa o largeIcon recebido; não há reconhecimento de pixels.
+- Atualizações somente de ícone não são descartadas. Desligar a opção limpa a orientação
+  externa; ligar recupera notificações ativas. Desconexão não apaga a rota nativa.
+- Modo de debug registra campos brutos das notificações de Maps/Waze, inclusive formatos
+  desconhecidos. Exemplos sintéticos PT-BR em testes; validação no carro pendente.
+- Validação local: 161 testes JVM, zero falhas; `lintDebug` sem erros. Sem emulador
+  (ambiente sem `/dev/kvm`); captura das Configurações e teste no carro pendentes.
+
 ## 0.5.0 — 2026-10-23 — rota nativa, menu do painel, modo de debug e discador (pré-release de teste)
 
 APK `PainelLivre-v0.5.0-release.apk` (versionCode 6), SHA-256 `1fb15b4ddfe371b4443f1f072a5701996884e0d84140ae4a6853a9e62f2fca06`.

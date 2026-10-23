@@ -26,6 +26,14 @@ data class ParsedNav(
  */
 object NavParser {
 
+    /** Somente nomes semânticos de recursos; IDs numéricos e pixels variam por versão. */
+    fun iconManeuver(resourceName: String?): Maneuver {
+        val name = resourceName?.lowercase(Locale.ROOT) ?: return Maneuver.UNKNOWN
+        val tokens = name.split('_', '-', '.')
+        if (tokens.none { it in setOf("turn", "maneuver", "straight", "roundabout", "uturn") }) return Maneuver.UNKNOWN
+        return classify(name.replace('_', ' ').replace('-', ' '))
+    }
+
     private val RX_DIST = Regex(
         """(?<![\d.,])(\d+(?:[.,]\d+)?)\s*(km|mi|ft|yd|m)\b""",
         RegexOption.IGNORE_CASE,
@@ -52,7 +60,7 @@ object NavParser {
         "procurando gps", "buscando gps", "searching for gps", "sinal de gps", "gps signal",
     )
 
-    fun parse(title: String?, text: String?, bigText: String?, subText: String?): ParsedNav? {
+    fun parse(title: String?, text: String?, bigText: String?, subText: String?, iconHint: Maneuver = Maneuver.UNKNOWN): ParsedNav? {
         val t = clean(title)
         val x = clean(text)
         val b = clean(bigText)
@@ -75,7 +83,7 @@ object NavParser {
         }
 
         // 2. Manobra
-        val maneuver = classify(flat)
+        val maneuver = classify(flat).let { if (it == Maneuver.UNKNOWN) iconHint else it }
         val exit = if (maneuver == Maneuver.ROUNDABOUT) roundaboutExit(flat) else null
         if (maneuver == Maneuver.UNKNOWN && distMeters == null) return null
 

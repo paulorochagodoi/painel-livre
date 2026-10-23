@@ -13,6 +13,10 @@ class PanelContentTest {
         assertEquals(PanelContent.WAZE, PanelContent.externalPackage("navigation", "waze"))
         assertEquals(PanelContent.MAPS, PanelContent.externalPackage("navigation", "anything"))
     }
+    @Test fun notificationRouteNeverMovesNavigatorToPanel() {
+        assertNull(PanelContent.externalPackage("navigation", "waze", notificationRoute = true))
+        assertNull(PanelContent.externalPackage("navigation", "maps", notificationRoute = true))
+    }
     @Test fun explicitRouteRespectsManualMode() {
         assertTrue(PanelContent.showOnRouteRequest("nav"))
         assertTrue(PanelContent.showOnRouteRequest("always"))

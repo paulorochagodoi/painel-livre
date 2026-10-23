@@ -9,6 +9,7 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
     constructor(context: Context) : this(PreferenceManager.getDefaultSharedPreferences(context.applicationContext))
 
     /** "nav" = só durante a navegação, "always" = sempre, "manual" = só pelos botões. */
+    val externalNavigation: Boolean get() = sp.getBoolean(KEY_EXTERNAL_NAVIGATION, false)
     val panelContent: String get() = sp.getString(KEY_PANEL_CONTENT, "integrated") ?: "integrated"
     val clusterMode: String get() = sp.getString(KEY_CLUSTER_MODE, "nav") ?: "nav"
     val restoreDelaySec: Int get() = sp.getString(KEY_RESTORE_DELAY, "20")?.toIntOrNull()?.coerceIn(0, 600) ?: 20
@@ -75,6 +76,7 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
         sp.getString(key, def.toString())?.toIntOrNull()?.coerceIn(0, 1500) ?: def
 
     companion object {
+        const val KEY_EXTERNAL_NAVIGATION = "external_navigation"
         const val KEY_PANEL_CONTENT = "panel_content"
         const val KEY_CLUSTER_MODE = "cluster_mode"
         const val KEY_RESTORE_DELAY = "restore_delay"

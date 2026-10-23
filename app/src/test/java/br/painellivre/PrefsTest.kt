@@ -39,11 +39,13 @@ class PrefsTest {
         assertNull(p.carPhoto)
         assertEquals(0L, p.lastBootAt)
         // Issue #9: debug e seguir o menu do painel ficam desligados até o motorista ligar.
+        assertFalse(p.externalNavigation)
         assertFalse(p.debugMode)
         assertFalse(p.panelMenuFollow)
     }
 
     @Test fun debugAndPanelMenuSwitchesAreReadFromStorage() {
+        assertTrue(prefs(Prefs.KEY_EXTERNAL_NAVIGATION to true).externalNavigation)
         assertTrue(prefs(Prefs.KEY_DEBUG_MODE to true).debugMode)
         assertTrue(prefs(Prefs.KEY_PANEL_MENU_FOLLOW to true).panelMenuFollow)
     }

@@ -154,3 +154,22 @@ qual mapa usar. Endereço textual abre a busca para você conferir o resultado. 
 ou Waze ainda não são expandidos: nesse caso busque o endereço ou compartilhe coordenadas.
 Fechar só a tela mantém a orientação; encerrar o processo/serviço perde a rota atual.
 Esta função ainda precisa de validação no carro; veja o checklist em `docs/PLANO.md`.
+
+### Rota do Google Maps ou Waze no painel (issue #16)
+
+Em **Ajustes → Painel de instrumentos**, ligue **Mostrar rota de outros apps no painel**
+(desligado por padrão). Toque em **Permitir acesso às notificações** e habilite **Painel Livre**
+na lista do Android. Inicie a navegação no Maps ou Waze na central. O painel integrado mostra
+próxima manobra, distância até ela, rua e chegada/distância restante quando a notificação trouxer
+esses dados. O modo manual do painel continua exigindo o botão de ativação.
+
+Essa opção mantém o navegador na central e prioriza o painel integrado sobre a alternativa de
+mover o app. Lê notificações, sem tocar em botões, cancelar notificações ou controlar Maps/Waze.
+Não extrai a linha da rota. Formatos variam entre versões; campos ausentes ficam vazios.
+Setas reconhecidas usam desenho próprio; quando não reconhecidas, o largeIcon é a alternativa.
+
+Para investigar no carro, ligue **Modo de debug** e consulte o registro em **Ajustes → Testes e ajuda**.
+Ele inclui textos brutos, ruas, destino e metadados dos ícones de Maps/Waze, inclusive mensagens sem
+orientação reconhecida. Revise esses dados antes de compartilhar o registro. Os bitmaps são descritos
+por dimensões, sem exportar a imagem. Nada é enviado por essa leitura a um servidor.
+Testes atuais usam exemplos sintéticos PT-BR; compatibilidade real ainda precisa de teste no carro.

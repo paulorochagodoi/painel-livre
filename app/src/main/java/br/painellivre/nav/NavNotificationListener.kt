@@ -1,5 +1,9 @@
 package br.painellivre.nav
 
+import android.content.SharedPreferences
+import androidx.preference.PreferenceManager
+import br.painellivre.util.Prefs
+import br.painellivre.debug.DebugLog
 import android.app.Notification
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -19,11 +23,38 @@ import br.painellivre.util.AppLog
 class NavNotificationListener : NotificationListenerService() {
 
     private var drivingKey: String? = null
-    private var lastSignature: String? = null
+    private lateinit var preferences: SharedPreferences
+    private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == Prefs.KEY_EXTERNAL_NAVIGATION) {
+            clearExternal()
+            if (Prefs(this).externalNavigation) readActive()
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        preferences = PreferenceManager.getDefaultSharedPreferences(this)
+        preferences.registerOnSharedPreferenceChangeListener(preferenceListener)
+    }
+
+    override fun onDestroy() {
+        preferences.unregisterOnSharedPreferenceChangeListener(preferenceListener)
+        clearExternal()
+        super.onDestroy()
+    }
+
+    private fun clearExternal() {
+        NavRepository.NAV_PACKAGES.forEach { NavRepository.end(it) }
+        drivingKey = null
+    }
 
     override fun onListenerConnected() {
         AppLog.i("Leitor de notificações conectado")
-        // Se uma rota já estava em andamento quando o app (re)iniciou, recupera o estado.
+        readActive()
+    }
+
+    private fun readActive() {
+        // Recupera também uma rota que já estava em andamento ao habilitar a opção.
         try {
             activeNotifications?.filter { it.packageName in NavRepository.NAV_PACKAGES }
                 ?.forEach { onNotificationPosted(it) }
@@ -34,33 +65,56 @@ class NavNotificationListener : NotificationListenerService() {
 
     override fun onListenerDisconnected() {
         AppLog.w("Leitor de notificações desconectado")
-        NavRepository.end(null)
-        drivingKey = null
+        clearExternal()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         sbn ?: return
         if (sbn.packageName !in NavRepository.NAV_PACKAGES) return
         val n = sbn.notification ?: return
-        if (!isNavigationNotification(n)) return
+        // O debug captura inclusive formatos ainda não reconhecidos, antes de qualquer filtro.
+        if (Prefs(this).debugMode) {
+            DebugLog.add("notificação", buildString {
+                append("pacote=${sbn.packageName} id=${sbn.id} categoria=${n.category} flags=${n.flags}")
+                n.extras?.keySet()?.sorted()?.forEach { key ->
+                    val value = runCatching { n.extras.get(key) }.getOrNull()
+                    append("\n$key=${when (value) {
+                        is Bitmap -> "Bitmap(${value.width}x${value.height})"
+                        is Array<*> -> value.contentDeepToString()
+                        else -> value.toString()
+                    }}")
+                }
+                append("\nlargeIcon=${n.getLargeIcon()} smallIcon=${n.smallIcon}")
+            })
+        }
+        if (!Prefs(this).externalNavigation || !isNavigationNotification(n)) return
         val ex: Bundle = n.extras ?: return
 
         val title = ex.getCharSequence(Notification.EXTRA_TITLE)?.toString()
         val text = ex.getCharSequence(Notification.EXTRA_TEXT)?.toString()
         val big = ex.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
+            ?: ex.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)?.joinToString(" · ")
         val sub = ex.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
 
-        val signature = "${sbn.key}|$title|$text|$big|$sub"
-        if (signature == lastSignature) return
-        lastSignature = signature
-
-        val parsed = NavParser.parse(title, text, big, sub)
+        val icon = n.getLargeIcon()
+        val iconName = runCatching {
+            if (icon?.type == Icon.TYPE_RESOURCE)
+                packageManager.getResourcesForApplication(sbn.packageName).getResourceEntryName(icon.resId)
+            else null
+        }.getOrNull()
+        val parsed = NavParser.parse(title, text, big, sub, NavParser.iconManeuver(iconName))
         if (parsed == null) {
+            if (drivingKey == sbn.key) {
+                NavRepository.end(sbn.packageName)
+                drivingKey = null
+            }
             AppLog.i("Notificação de ${sbn.packageName} sem orientação reconhecível (título=${title?.length ?: 0} car.)")
             return
         }
         drivingKey = sbn.key
-        NavRepository.update(sbn.packageName, parsed, loadLargeIcon(n))
+        // Setas próprias para manobras reconhecidas; bitmap como alternativa sem adivinhar pixels.
+        NavRepository.update(sbn.packageName, parsed,
+            if (parsed.maneuver == Maneuver.UNKNOWN) loadLargeIcon(n) else null)
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
@@ -69,7 +123,6 @@ class NavNotificationListener : NotificationListenerService() {
         // Fim de rota = sumiu a notificação que estava guiando (ou não sabemos qual era).
         if (drivingKey == null || drivingKey == sbn.key) {
             drivingKey = null
-            lastSignature = null
             NavRepository.end(sbn.packageName)
             AppLog.i("Navegação encerrada (${sbn.packageName})")
         }

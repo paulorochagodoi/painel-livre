@@ -64,6 +64,9 @@ class SettingsActivity : AppCompatActivity() {
                 ClusterService.start(requireContext(), ClusterService.ACTION_SIMULATE)
                 Toast.makeText(requireContext(), "Simulação ligada/desligada", Toast.LENGTH_SHORT).show()
             }
+            onClick("notification_access") {
+                openOr(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS), Intent(Settings.ACTION_SETTINGS))
+            }
             onClick("grant_all") { run { SystemSetup.grantAll(requireContext()) } }
             findPreference<Preference>(Prefs.KEY_DEBUG_MODE)?.setOnPreferenceChangeListener { _, v ->
                 DebugProbe.sync(requireContext(), v as Boolean)

@@ -2,6 +2,7 @@ package br.painellivre.adb
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
 import br.painellivre.nav.NavNotificationListener
@@ -69,35 +70,69 @@ object SystemSetup {
     }
 
     // ── Launcher padrão ─────────────────────────────────────────────────────
+    // Issue #7: o filtro HOME (alias `HomeAlias`) agora vem ligado no manifesto, para o Android e a
+    // BYD reconhecerem o Painel Livre como tela inicial. "Usar como tela inicial" só escolhe o
+    // preferido; as decisões ficam em `HomeChoice` (testadas na JVM).
 
     private fun homeAlias(ctx: Context) = ComponentName(ctx.packageName, "${ctx.packageName}.ui.HomeAlias")
 
-    suspend fun currentHome(ctx: Context): String? {
-        val out = SelfAdb.shellText(
-            ctx, "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME",
+    private const val RESOLVE_HOME =
+        "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"
+
+    suspend fun currentHome(ctx: Context): HomeChoice.Resolved =
+        HomeChoice.parseResolved(SelfAdb.shellText(ctx, "$RESOLVE_HOME 2>&1"), ctx.packageName)
+
+    private fun setAlias(ctx: Context, enabled: Boolean) {
+        ctx.packageManager.setComponentEnabledSetting(
+            homeAlias(ctx),
+            if (enabled) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+            PackageManager.DONT_KILL_APP,
         )
-        return out.lines().map { it.trim() }.lastOrNull { it.contains('/') && !it.startsWith("ERRO") }
     }
 
-    suspend fun becomeHome(ctx: Context): String {
+    /** Resultado de [becomeHome]: texto para o usuário e, sem ADB, a tela que a interface deve abrir. */
+    data class HomeResult(val message: String, val fallback: HomeChoice.Step? = null)
+
+    suspend fun becomeHome(ctx: Context): HomeResult {
         val prefs = Prefs(ctx)
-        val cur = currentHome(ctx)
-        if (cur != null && !cur.startsWith(ctx.packageName)) prefs.originalHome = cur
-        ctx.packageManager.setComponentEnabledSetting(
-            homeAlias(ctx), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP,
-        )
-        val r = SelfAdb.shellText(ctx, "cmd package set-home-activity ${homeAlias(ctx).flattenToString()} 2>&1")
-        AppLog.i("Usar como tela inicial (anterior: $cur): $r")
-        return "Launcher anterior salvo: ${cur ?: "?"}\n$r"
+        // Religa o alias caso um "Voltar ao launcher da BYD" antigo o tenha desligado.
+        setAlias(ctx, true)
+        val adbOk = SelfAdb.shell(ctx, "echo ok") is SelfAdb.Result.Ok
+        val cur = if (adbOk) currentHome(ctx) else HomeChoice.Resolved.Unknown
+        HomeChoice.originalToSave(cur)?.let { prefs.originalHome = it }
+        val hasSettings = Intent(Settings.ACTION_HOME_SETTINGS).resolveActivity(ctx.packageManager) != null
+        return when (val step = HomeChoice.nextStep(cur, adbOk, hasSettings)) {
+            HomeChoice.Step.DONE -> HomeResult("O Painel Livre já é a tela inicial.")
+            HomeChoice.Step.ADB -> {
+                val r = SelfAdb.shellText(ctx, "cmd package set-home-activity ${homeAlias(ctx).flattenToString()} 2>&1")
+                val after = currentHome(ctx)
+                AppLog.i("Usar como tela inicial (antes: $cur, depois: $after): $r")
+                when {
+                    after is HomeChoice.Resolved.Ours ->
+                        HomeResult("Pronto: o botão Início abre o Painel Livre.\nLauncher anterior: ${prefs.originalHome ?: "?"}")
+                    HomeChoice.setHomeSucceeded(r) ->
+                        HomeResult("A central aceitou o pedido, mas ainda responde com outro launcher ($after). Toque em Início para conferir.\n$r")
+                    else -> HomeResult(
+                        "A central recusou pelo ADB. Escolha o Painel Livre e toque em \"Sempre\".\n$r",
+                        if (hasSettings) HomeChoice.Step.HOME_SETTINGS else HomeChoice.Step.CHOOSER,
+                    )
+                }
+            }
+            else -> {
+                AppLog.i("Usar como tela inicial sem ADB: $step")
+                HomeResult("Sem ADB local. Escolha o Painel Livre na lista e toque em \"Sempre\".", step)
+            }
+        }
     }
 
     suspend fun restoreHome(ctx: Context): String {
-        val orig = Prefs(ctx).originalHome
+        val orig = HomeChoice.restoreTarget(Prefs(ctx).originalHome, ctx.packageName)
         val r = if (orig != null) SelfAdb.shellText(ctx, "cmd package set-home-activity $orig 2>&1") else "launcher original desconhecido"
-        ctx.packageManager.setComponentEnabledSetting(
-            homeAlias(ctx), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP,
-        )
-        AppLog.i("Voltar ao launcher BYD ($orig): $r")
-        return "Voltando para: ${orig ?: "?"}\n$r"
+        // Sem o original (ou se a central recusou), some com o nosso filtro HOME: a BYD volta a ser a única.
+        val hide = orig == null || !HomeChoice.setHomeSucceeded(r)
+        if (hide) setAlias(ctx, false)
+        AppLog.i("Voltar ao launcher BYD ($orig, alias desligado=$hide): $r")
+        return "Voltando para: ${orig ?: "launcher da BYD"}\n$r" +
+            if (hide) "\nO Painel Livre deixou de aparecer como tela inicial (\"Usar como tela inicial\" religa)." else ""
     }
 }

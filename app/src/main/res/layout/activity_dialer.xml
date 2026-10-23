@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Discador interno (issue #3): número, teclado e Ligar. As teclas são criadas no código
+     (DialerActivity) e as cores vêm do tema dia/noite (Palette, por tag). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/backdrop"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY" />
+
+    <ImageView
+        android:id="@+id/dialClose"
+        style="@style/CcRoundButton"
+        android:layout_gravity="top|start"
+        android:layout_margin="20dp"
+        android:contentDescription="@string/close"
+        android:src="@drawable/ic_close" />
+
+    <LinearLayout
+        android:layout_width="440dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="center_horizontal"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingTop="20dp"
+        android:paddingBottom="20dp">
+
+        <TextView
+            style="@style/CcTitle"
+            android:text="@string/tab_phone" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="76dp"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <View
+                android:layout_width="48dp"
+                android:layout_height="1dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp" />
+
+            <TextView
+                android:id="@+id/dialNumber"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="start"
+                android:fontFamily="sans-serif-light"
+                android:gravity="center"
+                android:hint="@string/dial_hint"
+                android:maxLines="1"
+                android:tag="t1"
+                android:textSize="36sp" />
+
+            <ImageView
+                android:id="@+id/dialBackspace"
+                style="@style/CcRoundButton"
+                android:contentDescription="@string/dial_backspace"
+                android:src="@drawable/ic_backspace" />
+        </LinearLayout>
+
+        <!-- 4 linhas de 3 teclas, preenchidas pela Activity. -->
+        <LinearLayout
+            android:id="@+id/dialKeys"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_weight="1"
+            android:orientation="vertical" />
+
+        <TextView
+            android:id="@+id/dialStatus"
+            style="@style/CcSub"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:layout_marginTop="12dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/dialRedial"
+                style="@style/CcChipButton"
+                android:layout_width="0dp"
+                android:layout_marginTop="0dp"
+                android:layout_weight="1"
+                android:tag="chip"
+                android:text="@string/dial_redial" />
+
+            <ImageView
+                android:id="@+id/dialCall"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:layout_marginStart="18dp"
+                android:layout_marginEnd="18dp"
+                android:contentDescription="@string/dial_call"
+                android:padding="20dp"
+                android:src="@drawable/ic_phone" />
+
+            <TextView
+                android:id="@+id/dialPhoneApp"
+                style="@style/CcChipButton"
+                android:layout_width="0dp"
+                android:layout_marginTop="0dp"
+                android:layout_weight="1"
+                android:tag="chip"
+                android:text="@string/dial_car_app" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

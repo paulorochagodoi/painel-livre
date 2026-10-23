@@ -1,6 +1,6 @@
 # Plano — Painel Livre
 
-Atualizado: 2026-10-22. Estado: **v0.3.0** = Fase 3 itens 1–6 (v0.2.0) + **interface redesenhada no
+Atualizado: 2026-10-23. Estado: **v0.3.0** (+ issues #7, #3, #4 da central, não lançadas) = Fase 3 itens 1–6 (v0.2.0) + **interface redesenhada no
 estilo do SealNav** (central tipo cockpit e painel com o layout dele). 73 testes de unidade, testada
 no emulador (Android 10, display secundário 1920×720); **ainda não testada no carro**.
 APK: `PainelLivre-v0.3.0-release.apk` (fora do repositório, na pasta de trabalho do dono; instala por
@@ -20,6 +20,15 @@ e de entender, igual a ele; a única diferença é a rota vir do Google Maps ou 
 | 5 | Extras: câmeras no painel, voz, launcher 3D | Fases 2–3 | opcional |
 
 ---
+
+## Central — issues #7, #3, #4 (2026-10-23, não lançado)
+
+- **#7 launcher**: alias HOME ligado no manifesto (era a causa), "Usar como tela inicial" conferido e
+  com plano B sem ADB, Início volta à aba Início. Detalhes em `ARQUITETURA.md`, "Tela inicial".
+- **#3 telefone**: discador próprio com quatro caminhos para ligar (`ARQUITETURA.md`, "Telefone").
+- **#4 tempo**: tela de previsão (agora, 24 h, 7 dias) do mesmo pedido ao Open-Meteo.
+- 26 testes JVM novos (99 no total). Validado só na JVM e no build/lint; **falta emulador e carro**
+  (Fase 1, item 8).
 
 ## Regressão JVM — issue #1
 
@@ -127,6 +136,20 @@ o menu pela aplicação.
    no emulador ficou em ~15 porque o PC renderiza por software.
 7. Desligar e ligar o carro: o Diagnóstico mostra "Último boot recebido"? O serviço sobe sozinho?
    Se não, testar "Usar como tela inicial".
+8. **Central (issues #7, #3, #4)** — só o carro confirma:
+   - *Tela inicial*: no Diagnóstico → Info da central, anotar `tela_inicial=` e a lista `launchers:`
+     (o Painel Livre deve aparecer). Tocar em "Usar como tela inicial" e depois no Início da BYD (botão
+     da tela e do volante, se houver): abre o Painel Livre? Se a BYD abrir o launcher dela mesmo assim,
+     é porque o botão Início da ROM chama o pacote direto (sem passar pelo HOME do Android) — anotar o
+     pacote do launcher dela e o que aparece no logcat ao tocar (`ActivityTaskManager: START`). Depois
+     do boot, a central abre direto no Painel Livre? Conferir se aparece o seletor de launcher sem
+     pedir. "Voltar ao launcher da BYD" volta mesmo?
+   - *Telefone*: com o celular pareado, discar um número conhecido (não emergência) com o carro
+     parado. Anotar qual caminho o Log do app mostra (`Telefone: chamada por …`) e se a ligação sai
+     pelo som do carro. O Diagnóstico lista `telefone:` (apps que respondem a `ACTION_DIAL`) e pacotes
+     com `phone`/`bluetooth`; se a BYD tiver um app próprio que aceite o número por intent, levar o
+     pacote para `PhoneApps`/`CallPlan`.
+   - *Tempo*: tocar no tempo, conferir horas/dias e a leitura de dia e de noite, deitada e em pé.
 
 Opcional, no mesmo dia: com o **SealNav** projetando, guardar `logcat`, `dumpsys display`,
 `dumpsys activity activities` e `ps -A | grep app_process` (só observação, nada é alterado) — confirma

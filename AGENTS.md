@@ -16,15 +16,17 @@ Brasil**, frases simples, sem jargão desnecessário.
 - **Depois**: setas no HUD/painel via CAN (Fase 4), controles de conforto como os do SealNav (Fase 4b),
   navegação própria opcional com linha da rota no painel (Fase 3, item 7), extras (Fase 5).
 
-## 2. Onde o projeto está (2026-10-22)
+## 2. Onde o projeto está (2026-10-23)
 
-- **v0.3.0**, compilada; suíte da versão com 73 testes; trabalho não lançado de painel/telemetria com **87 testes JVM passando**, lint debug com 0 erros (105 avisos). Versão testada **só no emulador**; mudanças não lançadas validadas só na JVM/build/lint.
+- **v0.3.0**, compilada; suíte da versão com 73 testes; trabalho não lançado de painel/telemetria (#2, #5, #6) e da central
+  (#7 tela inicial, #3 discador, #4 previsão do tempo) com **113 testes JVM passando**, lint debug sem erros.
+  Versão testada **só no emulador**; mudanças não lançadas validadas só na JVM/build/lint. Conferir no carro: `docs/PLANO.md`, Fase 1, item 8.
   **Nada foi testado no carro ainda** — o próximo passo combinado é o primeiro teste no carro
   (`docs/PLANO.md`, Fase 1). O dono ainda não liberou acesso ADB ao carro para o agente.
 - Funciona (emulador): tela central estilo cockpit (dia/noite, deitada/em pé), aba Navegação com busca
   e Casa/Trabalho/recentes abrindo a rota no Maps/Waze, painel com o layout do SealNav, leitura da
   notificação do Maps/Waze, ativação do painel na sequência do SealNav, ADB persistente, vigia de
-  travamento, convivência com outros apps, diagnóstico.
+  travamento, convivência com outros apps, diagnóstico; discador interno e previsão do tempo (JVM).
 - Histórico em `CHANGELOG.md`. Telas em `docs/telas/`.
 
 **Próximos passos, em ordem**:
@@ -84,6 +86,8 @@ porque o GitHub recusou a execução por cobrança da conta; depois que o dono r
   de métodos dentro do ajudante uid 2000, nada de travas/portas/câmbio/freio/direção/ADAS/CAN cru,
   vidros/teto/porta-malas só com o carro parado, ler o valor de volta, limite de frequência, confirmação
   na primeira vez e interruptor geral, uma função por vez testada no carro parado.
+- **Telefone**: o discador só liga quando o motorista toca em Ligar; nunca ligar sozinho nem para
+  número que não foi digitado. O número não vai para o log.
 - Nunca mexer nas chaves ADB do sistema (o comando `adbkeys` do SealNav autoriza/apaga chaves sem aviso:
   **não adotar**).
 
@@ -161,6 +165,10 @@ porque o GitHub recusou a execução por cobrança da conta; depois que o dono r
 - adb como root é recusado no `am start --display`; o carro usa uid 2000.
 - O display simulado do emulador aparece como janela e engole toques; `uiautomator` falha com o mapa
   animando; SwiftShader desenha traços no mapa que não existem no carro.
+- Filtro HOME desligado no manifesto = o app não aparece como launcher em lugar nenhum (issue #7).
+  Não desligue o `HomeAlias` por padrão; `cmd package resolve-activity` pode responder com o seletor
+  (`ResolverActivity`), que não é um launcher para guardar/restaurar.
+- `ACTION_DIAL` pode não ter app na DiLink (issue #3): use o `DialerActivity`, nunca `ACTION_DIAL` cru.
 - O MapLibre só desenha quando algo muda: carro parado sem quadros é normal (o vigia sabe disso).
 
 ## 10. Trabalhando com o dono

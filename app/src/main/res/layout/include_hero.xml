@@ -84,7 +84,8 @@
         android:paddingTop="12dp"
         android:paddingEnd="18dp"
         android:paddingBottom="12dp"
-        android:tag="card"
+        android:contentDescription="@string/weather_title"
+        android:tag="card_click"
         android:visibility="gone">
 
         <LinearLayout

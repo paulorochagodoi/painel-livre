@@ -1,6 +1,6 @@
 # Arquitetura do Painel Livre
 
-Atualizado: 2026-10-22 (v0.3.0). Pacote `br.painellivre`, um único módulo `:app`, Kotlin, Views
+Atualizado: 2026-10-23 (v0.3.0 + issues #7, #3, #4 não lançadas). Pacote `br.painellivre`, um único módulo `:app`, Kotlin, Views
 clássicas (sem Compose), coroutines + `StateFlow`. minSdk 28, targetSdk 29 (o comportamento do
 Android 10 é o que a DiLink 3 espera), compileSdk 34.
 
@@ -31,7 +31,8 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | Pacote | Arquivo | Responsabilidade |
 |---|---|---|
 | `adb` | `SelfAdb.kt` | Conexão única dadb com `127.0.0.1:5555`, reconecta 1× se cair, `ensureReady` (15×2 s no boot), `ready: StateFlow<Boolean?>`, mensagens de erro em pt-BR por tipo (porta fechada, chave recusada, tempo esgotado) |
-| | `SystemSetup.kt` | "Conceder tudo": `pm grant` de localização e permissões BYD de leitura, `cmd notification allow_listener`, `deviceidle whitelist`, `appops RUN_ANY_IN_BACKGROUND`, `set-standby-bucket active`; virar/deixar de ser a tela inicial (`cmd package set-home-activity`) |
+| | `SystemSetup.kt` | "Conceder tudo": `pm grant` de localização e permissões BYD de leitura, `cmd notification allow_listener`, `deviceidle whitelist`, `appops RUN_ANY_IN_BACKGROUND`, `set-standby-bucket active`; virar/deixar de ser a tela inicial (`cmd package set-home-activity`, conferido antes e depois) |
+| | `HomeChoice.kt` | **Kotlin puro.** Lê a resposta do `resolve-activity` (nosso / outro / seletor / desconhecido), o que guardar como launcher original, se o `set-home-activity` deu certo e o próximo passo (ADB → tela "Tela inicial" → seletor) |
 | `cluster` | `ClusterController.kt` | Acha o display do painel (app e `dumpsys display`), mede e guarda a geometria, decide o código de tamanho, manda `sendInfo` (lista segura), sequência de ativação/restauração, abre a tela pelo shell (`--windowingMode 1`, depois 5 + `am task resize`, depois `startActivity` direto) |
 | | `PanelAutomation.kt` | **Kotlin puro.** Decisão dos modos automático/navegação/manual e temporizador de restauração, testados com tempo virtual |
 | | `PanelSize.kt` | **Kotlin puro.** Decide se manda 29/30/31 (ver "Regras de segurança" no `AGENTS.md`) |
@@ -48,11 +49,15 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | | `NavRepository.kt` | `state: StateFlow<NavState>` (rota ativa, fonte, ícone, simulação) |
 | | `NavSimulator.kt` | Rota de teste pelo mesmo parser; em debug injeta GPS falso |
 | | `Places.kt` | Busca Photon, Casa/Trabalho/recentes (SharedPreferences JSON), abre a rota no Maps/Waze por intent |
-| `info` | `WeatherRepository.kt` | Open-Meteo (posição arredondada a 0,1°, no máximo a cada 15 min) |
+| `info` | `WeatherRepository.kt` | Open-Meteo (posição arredondada a 0,1°, no máximo a cada 15 min; sem dados, 1 vez por minuto): `weather` (cartão) e `forecast` (tela de previsão) do mesmo pedido |
+| | `Forecast.kt` | **Kotlin puro.** `ForecastParser` (URL e leitura de agora, 24 h e 7 dias, rótulos "Agora"/"15h"/"Hoje"/"Amanhã"/"Sáb 25") e `ForecastText` |
 | | `MediaRepository.kt` | Sessão de mídia ativa (`MediaSessionManager`, usa o acesso às notificações) e controles |
+| `phone` | `DialNumber.kt` | **Kotlin puro.** `DialNumber` (teclas aceitas, limpeza, formato brasileiro, `tel:` com `#` escapado), `CallPlan` (ordem de tentativas para ligar e quando pedir `CALL_PHONE`), `PhoneApps` (acha o app de telefone/Bluetooth do carro) |
 | `car` | `VehicleData.kt` | Leitura por reflexão de `BYDAutoStatisticDevice` (bateria, autonomias, hodômetro). Só leitura |
 | `location` | `LocationRepository.kt` | GPS da central (`LocationManager`), mantém o rumo quando parado, injeção só em debug |
-| `ui` | `LauncherActivity.kt` | Cockpit: barra de cima, carro, cartões, abas (Início, Navegação, Apps; Mídia/Telefone/Ajustes abrem outra tela), lista de lugares, mapa da aba Navegação, aviso de configuração |
+| `ui` | `LauncherActivity.kt` | Cockpit: barra de cima, carro, cartões, abas (Início, Navegação, Apps; Mídia/Telefone/Ajustes abrem outra tela), lista de lugares, mapa da aba Navegação, aviso de configuração; toque no tempo abre a previsão; `onNewIntent` com `HOME` volta à aba Início |
+| | `DialerActivity.kt` | Discador interno (aba Telefone): teclado, Rediscar, App do carro; liga pela ordem de `CallPlan` e passa ao próximo caminho se a central recusar |
+| | `WeatherActivity.kt` | Previsão do tempo: agora, 24 horas (rolagem lateral) e 7 dias com faixa mín–máx |
 | | `cockpit/Palette.kt` | Temas dia/noite e pintura da árvore de Views por `android:tag` (ver abaixo) |
 | | `cockpit/CockpitArt.kt` | Fundo "estúdio" e ilustração do SUV, desenhados em código |
 | | `cockpit/WeatherIconDrawable.kt` | Ícone do tempo desenhado em código |
@@ -62,6 +67,32 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | `util` | `Prefs.kt` | Preferências tipadas (chaves abaixo) |
 | | `AppLog.kt` | Log em memória (400 linhas) + logcat `PainelLivre` |
 | raiz | `App.kt`, `BootReceiver.kt` | Inicializa MapLibre e canal de notificação; boot/`MY_PACKAGE_REPLACED` → serviço |
+
+## Tela inicial (launcher)
+
+O alias `.ui.HomeAlias` (filtro `MAIN` + `HOME` + `DEFAULT`, alvo `LauncherActivity`, `singleTask`)
+vem **ligado** no manifesto desde a issue #7; antes vinha desligado e o app não era reconhecido como
+launcher. Fluxo de "Usar como tela inicial" (`SystemSetup.becomeHome` + `HomeChoice`):
+
+1. Religa o alias (um "Voltar ao launcher da BYD" antigo pode tê-lo desligado).
+2. Com ADB: lê o launcher atual (`resolve-activity --brief`), guarda-o se for outro launcher de verdade
+   (nunca o seletor `ResolverActivity`), manda `cmd package set-home-activity br.painellivre/.ui.HomeAlias`
+   e lê de novo para dizer se funcionou.
+3. Sem ADB ou recusado: abre `Settings.ACTION_HOME_SETTINGS` ou, se a BYD tirou essa tela, o próprio
+   Início, para o Android mostrar o seletor com "Sempre".
+
+"Voltar ao launcher da BYD" define o original guardado; se não houver original (ou a central recusar),
+desliga o alias para a BYD voltar a ser a única tela inicial. Com o alias ligado e nenhum preferido, o
+Android pode mostrar o seletor uma vez ao tocar em Início — é o comportamento normal de launcher.
+
+## Telefone
+
+A central não tem chip; a ligação é do celular pelo Bluetooth. `CallPlan.routes` tenta, nesta ordem:
+`ACTION_CALL` (com `CALL_PHONE`, pedida uma vez no primeiro Ligar) → `ACTION_DIAL` com o número →
+`TelecomManager.placeCall` → abrir o app de telefone do carro (`PhoneApps.pick`) com o número na
+área de transferência. Cada falha (`ActivityNotFound`, `SecurityException`) passa para a próxima; sem
+nenhuma, a tela avisa para usar o volante/celular. `uses-feature android.hardware.telephony` é
+opcional. O número nunca vai para o `AppLog`.
 
 ## Ciclo do painel
 
@@ -125,7 +156,7 @@ Frações da altura `h` e largura `w` do display (1920×720 no Song Plus), dentr
 
 ## Testes
 
-`app/src/test` tem **73 testes JVM** (41 anteriores + 32 novos na issue #1), sem carro, emulador,
+`app/src/test` tem **99 testes JVM** (41 da v0.3.0 + 32 da issue #1 + 26 das issues #7/#3/#4), sem carro, emulador,
 rede ou espera de tempo real. Execute com JDK 17:
 
 ```bash
@@ -142,6 +173,9 @@ rede ou espera de tempo real. Execute com JDK 17:
 | `PoseSmootherTest` | posição, rumo, limites de previsão e ruído de GPS |
 | `FreezeWatchTest` | vigia, orçamento de recuperação e convivência (`YieldPolicy`) |
 | `CockpitTest` | Photon, tema e códigos do tempo |
+| `HomeChoiceTest` | saída do `resolve-activity` (nosso, BYD, seletor, erro), launcher original, resultado do `set-home-activity`, próximo passo, restauração e o alias HOME ligado no manifesto |
+| `DialerTest` | teclado, limite, limpeza de número colado, mínimo de 3 dígitos, `tel:` com `#`, formato brasileiro, ordem dos caminhos de chamada (inclusive "nenhum app"), pedido de permissão e escolha do app do carro |
+| `ForecastTest` | agora/horas/dias do Open-Meteo, buracos `null`, respostas ruins, rótulos em português, textos, URL com posição arredondada e limite de pedidos |
 
 `PanelAutomation` contém a decisão usada pelo `ClusterService`; as chamadas Android/ADB continuam
 no serviço. `kotlinx-coroutines-test` controla o tempo dos testes. Um teste reproduz a restauração

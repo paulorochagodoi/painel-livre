@@ -36,6 +36,48 @@ Detalhes e limites em `ARQUITETURA.md`, seção Testes. O primeiro teste no carr
 > notificações, margens, sequência do AutoContainer) em casos fixos; (4) reativar o CI quando a
 > cobrança do GitHub for resolvida.
 
+## Issues #2/#5/#6 — implementação e testes no carro (2026-10-23)
+
+Validação local: **87 testes JVM passando (14 novos)**, `assembleDebug` concluído e `lintDebug`
+com **0 erros e 105 avisos**. Sem emulador nesta etapa.
+
+Implementado, sem teste no carro: pedido de rota também solicita o painel (exceto manual), escolha
+`panel_content` entre mapa integrado e Maps/Waze experimental, falhas por método no SDK BYD e
+indisponibilidade explícita no diagnóstico. Causas no código: `Places` só abria intent na central;
+projeção automática dependia de notificação; controlador sempre abria `ClusterActivity`; exceções
+nos getters BYD eram engolidas e portas/travas nunca eram consultadas. Recusa do uid do app na
+DiLink 3 é hipótese fundamentada no achado I de `SEALNAV_RE.md`, ainda não confirmada neste carro.
+
+Checklist específico, com carro parado e ações feitas pelo dono:
+
+1. Em Ajustes, escolher **Mapa integrado**, modo **Só durante a navegação**; abrir destino em Maps
+   e Waze pelos resultados, Casa/Trabalho e busca textual. Painel deve abrir sem esperar notificação.
+   Sem acesso às notificações, mapa aparece mas manobras/fim de rota não são detectados: restaurar
+   manualmente. Com acesso, conferir manobras e restauração após o atraso. Modo manual não deve
+   ativar ao abrir destino. Testar também modo Sempre, app ausente e falha ADB.
+2. Restaurar e escolher **App de navegação (experimental)** antes de ativar. Iniciar rota e conferir
+   se a tarefa com a rota aparece no `fission_bg_xdjaVirtualSurface` 1920×720, preservando destino.
+   Comparar Maps/Waze, confirmar margens/instrumentos BYD e legibilidade. O navegador exige toque:
+   não interagir com ele dirigindo. O log precisa confirmar pacote e display; se a firmware recusar,
+   deve informar falha e permitir voltar à opção integrada, sem insistir com AutoContainer.
+3. Com navegador no painel, esperar mais de 30 s: mapa integrado não deve tomá-lo. Testar Painel
+   original, fim da rota, perda/recriação do display e novo pedido de rota. Conferir onde a tarefa
+   externa fica após restaurar e se volta à central sem perder a rota; isso não foi garantido por JVM.
+   Não há vigia do app externo, nem encerramento forçado dele. Se houver incompatibilidade, usar
+   o integrado. Não considerar este modo validado apenas porque `am start` devolveu sucesso.
+4. Diagnóstico → Info da central e Dados do carro → Copiar tudo antes/depois de Conceder permissões.
+   Conferir bateria, combustível, autonomias e hodômetro com a tela BYD. Distinguir SDK ausente,
+   método ausente, permissão negada e sentinelas inválidas. A permissão do app pode constar concedida
+   e a chamada Binder continuar recusada. Registrar erro, sem tentar escrita nem nomes de propriedades.
+5. Portas/travas: confirmar que o diagnóstico diz **indisponível**, sem sugerir estado fechado/travado.
+   Para implementar leitura depois: obter SDK real só por leitura, confirmar parâmetros/constantes de
+   `getDoorState(int)` e API de trava; testar cada porta e trava separadamente, com carro parado.
+   Se SDK exigir uid 2000, implementar ajudante próprio somente leitura/autenticado antes da interface.
+
+Pendências: primeiro teste real, capturas das novas preferências no emulador, lifecycle/projeção de
+apps externos, SDK real e ajudante uid 2000. Não houve acesso ao carro, escrita CAN/SDK, mudança de
+manifesto, launcher, telefone/clima, assinatura, versão ou publicação nesta etapa.
+
 ## Fase 1 — Primeiro teste no carro
 
 1. Instalar `PainelLivre-v0.3.0-release.apk`, aceitar "Permitir depuração USB" e tocar em **Configurar**

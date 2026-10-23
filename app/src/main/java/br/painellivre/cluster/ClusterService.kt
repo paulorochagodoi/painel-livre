@@ -49,6 +49,7 @@ class ClusterService : LifecycleService() {
     private lateinit var controller: ClusterController
     private val op = Mutex()
     private lateinit var automation: PanelAutomation
+    private var externalPackage: String? = null
     private var lastAutoAttempt = 0L
     private val yieldPolicy = YieldPolicy()
 
@@ -87,7 +88,7 @@ class ClusterService : LifecycleService() {
 
         lifecycleScope.launch {
             coverEvents.collect {
-                if (_status.value !is ClusterStatus.Active) return@collect
+                if (_status.value !is ClusterStatus.Active || externalPackage != null) return@collect
                 if (yieldPolicy.onTakeover(System.currentTimeMillis())) {
                     AppLog.w("Outro app cobriu o painel — retomando em 3 s")
                     delay(3_000)
@@ -109,7 +110,7 @@ class ClusterService : LifecycleService() {
             while (true) {
                 delay(15_000)
                 val st = _status.value
-                if (st is ClusterStatus.Active && ClusterActivity.runningOnDisplay == null) {
+                if (st is ClusterStatus.Active && externalPackage == null && ClusterActivity.runningOnDisplay == null) {
                     AppLog.w("Tela do painel sumiu — tentando reabrir")
                     launchOnly()
                 }
@@ -120,6 +121,13 @@ class ClusterService : LifecycleService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         when (intent?.action) {
+            ACTION_ROUTE_REQUEST -> lifecycleScope.launch {
+                if (PanelContent.showOnRouteRequest(prefs.clusterMode)) {
+                    yieldPolicy.reset()
+                    automation.cancelRestore()
+                    show()
+                }
+            }
             ACTION_SHOW -> lifecycleScope.launch { yieldPolicy.reset(); show() }
             ACTION_RESTORE -> lifecycleScope.launch { restore() }
             ACTION_LAUNCH_ONLY -> lifecycleScope.launch { yieldPolicy.reset(); launchOnly() }
@@ -130,6 +138,7 @@ class ClusterService : LifecycleService() {
     }
 
     private suspend fun autoShow() {
+        if (_status.value is ClusterStatus.Working || _status.value is ClusterStatus.Active) return
         val now = System.currentTimeMillis()
         if (now - lastAutoAttempt < 60_000) return // não insistir em loop se a firmware recusar
         lastAutoAttempt = now
@@ -141,16 +150,23 @@ class ClusterService : LifecycleService() {
         val target = controller.activate()
         if (target == null) {
             _status.value = ClusterStatus.Failed("display do painel não apareceu (veja Diagnóstico)")
+            updateNotification()
             return@withLock
         }
-        val ok = controller.launchClusterUi(target)
+        externalPackage = PanelContent.externalPackage(prefs.panelContent, prefs.navApp)
+        val ok = externalPackage?.let { controller.launchNavigation(target, it) }
+            ?: controller.launchClusterUi(target)
         _status.value = if (ok) ClusterStatus.Active(target.displayId)
-        else ClusterStatus.Failed("não consegui abrir a tela no display ${target.displayId}")
+        else ClusterStatus.Failed("não consegui abrir no painel; tente Mapa integrado em Ajustes e veja Diagnóstico")
+        if (!ok) AppLog.w("Abertura no painel falhou: conteúdo=${prefs.panelContent}; veja Diagnóstico")
         updateNotification()
     }
 
     private suspend fun launchOnly() = op.withLock {
-        val t = controller.launchOnly()
+        val t = if (externalPackage != null) {
+            val target = controller.findClusterDisplay() ?: controller.findClusterDisplayViaShell()
+            target?.takeIf { controller.launchNavigation(it, externalPackage!!) }
+        } else controller.launchOnly()
         _status.value = if (t != null) ClusterStatus.Active(t.displayId)
         else ClusterStatus.Failed("nenhum display de painel aberto (ative o painel primeiro)")
         updateNotification()
@@ -158,7 +174,7 @@ class ClusterService : LifecycleService() {
 
     /** Pedido do vigia da tela: fecha e reabre a tela do painel, sem mexer no AutoContainer. */
     private suspend fun relaunch() = op.withLock {
-        if (_status.value !is ClusterStatus.Active) return@withLock
+        if (_status.value !is ClusterStatus.Active || externalPackage != null) return@withLock
         val t = controller.findClusterDisplay() ?: controller.findClusterDisplayViaShell() ?: return@withLock
         val ok = controller.relaunch(t)
         AppLog.i("Tela do painel reaberta: ${if (ok) "ok" else "falhou"}")
@@ -168,6 +184,7 @@ class ClusterService : LifecycleService() {
         automation.cancelRestore()
         _status.value = ClusterStatus.Working
         controller.restore()
+        externalPackage = null
         _status.value = ClusterStatus.Idle
         updateNotification()
     }
@@ -200,6 +217,7 @@ class ClusterService : LifecycleService() {
 
     companion object {
         private const val NOTIF_ID = 42
+        const val ACTION_ROUTE_REQUEST = "br.painellivre.ROUTE_REQUEST"
         const val ACTION_SHOW = "br.painellivre.SHOW"
         const val ACTION_RESTORE = "br.painellivre.RESTORE"
         const val ACTION_SIMULATE = "br.painellivre.SIMULATE"

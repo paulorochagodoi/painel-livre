@@ -2,6 +2,7 @@ package br.painellivre.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.text.InputType
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -12,6 +13,7 @@ import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import br.painellivre.R
+import br.painellivre.adb.HomeChoice
 import br.painellivre.adb.SystemSetup
 import br.painellivre.cluster.ClusterService
 import br.painellivre.util.Prefs
@@ -63,8 +65,35 @@ class SettingsActivity : AppCompatActivity() {
             }
             onClick("grant_all") { run { SystemSetup.grantAll(requireContext()) } }
             onClick("diagnostics") { startActivity(Intent(requireContext(), DiagnosticsActivity::class.java)) }
-            onClick("become_home") { run { SystemSetup.becomeHome(requireContext()) } }
+            onClick("become_home") { becomeHome() }
             onClick("restore_home") { run { SystemSetup.restoreHome(requireContext()) } }
+        }
+
+        /** Sem ADB, cai na tela "Tela inicial" do Android ou no seletor com "Sempre" (issue #7). */
+        private fun becomeHome() {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val ctx = requireContext()
+                val r = SystemSetup.becomeHome(ctx)
+                val dialog = AlertDialog.Builder(ctx).setMessage(r.message)
+                when (r.fallback) {
+                    HomeChoice.Step.HOME_SETTINGS -> dialog.setPositiveButton(android.R.string.ok) { _, _ ->
+                        openOr(Intent(Settings.ACTION_HOME_SETTINGS), homeIntent())
+                    }
+                    HomeChoice.Step.CHOOSER -> dialog.setPositiveButton(android.R.string.ok) { _, _ -> openOr(homeIntent(), null) }
+                    else -> dialog.setPositiveButton(android.R.string.ok, null)
+                }
+                dialog.show()
+            }
+        }
+
+        private fun homeIntent() = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+
+        private fun openOr(first: Intent, second: Intent?) {
+            try {
+                startActivity(first.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (t: Throwable) {
+                if (second != null) runCatching { startActivity(second.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }
         }
 
         private fun onClick(key: String, action: () -> Unit) {

@@ -7,15 +7,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.Locale
-import kotlin.math.roundToInt
 
 /**
- * Tempo agora no lugar do carro, pelo Open-Meteo (aberto, sem chave). Só vai a posição
- * arredondada a ~10 km, e no máximo a cada 15 minutos.
+ * Tempo no lugar do carro, pelo Open-Meteo (aberto, sem chave). Só vai a posição arredondada a
+ * ~10 km, e no máximo a cada 15 minutos. O mesmo pedido traz a previsão das próximas horas e dias
+ * (issue #4, tela `WeatherActivity`); a leitura fica em [ForecastParser].
  */
 object WeatherRepository {
 
@@ -29,17 +27,29 @@ object WeatherRepository {
     private val _weather = MutableStateFlow<Weather?>(null)
     val weather: StateFlow<Weather?> = _weather.asStateFlow()
 
+    private val _forecast = MutableStateFlow<Forecast?>(null)
+    val forecast: StateFlow<Forecast?> = _forecast.asStateFlow()
+
     private var lastFetch = 0L
 
-    suspend fun refresh(loc: Location?, force: Boolean = false) {
-        loc ?: return
+    const val INTERVAL_MS = 15 * 60_000L
+    /** Mesmo "Atualizar" à força espera isto entre pedidos (o Open-Meteo é gratuito; não abusar). */
+    const val FORCE_MIN_MS = 60_000L
+
+    /** **Puro.** Decide se vale pedir de novo. */
+    fun shouldFetch(now: Long, last: Long, hasData: Boolean, force: Boolean): Boolean = when {
+        !hasData -> now - last >= FORCE_MIN_MS || last == 0L
+        force -> now - last >= FORCE_MIN_MS
+        else -> now - last >= INTERVAL_MS
+    }
+
+    /** Devolve true se a previsão está disponível depois da chamada. */
+    suspend fun refresh(loc: Location?, force: Boolean = false): Boolean {
+        loc ?: return _forecast.value != null
         val now = System.currentTimeMillis()
-        if (!force && now - lastFetch < 15 * 60_000L && _weather.value != null) return
+        if (!shouldFetch(now, lastFetch, _weather.value != null && _forecast.value != null, force)) return _forecast.value != null
         lastFetch = now
-        val lat = String.format(Locale.ROOT, "%.1f", loc.latitude)
-        val lon = String.format(Locale.ROOT, "%.1f", loc.longitude)
-        val url = "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon" +
-            "&current=temperature_2m,weather_code,is_day&timezone=auto"
+        val url = ForecastParser.url(loc.latitude, loc.longitude)
         try {
             val json = withContext(Dispatchers.IO) {
                 (URL(url).openConnection() as HttpURLConnection).run {
@@ -48,15 +58,13 @@ object WeatherRepository {
                     inputStream.bufferedReader().use { it.readText() }.also { disconnect() }
                 }
             }
-            val cur = JSONObject(json).getJSONObject("current")
-            _weather.value = Weather(
-                tempC = cur.getDouble("temperature_2m").roundToInt(),
-                code = cur.getInt("weather_code"),
-                isDay = cur.optInt("is_day", 1) == 1,
-            )
+            val f = ForecastParser.parse(json) ?: throw IllegalStateException("resposta sem 'current'")
+            _forecast.value = f
+            _weather.value = Weather(tempC = f.current.tempC, code = f.current.code, isDay = f.current.isDay)
         } catch (t: Throwable) {
             AppLog.w("Tempo indisponível: ${t.javaClass.simpleName}")
         }
+        return _forecast.value != null
     }
 
     /** Códigos WMO usados pelo Open-Meteo. */

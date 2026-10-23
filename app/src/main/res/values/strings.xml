@@ -61,4 +61,28 @@
     <string name="good_morning">Bom dia</string>
     <string name="good_afternoon">Boa tarde</string>
     <string name="good_evening">Boa noite</string>
+
+    <string name="close">Fechar</string>
+
+    <!-- Discador interno (issue #3) -->
+    <string name="dial_hint">Digite o número</string>
+    <string name="dial_backspace">Apagar</string>
+    <string name="dial_call">Ligar</string>
+    <string name="dial_redial">Rediscar</string>
+    <string name="dial_car_app">App do carro</string>
+    <string name="dial_no_last">Nenhum número ligado ainda</string>
+    <string name="dial_type_number">Digite o número com DDD</string>
+    <string name="dial_requested">Chamada pedida. Se não começar, use o telefone pelo volante ou pelo celular.</string>
+    <string name="dial_in_car_app">Número copiado. Disque no %1$s.</string>
+    <string name="dial_no_way">A central não deixou ligar daqui. Use o telefone pelo volante ou pelo celular.</string>
+
+    <!-- Previsão do tempo (issue #4) -->
+    <string name="weather_title">Previsão do tempo</string>
+    <string name="weather_refresh">Atualizar</string>
+    <string name="weather_hours">Próximas horas</string>
+    <string name="weather_days">Próximos dias</string>
+    <string name="weather_loading">Carregando a previsão…</string>
+    <string name="weather_no_gps">Esperando a posição do GPS para buscar a previsão.</string>
+    <string name="weather_unavailable">Previsão indisponível agora. Confira a internet e toque em Atualizar.</string>
+    <string name="weather_credit">Dados: Open-Meteo</string>
 </resources>

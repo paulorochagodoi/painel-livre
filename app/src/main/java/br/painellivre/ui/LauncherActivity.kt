@@ -142,6 +142,13 @@ class LauncherActivity : AppCompatActivity() {
         }
     }
 
+    /** Como tela inicial (singleTask), o botão Início chega aqui: volta para a aba Início. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.hasCategory(Intent.CATEGORY_HOME) && page != PAGE_HOME) showPage(PAGE_HOME)
+    }
+
     override fun onResume() {
         super.onResume()
         MediaRepository.start(this)
@@ -387,6 +394,7 @@ class LauncherActivity : AppCompatActivity() {
             if (i != null) startSafely(i) else Places.openApp(this, prefs.navApp)
         }
         click(R.id.setupButton) { runSetup() }
+        click(R.id.weatherCard) { startActivity(Intent(this, WeatherActivity::class.java)) } // issue #4
         click(R.id.dockPanel) { toggleCluster() }
         click(R.id.dockNavApp) { if (!Places.openApp(this, prefs.navApp)) toast("App não instalado") }
     }
@@ -410,7 +418,8 @@ class LauncherActivity : AppCompatActivity() {
         click(R.id.tabNav) { showPage(PAGE_NAV) }
         click(R.id.tabApps) { showPage(PAGE_APPS) }
         click(R.id.tabMedia) { openMedia() }
-        click(R.id.tabPhone) { startSafely(Intent(Intent.ACTION_DIAL)) }
+        // Discador próprio: a DiLink nem sempre tem app para ACTION_DIAL (issue #3).
+        click(R.id.tabPhone) { startActivity(Intent(this, DialerActivity::class.java)) }
         click(R.id.tabSettings) { startActivity(Intent(this, SettingsActivity::class.java)) }
     }
 

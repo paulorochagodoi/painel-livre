@@ -23,6 +23,8 @@ O que faz:
   uma foto sua) com a autonomia e o tempo; cartões de Mídia (o que está tocando, com
   anterior/tocar/próxima), Bateria, Painel e Destino (Casa/Trabalho); barra de baixo com Início,
   Navegação, Mídia, Telefone, Apps e Ajustes. Temas claro e escuro, tela deitada ou em pé.
+- **Telefone e tempo**: discador próprio (liga pelo sistema ou abre o app de telefone do carro) e,
+  tocando no tempo, a previsão das próximas horas e dos próximos dias (Open-Meteo).
 - **Aba Navegação**: busca de endereço (Photon/OpenStreetMap), lugares guardados e recentes, mapa
   com a posição do carro; escolha Google Maps ou Waze e a rota abre nele.
 - **Automático**: liga o mapa no painel quando uma rota começa e devolve o painel original da BYD

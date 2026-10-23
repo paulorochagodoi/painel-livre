@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Previsão do tempo (issue #4): agora, próximas horas e próximos dias. As linhas de horas e dias
+     são criadas na WeatherActivity; as cores vêm do tema dia/noite (Palette, por tag). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/backdrop"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="28dp"
+            android:paddingTop="20dp"
+            android:paddingEnd="28dp"
+            android:paddingBottom="28dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/wxClose"
+                    style="@style/CcRoundButton"
+                    android:layout_marginStart="0dp"
+                    android:contentDescription="@string/close"
+                    android:src="@drawable/ic_close" />
+
+                <TextView
+                    style="@style/CcTitle"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/weather_title" />
+
+                <TextView
+                    android:id="@+id/wxRefresh"
+                    style="@style/CcChipButton"
+                    android:layout_width="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:paddingStart="22dp"
+                    android:paddingEnd="22dp"
+                    android:tag="chip"
+                    android:text="@string/weather_refresh" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/wxMessage"
+                style="@style/CcSub"
+                android:layout_marginTop="24dp"
+                android:layout_gravity="center_horizontal"
+                android:textSize="18sp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/wxContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Agora -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="20dp"
+                    android:tag="card">
+
+                    <ImageView
+                        android:id="@+id/wxIcon"
+                        android:layout_width="88dp"
+                        android:layout_height="88dp"
+                        android:importantForAccessibility="no" />
+
+                    <TextView
+                        android:id="@+id/wxTemp"
+                        style="@style/CcBig"
+                        android:layout_marginStart="16dp"
+                        android:textSize="64sp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="24dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/wxDesc"
+                            style="@style/CcTitle"
+                            android:textSize="22sp" />
+
+                        <TextView
+                            android:id="@+id/wxDetails"
+                            style="@style/CcSub"
+                            android:layout_marginTop="4dp"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/wxToday"
+                            style="@style/CcSub"
+                            android:layout_marginTop="2dp"
+                            android:textSize="16sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    style="@style/CcSub"
+                    android:layout_marginTop="20dp"
+                    android:letterSpacing="0.08"
+                    android:text="@string/weather_hours"
+                    android:textAllCaps="true" />
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/wxHours"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+                </HorizontalScrollView>
+
+                <TextView
+                    style="@style/CcSub"
+                    android:layout_marginTop="20dp"
+                    android:letterSpacing="0.08"
+                    android:text="@string/weather_days"
+                    android:textAllCaps="true" />
+
+                <LinearLayout
+                    android:id="@+id/wxDays"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="vertical"
+                    android:paddingStart="20dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="20dp"
+                    android:paddingBottom="6dp"
+                    android:tag="card" />
+
+                <TextView
+                    style="@style/CcSub"
+                    android:layout_marginTop="12dp"
+                    android:tag="t3"
+                    android:text="@string/weather_credit"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>

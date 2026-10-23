@@ -4,6 +4,28 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 Nenhuma versão foi testada no carro ainda: todos os testes foram no emulador (`docs/AMBIENTE.md`).
 
+## Não lançado — 2026-10-23 — central: tela inicial, discador e previsão (issues #7, #3, #4)
+
+- **#7 Tela inicial**: causa — o filtro `HOME`/`DEFAULT` ficava no alias `HomeAlias` desligado no
+  manifesto, então o Android e a BYD não listavam o Painel Livre como launcher; além disso "Usar como
+  tela inicial" podia guardar o seletor do Android (`ResolverActivity`) como "launcher original" e não
+  conferia se o `set-home-activity` deu certo. Agora o alias vem ligado; o botão confere antes e depois
+  (`HomeChoice`), sem ADB abre a tela "Tela inicial" do Android ou o seletor com "Sempre"; "Voltar ao
+  launcher da BYD" desliga o alias se não souber o original. O botão Início volta para a aba Início.
+  Diagnóstico mostra o launcher atual, os candidatos e os apps de telefone.
+- **#3 Telefone**: discador próprio (`DialerActivity`): teclado, formato brasileiro, Rediscar, apagar
+  (toque longo limpa), "+" no toque longo do 0. Liga por `ACTION_CALL` (pede `CALL_PHONE` uma vez),
+  depois `ACTION_DIAL`, `TelecomManager.placeCall` e por último abre o app de telefone/Bluetooth do
+  carro com o número copiado. Sem nenhum caminho, avisa em vez de "nenhum app". O número não vai para o log.
+- **#4 Tempo**: toque no tempo da tela inicial abre a previsão (`WeatherActivity`): agora (sensação,
+  umidade, vento, máx/mín, nascer/pôr do sol), 24 horas e 7 dias. Mesmo pedido ao Open-Meteo, mesma
+  posição arredondada a 0,1°. Corrigido: sem internet o app pedia o tempo a cada posição do GPS; agora
+  no máximo 1 vez por minuto (15 min com dados).
+- Testes: `HomeChoiceTest` (7), `DialerTest` (10), `ForecastTest` (9) — 99 no total.
+- Validação: `testDebugUnitTest` 99/99, `assembleDebug` e `lintDebug` com 0 erros. Sem emulador nem
+  carro nesta etapa; o que depende do carro está em `docs/PLANO.md` (Fase 1, item 8).
+- Sem novo APK de release nem mudança da versão 0.3.0.
+
 ## Não lançado — 2026-10-22 — regressão JVM (issue #1)
 
 - 32 testes novos (73 no total): notificações Maps/Waze, manobras, distância, rua, resumo e chegada;

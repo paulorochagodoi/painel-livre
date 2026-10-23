@@ -105,6 +105,11 @@ class DiagnosticsActivity : AppCompatActivity() {
                     "echo car.type=\$(getprop persist.sys.car.type) dilink=\$(getprop ro.build.dilink.version)\$(getprop ro.dilink.version); " +
                     "service check AutoContainer; service check auto_container; " +
                     "echo; dumpsys display | grep -E 'DisplayInfo\\{' | head -12; " +
+                    // Issues #7 e #3: qual launcher responde ao Início, quais são candidatos e que app de telefone existe.
+                    "echo; echo tela_inicial=\$(cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tail -1); " +
+                    "echo launchers:; cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.HOME | grep /; " +
+                    "echo telefone:; cmd package query-activities --brief -a android.intent.action.DIAL -d tel:190 | grep /; " +
+                    "pm list packages | grep -iE 'launcher|dialer|phone|telecom|bluetooth'; " +
                     "echo; pm list packages | grep -iE 'xdja|telenav|amap|navi|cluster|dashcast|sealnav' ",
             ),
         )

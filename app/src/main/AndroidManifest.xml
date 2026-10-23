@@ -11,6 +11,9 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Só para o ícone de Bluetooth ligado/desligado na barra de cima. -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
+    <!-- Discador interno (issue #3): ligar direto quando a central tiver o serviço de chamadas.
+         Pedida só ao tocar em Ligar; sem ela o discador abre o app de telefone com o número. -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
 
     <!-- Leitura de dados do carro (bateria, autonomia, combustível, hodômetro) pelo SDK BYD.
          Mesmas permissões de leitura que o BYD Navigator (Telenav) declara. Só leitura. -->
@@ -21,6 +24,8 @@
     <uses-permission android:name="android.permission.BYDAUTO_INSTRUMENT_GET" />
 
     <uses-feature android:glEsVersion="0x00030000" android:required="true" />
+    <!-- A central não tem chip: o telefone é o celular por Bluetooth. -->
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <application
         android:name=".App"
@@ -47,11 +52,12 @@
             </intent-filter>
         </activity>
 
-        <!-- Alias HOME: desligado por padrão. Ligado só quando o usuário escolhe
-             "Usar como tela inicial", para não abrir o seletor de launcher sem pedir. -->
+        <!-- Alias HOME: ligado (issue #7). Desligado, o Android e a BYD não listavam o app como
+             tela inicial. "Usar como tela inicial" escolhe o preferido pelo ADB; "Voltar ao
+             launcher da BYD" desliga o alias se não souber qual era o original. -->
         <activity-alias
             android:name=".ui.HomeAlias"
-            android:enabled="false"
+            android:enabled="true"
             android:exported="true"
             android:targetActivity=".ui.LauncherActivity">
             <intent-filter>
@@ -81,6 +87,15 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|keyboardHidden|uiMode"
             android:exported="false"
             android:theme="@style/Theme.PainelLivre.Cluster" />
+
+        <activity
+            android:name=".ui.DialerActivity"
+            android:exported="false"
+            android:windowSoftInputMode="stateAlwaysHidden" />
+
+        <activity
+            android:name=".ui.WeatherActivity"
+            android:exported="false" />
 
         <activity
             android:name=".ui.SettingsActivity"

@@ -33,6 +33,7 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | `adb` | `SelfAdb.kt` | Conexão única dadb com `127.0.0.1:5555`, reconecta 1× se cair, `ensureReady` (15×2 s no boot), `ready: StateFlow<Boolean?>`, mensagens de erro em pt-BR por tipo (porta fechada, chave recusada, tempo esgotado) |
 | | `SystemSetup.kt` | "Conceder tudo": `pm grant` de localização e permissões BYD de leitura, `cmd notification allow_listener`, `deviceidle whitelist`, `appops RUN_ANY_IN_BACKGROUND`, `set-standby-bucket active`; virar/deixar de ser a tela inicial (`cmd package set-home-activity`) |
 | `cluster` | `ClusterController.kt` | Acha o display do painel (app e `dumpsys display`), mede e guarda a geometria, decide o código de tamanho, manda `sendInfo` (lista segura), sequência de ativação/restauração, abre a tela pelo shell (`--windowingMode 1`, depois 5 + `am task resize`, depois `startActivity` direto) |
+| | `PanelAutomation.kt` | **Kotlin puro.** Decisão dos modos automático/navegação/manual e temporizador de restauração, testados com tempo virtual |
 | | `PanelSize.kt` | **Kotlin puro.** Decide se manda 29/30/31 (ver "Regras de segurança" no `AGENTS.md`) |
 | | `ClusterService.kt` | Serviço em primeiro plano: GPS, liga o painel quando a rota começa (modo `nav`), devolve o original depois de `restore_delay` s, vigia de 15 s que reabre a tela, convivência com outros apps, ações `SHOW/RESTORE/LAUNCH_ONLY/RELAUNCH/SIMULATE`, `status: StateFlow<ClusterStatus>` |
 | | `ClusterActivity.kt` | Tela do painel: MapLibre (OpenFreeMap), carro como View fixa no ponto focal, câmera por quadro (Choreographer + `PoseSmoother`), limite de fps (`setMaximumFps`), vigia (`FreezeWatch`), cartões da manobra e da chegada, tema dia/noite, sai se cair no display 0, avisa o serviço quando é coberta |
@@ -124,7 +125,44 @@ Frações da altura `h` e largura `w` do display (1920×720 no Song Plus), dentr
 
 ## Testes
 
-`app/src/test` (JVM, sem Android): `NavParserTest`, `PanelSizeTest`, `PoseSmootherTest`,
-`FreezeWatchTest` (inclui `YieldPolicy`), `CockpitTest` (Photon, tema, códigos do tempo). Regra: lógica
-nova que dá para separar do Android vai para uma classe Kotlin pura com teste. `org.json` real entra
-só nos testes (`testImplementation("org.json:json")`); no app é o do Android.
+`app/src/test` tem **73 testes JVM** (41 anteriores + 32 novos na issue #1), sem carro, emulador,
+rede ou espera de tempo real. Execute com JDK 17:
+
+```bash
+./gradlew testDebugUnitTest
+./gradlew lintRelease
+```
+
+| Suíte | Cobertura |
+|---|---|
+| `NavParserTest` e `NavRegressionTest` | Maps/Waze: manobra (seta de reserva), distância, rua, instrução, resumo, chegada, texto expandido/repetido, prioridade do título, espaços Unicode, inglês/unidades imperiais e ruído |
+| `PanelAutomationTest` | modos `nav`/`always`/`manual`, painel já ativo, prazo exato, atraso zero/600 s, nova rota cancelando a devolução, novo prazo e cancelamento explícito |
+| `PrefsTest` | padrões, modos, Maps/Waze, valores ausentes/inválidos e limites de atraso, inclinação, fps e quatro margens; opções de boot e recuperação |
+| `PanelSizeTest` | escolha segura do código de tamanho e geometria |
+| `PoseSmootherTest` | posição, rumo, limites de previsão e ruído de GPS |
+| `FreezeWatchTest` | vigia, orçamento de recuperação e convivência (`YieldPolicy`) |
+| `CockpitTest` | Photon, tema e códigos do tempo |
+
+`PanelAutomation` contém a decisão usada pelo `ClusterService`; as chamadas Android/ADB continuam
+no serviço. `kotlinx-coroutines-test` controla o tempo dos testes. Um teste reproduz a restauração
+que cancelava o próprio Job antes da pausa entre 18 e 0: ao vencer o prazo, a referência do Job agora
+é limpa antes de chamar a restauração, evitando interromper a sequência.
+
+`Prefs` aceita internamente um `SharedPreferences` fornecido pelo teste. Um substituto em memória
+via proxy testa os getters reais, padrões e conversões sem inicializar o Android. A persistência do
+Android e os setters não são validados por esses testes.
+
+Os exemplos de notificação vêm de `NavSimulator` e `NavParserTest`: **imitam formatos reais**, mas
+não são capturas confirmadas no carro. Os testes validam o parse dos quatro campos textuais; não
+validam entrega/remoção de notificações pelo sistema nem extração/recoloração do bitmap da seta.
+A ativação real via AutoContainer, integração com ADB, ciclo de vida Android e renderização ainda
+exigem os roteiros de emulador e o primeiro teste no carro. Esta etapa foi validada somente na JVM.
+
+O CI (`.github/workflows/android.yml`) tem etapa explícita `./gradlew --no-daemon testDebugUnitTest`,
+seguida de lint e build debug; os relatórios são publicados mesmo em falha. A execução do workflow
+continua desativada por cobrança da conta, conforme `AGENTS.md`; não foi reativada nesta tarefa.
+Relatórios locais: `app/build/reports/tests/testDebugUnitTest/` e
+`app/build/reports/lint-results-release.html`.
+
+Regra: lógica nova que dá para separar do Android vai para Kotlin puro com teste.
+`org.json` real entra só nos testes (`testImplementation("org.json:json")`); no app é o do Android.

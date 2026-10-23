@@ -18,7 +18,7 @@ Brasil**, frases simples, sem jargão desnecessário.
 
 ## 2. Onde o projeto está (2026-10-22)
 
-- **v0.3.0**, compilada, 41 testes de unidade passando, lint sem erros, testada **só no emulador**.
+- **v0.3.0**, compilada; suíte ampliada para 73 testes de unidade passando, lint sem erros, testada **só no emulador**.
   **Nada foi testado no carro ainda** — o próximo passo combinado é o primeiro teste no carro
   (`docs/PLANO.md`, Fase 1). O dono ainda não liberou acesso ADB ao carro para o agente.
 - Funciona (emulador): tela central estilo cockpit (dia/noite, deitada/em pé), aba Navegação com busca

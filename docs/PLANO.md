@@ -1,7 +1,7 @@
 # Plano — Painel Livre
 
 Atualizado: 2026-10-22. Estado: **v0.3.0** = Fase 3 itens 1–6 (v0.2.0) + **interface redesenhada no
-estilo do SealNav** (central tipo cockpit e painel com o layout dele). 41 testes de unidade, testada
+estilo do SealNav** (central tipo cockpit e painel com o layout dele). 73 testes de unidade, testada
 no emulador (Android 10, display secundário 1920×720); **ainda não testada no carro**.
 APK: `PainelLivre-v0.3.0-release.apk` (fora do repositório, na pasta de trabalho do dono; instala por
 cima das anteriores, mesma assinatura). Guia para agentes: `AGENTS.md`; histórico: `CHANGELOG.md`.
@@ -20,6 +20,13 @@ e de entender, igual a ele; a única diferença é a rota vir do Google Maps ou 
 | 5 | Extras: câmeras no painel, voz, launcher 3D | Fases 2–3 | opcional |
 
 ---
+
+## Regressão JVM — issue #1
+
+Suíte ampliada de 41 para 73 testes, sem carro ou emulador. Cobertura de notificações Maps/Waze,
+modos do painel e atraso de restauração com tempo virtual, preferências e regras puras já existentes.
+Corrigido o cancelamento da própria restauração automática antes de completar a sequência 18 → 0.
+Detalhes e limites em `ARQUITETURA.md`, seção Testes. O primeiro teste no carro continua pendente.
 
 ## Fase 1 — Primeiro teste no carro
 

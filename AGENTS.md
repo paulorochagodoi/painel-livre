@@ -96,7 +96,10 @@ porque o GitHub recusou a execução por cobrança da conta; depois que o dono r
 - **Telefone**: o discador só liga quando o motorista toca em Ligar; nunca ligar sozinho nem para
   número que não foi digitado. O número não vai para o log.
 - **SDK/`autoservice` da BYD**: ler só por nome de getter (reflexão), nunca por `service call autoservice
-  <n>`: os números de transação mudam com a firmware e, na DiLink 3, podem cair num setter. O modo de
+  <n>`: os números de transação mudam com a firmware e, na DiLink 3, podem cair num setter.
+  **Única exceção** (v0.5.1, conferida no carro): `PanelMenu.ADB_READ_COMMAND`
+  (`service call autoservice 5 i32 1007 i32 1086337074`, leitura do menu do painel), comando fixo,
+  só no Android 10 e só se o SDK recusar a permissão. Nunca a transação 6 (set) nem outro número. O modo de
   debug só lê (`settings list`, `getprop`, `dumpsys`, `logcat -d`); nada de `settings put`/`setprop`.
 - Nunca mexer nas chaves ADB do sistema (o comando `adbkeys` do SealNav autoriza/apaga chaves sem aviso:
   **não adotar**).
@@ -191,7 +194,8 @@ porque o GitHub recusou a execução por cobrança da conta; depois que o dono r
   discador só avisa — nunca tenta outro caminho sozinho (ligaria duas vezes).
 - Menu de navegação do painel (Simples/Pequeno/Cheio/OFF, issue #9): nenhum app de terceiros o segue;
   o OFF não esconde a projeção 16/35. O Painel Livre só muda o próprio desenho (`PanelMenuFrame`) e só
-  com "Seguir o menu" ligado; mapeamento 1–4 vem do DiPlay (DiLink 5.0), não confirmado na DiLink 3.
+  com "Seguir o menu" ligado; mapeamento 1 OFF, 2 Simples, 3 Pequeno, 4 Cheio **confirmado na DiLink 3**
+  (2026-10-23). O SDK recusa no uid do app; a leitura real vem do ADB (`PanelMenuReader`).
 - O MapLibre só desenha quando algo muda: carro parado sem quadros é normal (o vigia sabe disso).
 
 ## 10. Trabalhando com o dono

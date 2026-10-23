@@ -120,7 +120,7 @@ class DebugActivity : AppCompatActivity() {
             "Debug: ${if (DebugLog.enabled) "ligado" else "desligado"}",
             "ADB: ${if (DebugProbe.adbRunning.value) "coletando" else "parado"}${if (SelfAdb.connected) "" else " (sem conexão)"}",
             "Seguir menu: ${if (follow) "sim" else "não"}",
-            "Leitura do menu: ${r?.let { it.error ?: "${it.raw} = ${it.mode.label}" } ?: "—"}",
+            "Leitura do menu: ${r?.let(PanelMenuWatcher::describe) ?: "—"}",
             "Teste: ${forced?.label ?: "nenhum"}",
         ).joinToString("  ·  ")
         pauseButton.text = if (DebugProbe.adbRunning.value) "Pausar" else "Retomar"

@@ -129,6 +129,16 @@ Não fazer: `service call autoservice …` à mão sem antes confirmar o número
 (pode ser um setter nesta firmware), `setprop`, `settings put`, broadcasts adivinhados, códigos 17/39
 no AutoContainer. Se o carro confirmar outro mapeamento, ajustar `PanelMenu.modeOf` e o teste.
 
+**Resultado no carro (2026-10-23, DiLink 3.0, Android 10).** (a) o registrador existe, mas o SDK
+recusa no uid do app ("permissão BYD recusada"); pelo ADB local (uid 2000)
+`service call autoservice 5 i32 1007 i32 1086337074` responde `Result: Parcel(00000000 0000000N …)`;
+(b) confirmado pelo dono trocando o menu: 1 = OFF, 2 = Simples, 3 = Pequeno, 4 = Cheio; erro aparece
+como 0xffffd8e5. **v0.5.1 (teste)**: o `PanelMenuReader` lê pelo ADB quando o SDK recusa (só esse
+comando, só leitura, só Android 10) a cada 1 s com o painel aberto e "Seguir o menu" ligado.
+Conferir no carro: ligar **Seguir o menu**, ativar o painel, trocar Simples/Pequeno/Cheio/OFF e ver
+no registro do debug `[menu] ADB: bruto=N … → modo` e o desenho mudar em ~2 s; (c) Pequeno no meio
+ainda é hipótese.
+
 ## Issue #15 — discador liga direto pelo celular (2026-10-23, não lançado)
 
 No carro (v0.4.1) a ligação ia para o app de telefone da BYD. Agora os caminhos diretos vêm antes

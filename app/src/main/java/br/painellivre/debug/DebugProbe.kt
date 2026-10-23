@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import android.os.Bundle
 import br.painellivre.adb.SelfAdb
 import br.painellivre.car.InstrumentSdk
+import br.painellivre.cluster.PanelMenuWatcher
 import br.painellivre.util.AppLog
 import br.painellivre.util.Prefs
 import kotlinx.coroutines.CoroutineScope
@@ -24,7 +25,8 @@ import kotlinx.coroutines.launch
 /**
  * Coleta do modo de debug (issue #9). Ligado pelo motorista em Ajustes; desligado, não roda nada.
  * A cada [INTERVAL_MS]:
- *  - getters candidatos do SDK do painel e `INSTRUMENT_NAVI_TYPE` (uid do app, sem ADB);
+ *  - getters candidatos do SDK do painel (uid do app, sem ADB) e `INSTRUMENT_NAVI_TYPE` (SDK; se recusar,
+ *    a leitura fixa pelo ADB do [br.painellivre.cluster.PanelMenuReader]);
  *  - pelo ADB local (uid 2000), um comando só de leitura com settings, getprop, histórico de
  *    broadcasts e logcat filtrado ([ProbeParse.COLLECT_COMMAND]) — o [ProbeTracker] mostra o que mudou;
  *  - broadcasts conhecidos (e os que o motorista digitar) com os extras.
@@ -133,9 +135,10 @@ object DebugProbe {
             val now = System.currentTimeMillis()
 
             // SDK do painel: sem ADB, sob o uid do app.
-            val nav = InstrumentSdk.naviType(app)
+            // INSTRUMENT_NAVI_TYPE: SDK e, se recusar, o ADB local (só leitura, PanelMenuReader).
+            val nav = PanelMenuWatcher.read(app)
             val sdk = InstrumentSdk.debugGetters(app) +
-                ("INSTRUMENT_NAVI_TYPE" to (nav.error?.let { "erro: $it" } ?: "${nav.raw} (${nav.mode.label}) ${nav.detail}"))
+                ("INSTRUMENT_NAVI_TYPE" to PanelMenuWatcher.describe(nav))
             for ((k, v) in sdk) if (sdkLast[k] != v) DebugLog.add("sdk", "$k = $v${sdkLast[k]?.let { " (era $it)" } ?: ""}")
             sdkLast = sdk
 
@@ -163,14 +166,14 @@ object DebugProbe {
     /** Fotografia completa, uma vez: pacotes, serviços, receptores, displays e telefone. */
     suspend fun snapshot(ctx: Context): String {
         val sdk = InstrumentSdk.debugGetters(ctx).entries.joinToString("\n") { "${it.key} = ${it.value}" }
-        val nav = InstrumentSdk.naviType(ctx)
+        val nav = PanelMenuWatcher.read(ctx)
         val shell = when (val r = SelfAdb.shell(ctx, SNAPSHOT_COMMAND)) {
             is SelfAdb.Result.Ok -> r.output
             is SelfAdb.Result.Error -> "ERRO no ADB: ${r.message}"
         }
         return buildString {
             append("# SDK do painel (uid do app)\n").append(sdk).append('\n')
-            append("INSTRUMENT_NAVI_TYPE = ").append(nav.error ?: "${nav.raw} (${nav.mode.label}) ${nav.detail}").append('\n')
+            append("INSTRUMENT_NAVI_TYPE = ").append(PanelMenuWatcher.describe(nav)).append(' ').append(nav.detail).append('\n')
             // Telefone e Bluetooth podem trazer números e endereços: escondidos antes de mostrar.
             append(ProbeParse.redactPersonal(shell))
         }

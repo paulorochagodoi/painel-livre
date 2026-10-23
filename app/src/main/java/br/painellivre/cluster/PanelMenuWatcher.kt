@@ -2,9 +2,11 @@ package br.painellivre.cluster
 
 import android.content.Context
 import android.graphics.Color
+import android.os.Build
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import br.painellivre.adb.SelfAdb
 import br.painellivre.car.InstrumentSdk
 import br.painellivre.debug.DebugLog
 import br.painellivre.util.AppLog
@@ -17,10 +19,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Acompanha o menu de navegação do painel (issue #9) enquanto a tela do painel está aberta e
- * diz como desenhar ([PanelMenu.Layout]). Só lê; nunca manda comando ao AutoContainer — mudar de
+ * diz como desenhar ([PanelMenu.Layout]): OFF = mapa e cartões escondidos (tela preta), Simples =
+ * só os cartões, Pequeno = no centro, Cheio = como sempre. Só lê; nunca manda comando ao AutoContainer — mudar de
  * opção só muda o que a nossa tela desenha (os vigias continuam valendo).
  */
 object PanelMenuWatcher {
@@ -32,6 +37,29 @@ object PanelMenuWatcher {
     /** Última leitura (a tela de debug mostra). */
     val last: StateFlow<InstrumentSdk.Reading?> = _last.asStateFlow()
 
+    private val readLock = Mutex()
+    @Volatile private var reader: PanelMenuReader? = null
+
+    /**
+     * Uma leitura do menu: SDK primeiro e, se recusar a permissão, ADB local (ver [PanelMenuReader]).
+     * Compartilhada com o modo de debug; o cadeado evita duas leituras ao mesmo tempo.
+     */
+    suspend fun read(ctx: Context): InstrumentSdk.Reading = readLock.withLock {
+        val app = ctx.applicationContext
+        val r = reader ?: PanelMenuReader(
+            sdk = { InstrumentSdk.naviType(app) },
+            adb = { cmd -> SelfAdb.shell(app, cmd) },
+            adbAllowed = Build.VERSION.SDK_INT == PanelMenu.ADB_SDK_INT,
+        ).also { reader = it }
+        r.read()
+    }
+
+    /** Texto de uma leitura para o log: valor bruto (decimal e hex), modo e origem. */
+    fun describe(r: InstrumentSdk.Reading): String {
+        val raw = r.raw?.let { "bruto=$it (${PanelMenu.hex(it)})" } ?: "sem valor"
+        return "${r.source}: $raw → ${r.mode.label}${r.error?.let { " — $it" } ?: ""}"
+    }
+
     fun layouts(ctx: Context): Flow<PanelMenu.Layout> = flow {
         val prefs = Prefs(ctx)
         val follower = PanelMenu.Follower()
@@ -41,9 +69,10 @@ object PanelMenuWatcher {
             val follow = prefs.panelMenuFollow
             val forced = override.value
             if (follow) {
-                val r = InstrumentSdk.naviType(ctx)
+                val r = read(ctx)
                 _last.value = r
-                val text = r.error ?: "valor ${r.raw} = ${r.mode.label}"
+                // Cada mudança lida (valor bruto e modo) vai para o log e, com o debug ligado, para o registro.
+                val text = describe(r)
                 if (text != lastReading) {
                     lastReading = text
                     AppLog.i("Menu do painel: $text")
@@ -61,7 +90,8 @@ object PanelMenuWatcher {
                 shown = layout
                 emit(layout)
             }
-            delay(if (follow || forced != null) 1_500 else 5_000)
+            // Leve: só roda com a tela do painel aberta; 1 s seguindo o menu, 5 s só olhando a opção.
+            delay(if (follow || forced != null) 1_000 else 5_000)
         }
     }.flowOn(Dispatchers.IO)
 }

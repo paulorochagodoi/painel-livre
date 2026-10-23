@@ -33,6 +33,10 @@ O que faz:
   ativação com limpeza de estado velho, código de tamanho do painel (só quando seguro) e pausas de
   1 s; tela aberta pelo shell em tela cheia; carro e câmera animados a cada quadro com limite de fps;
   vigia que redesenha/recria o mapa se travar; e convivência com outros apps no painel.
+- **Seguir o menu do painel** (Ajustes → Painel, experimental, desligado): quando você troca o menu
+  de navegação do painel pelos botões do volante, o mapa do Painel Livre acompanha — OFF esconde o
+  mapa, Simples mostra só a manobra, Pequeno fica no meio, Cheio é como sempre. Na DiLink 3 o app lê
+  essa opção pelo ADB local (só leitura, um comando fixo conferido no carro); nada é escrito no carro.
 - **Diagnóstico**: mostra se a central é dual-OS ou single-OS, versão do MCU do painel, displays,
   serviço AutoContainer, decisão do tamanho do painel, fps do mapa, GPS e dados do carro, com botão
   de copiar.

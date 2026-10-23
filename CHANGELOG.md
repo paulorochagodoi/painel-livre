@@ -4,6 +4,25 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
+## 0.5.1 (teste) — 2026-10-23 — "Seguir o menu do painel" funcionando na DiLink 3
+
+versionCode 7. Não lançada; sem APK assinado. Falta conferir no carro.
+
+- **Correção (issue #9)**: no carro (DiLink 3.0, Android 10) o SDK BYD recusava a leitura do menu no
+  processo do app ("permissão BYD recusada … ajudante uid 2000 pendente"), então "Seguir o menu" nunca
+  mudava nada. Agora, quando o SDK recusa por permissão, o app lê `INSTRUMENT_NAVI_TYPE` pelo ADB local
+  (uid 2000, o mesmo canal do `sendInfo`) com um único comando fixo,
+  `service call autoservice 5 i32 1007 i32 1086337074`, conferido no carro. Só leitura: nada de
+  transação 6 nem `INSTRUMENT_NAVI_TYPE_SET`; o ADB só é usado no Android 10.
+- Leitura a cada 1 s, só com a tela do painel aberta e a opção ligada. OFF esconde mapa e cartões
+  (tela preta), Simples mostra só os cartões, Pequeno vai para o meio, Cheio é como sempre.
+- Mapeamento **confirmado no carro** pelo dono: 1 = OFF, 2 = Simples, 3 = Pequeno, 4 = Cheio;
+  0xffffd8e5 = indisponível (fica como sempre).
+- Modo de debug: cada mudança lida vai ao registro com valor bruto, hex, modo e origem
+  (`[menu] ADB: bruto=2 (0x00000002) → Simples`). A tela do debug e a fotografia usam a mesma leitura.
+- Testes: `PanelMenuReaderTest` (parser do `Parcel`, comando, SDK → ADB, pausa após falha) —
+  167 no total, 0 falhas; `lintRelease` com 0 erros.
+
 ## 0.5.0 — 2026-10-23 — rota nativa, menu do painel, modo de debug e discador (pré-release de teste)
 
 APK `PainelLivre-v0.5.0-release.apk` (versionCode 6), SHA-256 `1fb15b4ddfe371b4443f1f072a5701996884e0d84140ae4a6853a9e62f2fca06`.

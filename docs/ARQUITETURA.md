@@ -39,7 +39,8 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | | `ClusterService.kt` | Serviço em primeiro plano: GPS, liga o painel quando a rota começa (modo `nav`), devolve o original depois de `restore_delay` s, vigia de 15 s que reabre a tela, convivência com outros apps, ações `SHOW/RESTORE/LAUNCH_ONLY/RELAUNCH/SIMULATE`, `status: StateFlow<ClusterStatus>` |
 | | `ClusterActivity.kt` | Tela do painel: MapLibre (OpenFreeMap), carro como View fixa no ponto focal, câmera por quadro (Choreographer + `PoseSmoother`), limite de fps (`setMaximumFps`), vigia (`FreezeWatch`), cartões da manobra e da chegada, tema dia/noite, sai se cair no display 0, avisa o serviço quando é coberta |
 | | `ClusterPreviewActivity.kt` | Mesma tela na central (toque fecha), para testar sem o painel |
-| | `PanelMenu.kt` | **Kotlin puro.** Menu de navegação do painel (issue #9): valor → modo (1 OFF, 2 Simples, 3 Pequeno, 4 Cheio), desenho de cada modo, `Follower` (2 leituras iguais, volta ao normal após falhas), só getters no debug |
+| | `PanelMenu.kt` | **Kotlin puro.** Menu de navegação do painel (issue #9): valor → modo (1 OFF, 2 Simples, 3 Pequeno, 4 Cheio, confirmado no carro), parser do `Parcel`, desenho de cada modo, `Follower` (2 leituras iguais, volta ao normal após falhas), só getters no debug |
+| | `PanelMenuReader.kt` | **Kotlin puro.** Lê `INSTRUMENT_NAVI_TYPE`: SDK primeiro; se recusar por permissão, ADB local com o comando fixo de leitura |
 | | `PanelMenuWatcher.kt` | Lê o modo enquanto a tela do painel está aberta (se "Seguir o menu" estiver ligado) e `PanelMenuFrame`, a moldura que reposiciona/cobre o conteúdo da `ClusterActivity` |
 | | `PoseSmoother.kt` | **Kotlin puro.** Posição/rumo do carro entre fixes do GPS (segue em frente ≤1,5 s, corrige em 0,6 s, salto >150 m, parado ignora <8 m) |
 | | `FreezeWatch.kt` | **Kotlin puro.** Escada do vigia (`FreezeWatch`), limite por janela (`Budget`) e `YieldPolicy` |
@@ -210,6 +211,7 @@ rede ou espera de tempo real. Execute com JDK 17:
 | `CockpitTest` | Photon, tema e códigos do tempo |
 | `HomeChoiceTest` | saída do `resolve-activity` (nosso, BYD, seletor, erro), launcher original, resultado do `set-home-activity`, próximo passo, restauração, estado do alias e quando ligá-lo, alias HOME **desligado** no manifesto e nenhum outro componente com `HOME` |
 | `DialerTest` | teclado, limite, limpeza de número colado, mínimo de 3 dígitos, `tel:` com `#`, formato brasileiro, ordem dos caminhos de chamada (inclusive "nenhum app"), conta HFP primeiro e `ACTION_CALL` desviado só de reserva, caminhos diretos, conferência sem nova tentativa, escolha da conta Bluetooth, quem atende o `ACTION_CALL`, pedido de permissão e escolha do app do carro |
+| `PanelMenuReaderTest` | `Parcel` do carro (1–4, várias linhas, prévia ASCII, 0xffffd8e5, exceção, lixo), comando fixo só de leitura, SDK primeiro → ADB só com SecurityException e no Android 10, pausa do ADB após falha, `Follower` com leituras do ADB |
 | `PanelMenuTest` | valores do menu, constante do SDK x molde, desenho de cada modo, opcional/teste do debug, `Follower` (sem piscar, volta ao normal), só getters, nenhum código novo em `SAFE_COMMANDS` |
 | `DebugProbeTest` | registro desligado por padrão e limite, comando de coleta só leitura, seções, `settings`/`getprop`, diff, histórico de broadcasts, candidatos, linha de base e novidades, seções ausentes, esconder número/MAC |
 | `ForecastTest` | agora/horas/dias do Open-Meteo, buracos `null`, respostas ruins, rótulos em português, textos, URL com posição arredondada e limite de pedidos |
@@ -345,7 +347,7 @@ lifecycle, renderização, entrega de intents nem compatibilidade da firmware. C
 ## Menu do painel e modo de debug — issue #9 (não lançado, 2026-10-23)
 
 **Seguir o menu** (`panel_menu_follow`, desligado). Enquanto a `ClusterActivity` está visível,
-`PanelMenuWatcher` lê a cada 1,5 s `InstrumentSdk.naviType`: `BYDAutoInstrumentDevice.getInstance`,
+`PanelMenuWatcher` lê a cada 1 s (`PanelMenuReader`, ver abaixo) primeiro `InstrumentSdk.naviType`: `BYDAutoInstrumentDevice.getInstance`,
 `getDevicetype()` (padrão 1007), a constante `BYDAutoFeatureIds$Instrument.INSTRUMENT_NAVI_TYPE` do
 próprio carro (se não for 0; senão 0x40C03032, medido pelo DiPlay na DiLink 5.0) e o getter genérico
 `get(int, int)`. O `Follower` só troca de modo depois de 2 leituras iguais e volta ao normal depois
@@ -361,8 +363,20 @@ de 3 falhas seguidas. `PanelMenuFrame` envolve o conteúdo da tela (o `FrameLayo
 O conteúdo muda de tamanho, então a própria tela recalcula cartões e câmera como numa mudança de
 display. O mapa continua desenhando por baixo do preto (o vigia não confunde com travamento). Nenhum
 comando vai ao AutoContainer: os códigos 17 (meia tela) e 39 (navegação simples) seguem fora de
-`SAFE_COMMANDS`. Não usamos `service call autoservice 5 …` porque o número da transação depende da
-firmware.
+`SAFE_COMMANDS`.
+
+**Leitura pelo ADB local (v0.5.1).** No carro (DiLink 3.0, Android 10) o SDK recusa no processo do app
+(SecurityException: as `BYDAUTO_*_GET` não saem por `pm grant`). Então o `PanelMenuReader` (Kotlin puro)
+tenta o SDK uma vez e, só se ele recusar **por permissão** e o Android for o 10 (`PanelMenu.ADB_SDK_INT`),
+passa a ler pelo mesmo `SelfAdb` do `sendInfo` com um único comando fixo,
+`PanelMenu.ADB_READ_COMMAND` = `service call autoservice 5 i32 1007 i32 1086337074` (transação 5 =
+`getInt`, conferida no carro). `PanelMenu.parseParcel` lê `Result: Parcel(00000000 0000000N …)` (também
+no formato de várias linhas com endereço), ignora a prévia entre aspas, recusa exceção do Binder
+(primeira palavra ≠ 0) e trata 0xffffd8e5 como indisponível. Valores confirmados no carro: 1 OFF,
+2 Simples, 3 Pequeno, 4 Cheio. Se o ADB falhar, nova tentativa em 5 s. É a exceção documentada à regra
+"nunca `service call autoservice <n>`": só leitura, comando constante, nada de transação 6
+(`set`)/`INSTRUMENT_NAVI_TYPE_SET`. O modo de debug usa a mesma leitura (`PanelMenuWatcher.read`) e
+cada mudança vai ao `AppLog` e ao registro do debug como `ADB: bruto=2 (0x00000002) → Simples`.
 
 **Modo de debug** (`debug_mode`, desligado). `App.onCreate` e a chave em Ajustes chamam
 `DebugProbe.sync`. Ligado, a cada 3 s: getters candidatos do SDK do painel (`PanelMenu.DEBUG_GETTERS`,

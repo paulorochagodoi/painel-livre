@@ -4,7 +4,14 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 Nenhuma versão foi testada no carro ainda: todos os testes foram no emulador (`docs/AMBIENTE.md`).
 
-## Não lançado — 2026-10-23 — central: tela inicial, discador e previsão (issues #7, #3, #4)
+## 0.4.0 — 2026-10-23 — painel, telemetria e central (issues #1 a #7)
+
+APK `PainelLivre-v0.4.0-release.apk`, SHA-256 `21aad317dd33e6e8b49641208c566d910b66bcbd3547b6b6265359eb9fcb401f`.
+
+Reúne as três etapas abaixo (PRs #8, #10 e #11). Validação: `testDebugUnitTest` 113/113, `lintRelease` com 0 erros
+(108 avisos), `assembleRelease` assinado com `CN=Painel Livre`. Sem teste em emulador nem no carro nesta versão.
+
+### 2026-10-23 — central: tela inicial, discador e previsão (issues #7, #3, #4)
 
 - **#7 Tela inicial**: causa — o filtro `HOME`/`DEFAULT` ficava no alias `HomeAlias` desligado no
   manifesto, então o Android e a BYD não listavam o Painel Livre como launcher; além disso "Usar como
@@ -26,7 +33,7 @@ Nenhuma versão foi testada no carro ainda: todos os testes foram no emulador (`
   carro nesta etapa; o que depende do carro está em `docs/PLANO.md` (Fase 1, item 8).
 - Sem novo APK de release nem mudança da versão 0.3.0.
 
-## Não lançado — 2026-10-23 — painel e telemetria (issues #2, #5 e #6)
+### 2026-10-23 — painel e telemetria (issues #2, #5 e #6)
 
 - #2: pedido de destino agora pede ativação do painel nos modos navegação/sempre, sem depender
   da chegada da notificação. Modo manual preservado; Maps/Waze continua recebendo o destino.
@@ -44,7 +51,7 @@ Nenhuma versão foi testada no carro ainda: todos os testes foram no emulador (`
   `lintDebug`: 0 erros, 105 avisos. Sem emulador/carro e sem novo release. Build usou cache e chave
   debug temporários em `/tmp` pelas restrições de escrita; assinatura release não alterada.
 
-## Não lançado — 2026-10-22 — regressão JVM (issue #1)
+### 2026-10-22 — regressão JVM (issue #1)
 
 - 32 testes novos (73 no total): notificações Maps/Waze, manobras, distância, rua, resumo e chegada;
   modos sempre/navegação/manual, atraso e cancelamento da restauração; padrões e limites das preferências.

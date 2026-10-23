@@ -18,9 +18,9 @@ Brasil**, frases simples, sem jargão desnecessário.
 
 ## 2. Onde o projeto está (2026-10-23)
 
-- **v0.3.0**, compilada; suíte da versão com 73 testes; trabalho não lançado de painel/telemetria (#2, #5, #6) e da central
-  (#7 tela inicial, #3 discador, #4 previsão do tempo) com **113 testes JVM passando**, lint debug sem erros.
-  Versão testada **só no emulador**; mudanças não lançadas validadas só na JVM/build/lint. Conferir no carro: `docs/PLANO.md`, Fase 1, item 8.
+- **v0.4.0**, lançada em 2026-10-23: painel/telemetria (#2, #5, #6) e central (#7 tela inicial, #3 discador,
+  #4 previsão do tempo), com **113 testes JVM passando** e lint sem erros. A v0.3.0 foi testada só no emulador;
+  o que entrou na v0.4.0 foi validado só na JVM/build/lint. Conferir no carro: `docs/PLANO.md`, Fase 1, item 8.
   **Nada foi testado no carro ainda** — o próximo passo combinado é o primeiro teste no carro
   (`docs/PLANO.md`, Fase 1). O dono ainda não liberou acesso ADB ao carro para o agente.
 - Funciona (emulador): tela central estilo cockpit (dia/noite, deitada/em pé), aba Navegação com busca

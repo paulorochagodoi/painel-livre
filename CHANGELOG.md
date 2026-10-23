@@ -21,8 +21,9 @@ Nenhuma versão foi testada no carro ainda: todos os testes foram no emulador (`
   sempre. Sem leitura ou valor estranho, fica como sempre; um modo novo só vale depois de 2 leituras
   iguais. Nenhum comando novo ao AutoContainer (17 e 39 continuam fora), nada de `service call` cru.
 - Testes: `PanelMenuTest`, `DebugProbeTest` e `PrefsTest` — 138 no total.
-- Validação: `testDebugUnitTest` 138/138, `lintRelease` com 0 erros, `assembleDebug` concluído. Sem
-  carro; o mapeamento dos valores e a leitura na DiLink 3 são hipóteses (`docs/PLANO.md`, issue #9).
+- Validação: `testDebugUnitTest` 138/138, `lintRelease` com 0 erros, `assembleDebug` concluído;
+  emulador: coleta, fotografia, salvar e os quatro desenhos de teste (`docs/telas/7-modo-debug.png`).
+  Sem carro; o mapeamento dos valores e a leitura na DiLink 3 são hipóteses (`docs/PLANO.md`, issue #9).
 
 ## 0.4.1 — 2026-10-23 — APK volta a instalar no carro (pré-release de teste)
 

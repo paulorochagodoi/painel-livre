@@ -94,7 +94,11 @@ manifesto, launcher, telefone/clima, assinatura, versão ou publicação nesta e
 Estudo em `ENGENHARIA_REVERSA.md`, §6; implementação em `ARQUITETURA.md`, "Menu do painel e modo de
 debug". Feito: **modo de debug** (desligado por padrão) e **seguir o menu** (experimental, desligado),
 que lê `INSTRUMENT_NAVI_TYPE` só pelo SDK (getter, por nome) e muda apenas o desenho da nossa tela.
-Validação: 138 testes JVM, `lintRelease` 0 erros, `assembleDebug`. **Nada testado no carro.**
+Validação: 138 testes JVM, `lintRelease` 0 erros, `assembleDebug`. Emulador `dilink3` (display
+simulado 1920×720): ligar o debug em Ajustes, linha de base, mudanças de settings e broadcasts com
+horário, fotografia completa, Salvar arquivo e os quatro "Testar desenho" no painel (Pequeno no
+centro, Simples sem mapa, OFF preto, volta ao normal) — captura em `docs/telas/7-modo-debug.png`. No
+emulador não há SDK BYD ("SDK BYD não encontrado", como esperado). **Nada testado no carro.**
 
 Hipóteses que o carro decide: (a) a DiLink 3 tem o registrador e o app consegue lê-lo pelo uid
 dele; (b) 1 = OFF, 2 = Simples, 3 = Pequeno, 4 = Cheio; (c) no Pequeno o painel mostra o meio da

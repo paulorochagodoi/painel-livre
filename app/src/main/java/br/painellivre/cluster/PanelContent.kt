@@ -4,8 +4,8 @@ package br.painellivre.cluster
 object PanelContent {
     const val MAPS = "com.google.android.apps.maps"
     const val WAZE = "com.waze"
-    fun externalPackage(content: String, app: String): String? =
-        if (content == "navigation") { if (app == "waze") WAZE else MAPS } else null
+    fun externalPackage(content: String, app: String, nativeRoute: Boolean = false): String? =
+        if (content == "navigation" && app != "native" && !nativeRoute) { if (app == "waze") WAZE else MAPS } else null
 
     fun showOnRouteRequest(mode: String) = mode == "nav" || mode == "always"
 

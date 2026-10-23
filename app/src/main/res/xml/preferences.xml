@@ -102,6 +102,31 @@
         <EditTextPreference app:key="inset_bottom" app:title="Base" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="Dados do carro" app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat
+            app:key="telemetry"
+            app:title="Ler dados do carro (experimental)"
+            app:summary="Portas, trava, carga, bateria, clima, bancos, vidros e pneus, pelo ADB da central. Só leitura: o app não muda nada no carro. Ainda não testado no carro."
+            app:defaultValue="false"
+            app:iconSpaceReserved="false" />
+        <ListPreference
+            app:key="telemetry_interval"
+            app:title="Frequência da leitura"
+            app:defaultValue="10"
+            app:entries="@array/telemetry_interval_entries"
+            app:entryValues="@array/telemetry_interval_values"
+            app:dependency="telemetry"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat
+            app:key="telemetry_panel"
+            app:title="Aviso no painel"
+            app:summary="Mostra no painel, junto do mapa, porta aberta, tampa do carregador aberta ou carregando."
+            app:defaultValue="false"
+            app:dependency="telemetry"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
     <PreferenceCategory app:title="Navegação" app:iconSpaceReserved="false">
         <ListPreference
             app:key="nav_app"

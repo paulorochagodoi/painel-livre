@@ -82,4 +82,14 @@
         <item>maps</item>
         <item>waze</item>
     </string-array>
+    <string-array name="telemetry_interval_entries">
+        <item>A cada 5 segundos</item>
+        <item>A cada 10 segundos</item>
+        <item>A cada 30 segundos</item>
+    </string-array>
+    <string-array name="telemetry_interval_values">
+        <item>5</item>
+        <item>10</item>
+        <item>30</item>
+    </string-array>
 </resources>

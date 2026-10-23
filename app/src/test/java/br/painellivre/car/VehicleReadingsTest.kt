@@ -38,7 +38,7 @@ class VehicleReadingsTest {
         val s = VehicleData.Snapshot(null, null, null, null, null, "permissão recusada")
         assertTrue(s.isEmpty)
         assertTrue(s.diagnosticText().contains("Combustível: indisponível"))
-        assertTrue(s.diagnosticText().contains("Portas/travas: indisponível"))
+        assertTrue(s.diagnosticText().contains("Portas/travas: não lidas pelo SDK"))
         assertTrue(s.diagnosticText().contains("permissão recusada"))
     }
     @Test fun partialSnapshotDoesNotHideValidBattery() {

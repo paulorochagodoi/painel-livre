@@ -37,7 +37,11 @@ import androidx.recyclerview.widget.RecyclerView
 import br.painellivre.R
 import br.painellivre.adb.SelfAdb
 import br.painellivre.adb.SystemSetup
+import br.painellivre.car.TelemetrySnapshot
+import br.painellivre.car.TelemetryText
 import br.painellivre.car.VehicleData
+import br.painellivre.car.VehicleTelemetry
+import br.painellivre.ui.cockpit.CarStatusView
 import br.painellivre.cluster.ClusterService
 import br.painellivre.cluster.ClusterStatus
 import br.painellivre.cluster.ManeuverView
@@ -126,6 +130,7 @@ class LauncherActivity : AppCompatActivity() {
                 launch { ClusterService.status.collect { renderCluster(it) } }
                 launch { MediaRepository.now.collect { renderMedia(it) } }
                 launch { WeatherRepository.weather.collect { renderWeather(it) } }
+                launch { VehicleTelemetry.observe(this@LauncherActivity).collect { renderTelemetry(it) } }
                 launch {
                     SelfAdb.ready.collect { if (it != null && it != adbOk) { adbOk = it; refreshSetup() } }
                 }
@@ -200,6 +205,7 @@ class LauncherActivity : AppCompatActivity() {
         paletteApplied = true
         findViewById<ImageView>(R.id.backdrop).setImageDrawable(BackdropDrawable(p.dark))
         renderCarArt()
+        findViewById<CarStatusView>(R.id.carStatus)?.palette = p
         p.apply(findViewById(R.id.root), density)
         highlightTab()
         renderCluster(ClusterService.status.value)
@@ -238,7 +244,7 @@ class LauncherActivity : AppCompatActivity() {
         )
         applyPalette()
         renderStatusIcons()
-        lifecycleScope.launch { renderCar(withContext(Dispatchers.IO) { VehicleData.read(this@LauncherActivity) }) }
+        lifecycleScope.launch { renderCar(withContext(Dispatchers.IO) { VehicleData.read(this@LauncherActivity) }.also { lastSdk = it }) }
     }
 
     @SuppressLint("MissingPermission")
@@ -253,7 +259,14 @@ class LauncherActivity : AppCompatActivity() {
         findViewById<View>(R.id.statusGps).alpha = if (gps) 1f else 0.3f
     }
 
-    private fun renderCar(s: VehicleData.Snapshot) {
+    private fun renderCar(sdk: VehicleData.Snapshot) {
+        // Sem o SDK (permissão BYD recusada no uid do app), usa a leitura pelo ADB local (issue #16).
+        val t = VehicleTelemetry.state.value.takeIf { it.status == TelemetrySnapshot.Status.OK }
+        val s = sdk.copy(
+            batteryPercent = sdk.batteryPercent ?: t?.socPercent,
+            evRangeKm = sdk.evRangeKm ?: t?.evRangeKm,
+            fuelRangeKm = sdk.fuelRangeKm ?: t?.fuelRangeKm,
+        )
         val total = listOfNotNull(s.evRangeKm, s.fuelRangeKm).takeIf { it.isNotEmpty() }?.sum()
         // Sem dados do carro (ou fora de uma BYD): some a autonomia em vez de mostrar traços.
         findViewById<View>(R.id.rangeBlock).visibility = if (total == null) View.INVISIBLE else View.VISIBLE
@@ -271,8 +284,26 @@ class LauncherActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.batteryValue).text = pct?.toInt()?.toString() ?: getString(R.string.battery)
         findViewById<ProgressBar>(R.id.batteryBar).progress = pct?.toInt() ?: 0
         findViewById<TextView>(R.id.batterySub).text = when {
+            t != null && TelemetryText.charge(t) != null -> TelemetryText.charge(t)
             s.evRangeKm != null -> "Autonomia elétrica ${s.evRangeKm} km"
             else -> getString(R.string.car_data_unavailable)
+        }
+    }
+
+    private var lastSdk: VehicleData.Snapshot? = null
+
+    private fun renderTelemetry(t: TelemetrySnapshot) {
+        val card = findViewById<View>(R.id.telemetryCard) ?: return
+        val show = t.status == TelemetrySnapshot.Status.OK && t.hasData
+        card.visibility = if (show) View.VISIBLE else View.GONE
+        lastSdk?.let(::renderCar)
+        if (!show) return
+        findViewById<CarStatusView>(R.id.carStatus).apply { palette = this@LauncherActivity.palette; snapshot = t }
+        findViewById<TextView>(R.id.telemetryTitle).text = TelemetryText.headline(t)
+        val lines = listOfNotNull(TelemetryText.charge(t).takeIf { t.openings.isNotEmpty() }) + TelemetryText.details(t)
+        findViewById<TextView>(R.id.telemetryLines).apply {
+            text = lines.joinToString("\n")
+            visibility = if (lines.isEmpty()) View.GONE else View.VISIBLE
         }
     }
 
@@ -395,6 +426,7 @@ class LauncherActivity : AppCompatActivity() {
         click(R.id.mediaNext) { MediaRepository.next() }
         click(R.id.mediaPlay) { if (MediaRepository.now.value == null) openMedia() else MediaRepository.playPause() }
         click(R.id.cardBattery) { startActivity(Intent(this, DiagnosticsActivity::class.java)) }
+        click(R.id.telemetryCard) { startActivity(Intent(this, DiagnosticsActivity::class.java)) }
         click(R.id.cardPanel) { toggleCluster() }
         click(R.id.panelToggle) { toggleCluster() }
         click(R.id.cardDest) { showPage(PAGE_NAV) }

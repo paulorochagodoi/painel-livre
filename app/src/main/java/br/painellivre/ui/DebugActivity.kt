@@ -18,6 +18,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import br.painellivre.BuildConfig
 import br.painellivre.R
 import br.painellivre.adb.SelfAdb
+import br.painellivre.car.VehicleTelemetry
 import br.painellivre.cluster.PanelMenu
 import br.painellivre.cluster.PanelMenuWatcher
 import br.painellivre.debug.DebugLog
@@ -67,6 +68,7 @@ class DebugActivity : AppCompatActivity() {
             if (DebugProbe.adbRunning.value) DebugProbe.pause() else DebugProbe.restart(this)
         }
         button(actions, "Fotografia completa") { snapshot() }
+        button(actions, "Ler dados do carro") { readCar() }
         button(actions, "Escutar ação…") {
             askText("Ação de broadcast para escutar", "com.exemplo.ACAO") { DebugProbe.addAction(this, it) }
         }
@@ -135,6 +137,13 @@ class DebugActivity : AppCompatActivity() {
         PanelMenuWatcher.override.value = mode
         DebugLog.add("teste", "desenho forçado no painel: ${mode?.label ?: "normal (segue a preferência)"}")
         toast("Aplicado no painel em até 2 s")
+    }
+
+    /** Issue #16: lê uma vez todos os ids mapeados (só leitura) e registra para conferir no carro. */
+    private fun readCar() {
+        if (!DebugLog.enabled) { toast("Ligue o modo de debug em Ajustes"); return }
+        // A varredura não lança: falha de ADB/serviço vira uma linha no registro.
+        lifecycleScope.launch { VehicleTelemetry.debugReadAll(this@DebugActivity) }
     }
 
     private fun snapshot() {

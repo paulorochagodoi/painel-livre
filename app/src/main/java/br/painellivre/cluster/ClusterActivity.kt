@@ -28,10 +28,15 @@ import br.painellivre.location.LocationRepository
 import br.painellivre.nav.NavRepository
 import br.painellivre.nav.NavState
 import br.painellivre.ui.cockpit.Palette
+import br.painellivre.car.TelemetrySnapshot
+import br.painellivre.car.TelemetryText
+import br.painellivre.car.VehicleTelemetry
+import br.painellivre.ui.cockpit.CarStatusView
 import br.painellivre.util.AppLog
 import br.painellivre.util.Prefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.maplibre.android.camera.CameraPosition
@@ -205,6 +210,16 @@ open class ClusterActivity : ComponentActivity() {
                     // Batimento da thread principal: se parar, o vigia percebe.
                     while (true) { mainBeatAt = SystemClock.uptimeMillis(); delay(1_000) }
                 }
+                launch {
+                    // Só lê os dados do carro daqui se o aviso no painel estiver ligado.
+                    while (true) {
+                        if (prefs.telemetryPanel) {
+                            VehicleTelemetry.observe(this@ClusterActivity).takeWhile { prefs.telemetryPanel }.collect(::renderTelemetry)
+                        }
+                        renderTelemetry(null)
+                        delay(3_000)
+                    }
+                }
                 if (!preview) launch(Dispatchers.Default) { watchLoop() }
             }
         }
@@ -275,6 +290,10 @@ open class ClusterActivity : ComponentActivity() {
     private val etaValues = arrayOfNulls<TextView>(3)
     private val etaLabels = arrayOfNulls<TextView>(3)
 
+    private lateinit var telemetryCard: LinearLayout
+    private lateinit var carStatus: CarStatusView
+    private lateinit var telemetryText: TextView
+
     private fun buildOverlay() {
         // O carro fica fixo no ponto focal da câmera (a câmera segue o carro), então é uma View
         // por cima do mapa: não depende de atualizar uma camada do mapa a cada quadro.
@@ -319,6 +338,18 @@ open class ClusterActivity : ComponentActivity() {
         etaLabels[2]!!.text = "Distância"
         leftColumn.addView(etaCard)
 
+        // Aviso dos dados do carro (issue #16, opcional): porta aberta, tampa de carga, carregando.
+        telemetryCard = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            visibility = View.GONE
+        }
+        carStatus = CarStatusView(this)
+        telemetryCard.addView(carStatus)
+        telemetryText = label(bold = true).apply { maxLines = 2 }
+        telemetryCard.addView(telemetryText, LinearLayout.LayoutParams(-2, -2))
+        leftColumn.addView(telemetryCard)
+
         statusText = label(bold = true)
         overlay.addView(statusText)
         osmText = label().apply { text = "© OpenStreetMap" }
@@ -331,6 +362,9 @@ open class ClusterActivity : ComponentActivity() {
         val r = h * 0.035f
         tbtCard.background = cardBg(r)
         etaCard.background = cardBg(r)
+        telemetryCard.background = cardBg(r)
+        carStatus.palette = pal
+        telemetryText.setTextColor(pal.text1)
         tbtIconBox.background = GradientDrawable().apply { setColor(pal.accent); cornerRadius = r * 0.8f }
         maneuverView.color = Color.WHITE
         maneuverView.tint = true
@@ -370,6 +404,12 @@ open class ClusterActivity : ComponentActivity() {
         etaLabels.forEach { it?.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.026f)) }
         etaValues.forEach { it?.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.058f)) }
 
+        telemetryCard.layoutParams = LinearLayout.LayoutParams(-2, -2).apply { topMargin = px(0.025f).toInt() }
+        telemetryCard.setPadding(pad, pad / 2, (pad * 1.4f).toInt(), pad / 2)
+        carStatus.layoutParams = LinearLayout.LayoutParams(px(0.09f).toInt(), px(0.17f).toInt()).apply { marginEnd = pad }
+        telemetryText.maxWidth = (w * 0.24f).toInt()
+        telemetryText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.04f))
+
         statusText.layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.CENTER_HORIZONTAL or Gravity.TOP).apply { topMargin = px(0.16f).toInt() }
         statusText.setPadding(pad, pad / 3, pad, pad / 3)
         statusText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.03f))
@@ -383,6 +423,13 @@ open class ClusterActivity : ComponentActivity() {
         carView.layoutParams = FrameLayout.LayoutParams(car, car, Gravity.TOP or Gravity.START)
         carView.rotationX = (tilt * 0.8).toFloat() // deitado como o mapa inclinado
         applyColors()
+    }
+
+    private fun renderTelemetry(t: TelemetrySnapshot?) {
+        val text = t?.takeIf { it.status == TelemetrySnapshot.Status.OK && it.notable }?.let(TelemetryText::panel)
+        telemetryCard.visibility = if (text == null) View.GONE else View.VISIBLE
+        carStatus.snapshot = if (text == null) null else t
+        telemetryText.text = text ?: ""
     }
 
     private fun ViewGroup.children() = (0 until childCount).map { getChildAt(it) }

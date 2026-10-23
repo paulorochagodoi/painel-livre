@@ -63,7 +63,7 @@ class DiagnosticsActivity : AppCompatActivity() {
         }
         button("Simular rota") { ClusterService.start(this, ClusterService.ACTION_SIMULATE); append("→ simulação alternada") }
         button("Conceder permissões") { runCatchingShow { SystemSetup.grantAll(this) } }
-        button("Dados do carro") { runCatchingShow { withContext(Dispatchers.IO) { VehicleData.read(this@DiagnosticsActivity).toString() } } }
+        button("Dados do carro") { runCatchingShow { withContext(Dispatchers.IO) { VehicleData.read(this@DiagnosticsActivity).diagnosticText() } } }
         button("Navegação atual") { append(NavRepository.state.value.let { "ativa=${it.active} fonte=${it.sourceLabel}\n${it.nav}" }) }
         button("Log do app") { append(AppLog.dump()) }
         button("Copiar tudo") {
@@ -92,6 +92,10 @@ class DiagnosticsActivity : AppCompatActivity() {
         sb.append("ADB TCP 5555 aberto: ${SelfAdb.isPortOpen()}\n")
         val boot = Prefs(this).lastBootAt
         sb.append("Último boot recebido pelo app: ${if (boot == 0L) "nunca (a BYD pode estar segurando o autoinício)" else java.text.DateFormat.getDateTimeInstance().format(java.util.Date(boot))}\n")
+        sb.append("== Dados do carro (SDK no usuário do app, não pelo AutoContainer) ==\n")
+        sb.append(withContext(Dispatchers.IO) { VehicleData.read(this@DiagnosticsActivity).diagnosticText() }).append("\n")
+        sb.append("BYDAUTO_STATISTIC_GET: ${if (checkSelfPermission("android.permission.BYDAUTO_STATISTIC_GET") == android.content.pm.PackageManager.PERMISSION_GRANTED) "concedida" else "não concedida"}\n")
+        sb.append("Conteúdo escolhido para o painel: ${Prefs(this).panelContent}\n")
         sb.append(panelSizeInfo()).append("\n\n")
         sb.append("== Shell (uid 2000) ==\n")
         sb.append(

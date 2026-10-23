@@ -28,6 +28,85 @@ modos do painel e atraso de restauração com tempo virtual, preferências e reg
 Corrigido o cancelamento da própria restauração automática antes de completar a sequência 18 → 0.
 Detalhes e limites em `ARQUITETURA.md`, seção Testes. O primeiro teste no carro continua pendente.
 
+> **Lembrete (pedido do dono, 2026-10-23): desenvolver os testes de regressão.** A suíte JVM já cobre a
+> lógica pura (73 testes). Falta: (1) automatizar no emulador os roteiros de `AMBIENTE.md` (ativação,
+> bloqueio 8,8", estado velho, ADB no boot, convivência, restaurar, fim de rota) com um script que
+> confira o log `PainelLivre`; (2) testes instrumentados da interface (cockpit, aba Navegação, painel);
+> (3) depois do primeiro teste no carro, transformar o que o carro mostrar (formato real das
+> notificações, margens, sequência do AutoContainer) em casos fixos; (4) reativar o CI quando a
+> cobrança do GitHub for resolvida.
+
+## Issues #2/#5/#6 — implementação e testes no carro (2026-10-23)
+
+Validação local: **87 testes JVM passando (14 novos)**, `assembleDebug` concluído e `lintDebug`
+com **0 erros e 105 avisos**. Sem emulador nesta etapa.
+
+Implementado, sem teste no carro: pedido de rota também solicita o painel (exceto manual), escolha
+`panel_content` entre mapa integrado e Maps/Waze experimental, falhas por método no SDK BYD e
+indisponibilidade explícita no diagnóstico. Causas no código: `Places` só abria intent na central;
+projeção automática dependia de notificação; controlador sempre abria `ClusterActivity`; exceções
+nos getters BYD eram engolidas e portas/travas nunca eram consultadas. Recusa do uid do app na
+DiLink 3 é hipótese fundamentada no achado I de `SEALNAV_RE.md`, ainda não confirmada neste carro.
+
+Checklist específico, com carro parado e ações feitas pelo dono:
+
+1. Em Ajustes, escolher **Mapa integrado**, modo **Só durante a navegação**; abrir destino em Maps
+   e Waze pelos resultados, Casa/Trabalho e busca textual. Painel deve abrir sem esperar notificação.
+   Sem acesso às notificações, mapa aparece mas manobras/fim de rota não são detectados: restaurar
+   manualmente. Com acesso, conferir manobras e restauração após o atraso. Modo manual não deve
+   ativar ao abrir destino. Testar também modo Sempre, app ausente e falha ADB.
+2. Restaurar e escolher **App de navegação (experimental)** antes de ativar. Iniciar rota e conferir
+   se a tarefa com a rota aparece no `fission_bg_xdjaVirtualSurface` 1920×720, preservando destino.
+   Comparar Maps/Waze, confirmar margens/instrumentos BYD e legibilidade. O navegador exige toque:
+   não interagir com ele dirigindo. O log precisa confirmar pacote e display; se a firmware recusar,
+   deve informar falha e permitir voltar à opção integrada, sem insistir com AutoContainer.
+3. Com navegador no painel, esperar mais de 30 s: mapa integrado não deve tomá-lo. Testar Painel
+   original, fim da rota, perda/recriação do display e novo pedido de rota. Conferir onde a tarefa
+   externa fica após restaurar e se volta à central sem perder a rota; isso não foi garantido por JVM.
+   Não há vigia do app externo, nem encerramento forçado dele. Se houver incompatibilidade, usar
+   o integrado. Não considerar este modo validado apenas porque `am start` devolveu sucesso.
+4. Diagnóstico → Info da central e Dados do carro → Copiar tudo antes/depois de Conceder permissões.
+   Conferir bateria, combustível, autonomias e hodômetro com a tela BYD. Distinguir SDK ausente,
+   método ausente, permissão negada e sentinelas inválidas. A permissão do app pode constar concedida
+   e a chamada Binder continuar recusada. Registrar erro, sem tentar escrita nem nomes de propriedades.
+5. Portas/travas: confirmar que o diagnóstico diz **indisponível**, sem sugerir estado fechado/travado.
+   Para implementar leitura depois: obter SDK real só por leitura, confirmar parâmetros/constantes de
+   `getDoorState(int)` e API de trava; testar cada porta e trava separadamente, com carro parado.
+   Se SDK exigir uid 2000, implementar ajudante próprio somente leitura/autenticado antes da interface.
+
+Pendências: primeiro teste real, capturas das novas preferências no emulador, lifecycle/projeção de
+apps externos, SDK real e ajudante uid 2000. Não houve acesso ao carro, escrita CAN/SDK, mudança de
+manifesto, launcher, telefone/clima, assinatura, versão ou publicação nesta etapa.
+
+## Issue #9 — estudo do menu nativo, sem implementação (2026-10-23)
+
+Relato e hipóteses em `ENGENHARIA_REVERSA.md`, §6. Não há vínculo confirmado do menu
+Simples/Pequeno/Cheio/OFF com property, setting, broadcast ou comando AutoContainer.
+Nenhuma mudança de código ou execução no carro nesta etapa; testes/build/lint não repetidos
+porque a alteração é apenas documental.
+
+Roteiro futuro, pelo dono, com carro parado e acesso ao carro previamente combinado:
+
+1. Registrar a opção inicial, app/versão, `panel_content`, modo automático/manual e outros apps de
+   projeção ativos. Comparar as quatro opções primeiro sem projeção de terceiros ativa; ausência
+   de Amap compatível impede concluir se o menu funciona na integração OEM.
+2. Repetir separadamente com mapa integrado e navegador experimental, mantendo as demais condições.
+   Comparar mudar o menu antes de ativar e durante a projeção. Registrar imagem, horário e Log do app:
+   a ativação pode sobrepor uma escolha que funcionava antes. Ao fim, restaurar a opção inicial.
+3. Com coleta somente leitura autorizada, comparar `getprop sys.screen.current.mode`,
+   `settings list system`, `settings list secure`, `settings list global`, `dumpsys display`,
+   `dumpsys activity activities` e logcat nos mesmos instantes. Comparar localmente os settings e
+   compartilhar só diferenças relevantes, sem identificadores pessoais. Ausência de diferença não
+   descarta estado interno do Qt/MCU; correlacionar mudanças não prova sua função.
+4. Conferir qual pacote/Activity está retomado em cada display. Para investigar espelhamento, mudar
+   apenas a tela visível na central enquanto o painel está ativo e observar se o painel acompanha.
+   Separar cópia da tela, mapa próprio e tarefa do navegador movida; não assumir pelo visual parecido.
+   Registrar também o efeito de Painel original (18 → 0), sem inventar comandos de teste.
+
+Não usar `setprop`, `settings put`, broadcasts adivinhados, escrita SDK/CAN ou novos códigos de
+AutoContainer. O objetivo é identificar o mecanismo e eventual interferência em #2/#5, não controlar
+o menu pela aplicação.
+
 ## Fase 1 — Primeiro teste no carro
 
 1. Instalar `PainelLivre-v0.3.0-release.apk`, aceitar "Permitir depuração USB" e tocar em **Configurar**

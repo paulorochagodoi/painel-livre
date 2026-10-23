@@ -18,7 +18,7 @@ Brasil**, frases simples, sem jargão desnecessário.
 
 ## 2. Onde o projeto está (2026-10-22)
 
-- **v0.3.0**, compilada; suíte ampliada para 73 testes de unidade passando, lint sem erros, testada **só no emulador**.
+- **v0.3.0**, compilada; suíte da versão com 73 testes; trabalho não lançado de painel/telemetria com **87 testes JVM passando**, lint debug com 0 erros (105 avisos). Versão testada **só no emulador**; mudanças não lançadas validadas só na JVM/build/lint.
   **Nada foi testado no carro ainda** — o próximo passo combinado é o primeiro teste no carro
   (`docs/PLANO.md`, Fase 1). O dono ainda não liberou acesso ADB ao carro para o agente.
 - Funciona (emulador): tela central estilo cockpit (dia/noite, deitada/em pé), aba Navegação com busca
@@ -31,8 +31,10 @@ Brasil**, frases simples, sem jargão desnecessário.
 1. Fase 1 — primeiro teste no carro (checklist em `docs/PLANO.md`). Depende do dono.
 2. Fase 4b, passo 1 — extrair dos moldes do SDK BYD (dentro do APK do BYD Navigator) as constantes de
    clima, bancos, vidros e porta-malas. Não precisa do carro.
-3. Ajustes que o teste no carro mostrar (margens, parser das notificações, autoinício).
-4. Ajudante uid 2000 próprio (só leitura primeiro) → Fases 4 e 4b.
+3. **Lembrete do dono**: ampliar os testes de regressão (roteiros do emulador automatizados, testes de
+   interface, casos vindos do carro) — detalhes no topo da Fase 1 de `docs/PLANO.md`.
+4. Ajustes que o teste no carro mostrar (margens, parser das notificações, autoinício).
+5. Ajudante uid 2000 próprio (só leitura primeiro) → Fases 4 e 4b.
 
 ## 3. Mapa da documentação
 
@@ -168,3 +170,23 @@ porque o GitHub recusou a execução por cobrança da conta; depois que o dono r
 - Antes de qualquer coisa que mexa no carro, no GitHub (publicar, mudar visibilidade) ou em contas,
   confirme com ele.
 - Ao terminar uma etapa: resumo curto do que mudou, como foi testado (emulador ≠ carro) e o que falta.
+
+## Continuação — issues #2, #5 e #6 (2026-10-23, não lançado)
+
+- Abrir destino em `Places.navigate/navigateText` pede também o painel, sem esperar notificação;
+  o modo manual continua respeitado. As manobras ainda exigem acesso às notificações.
+- Ajustes → O que mostrar no painel: `panel_content=integrated` (padrão, mapa próprio sem linha
+  da rota) ou `navigation` (Maps/Waze no display do painel pelo ADB, **experimental, sem teste no carro**).
+  Não confundir mover o navegador com extrair sua rota. Escolher antes de ativar. Os vigias próprios
+  não disputam a tela com o navegador. A confirmação usa Activity retomada no display correto.
+- Telemetria continua no SDK por reflexão sob o uid do app, não no AutoContainer. Falhas parciais
+  agora aparecem em Diagnóstico → Dados do carro e Info da central, com log ao mudar o erro.
+  Portas/travas ainda não têm leitura implementada; não inventar IDs, propriedades ou estados.
+  Permissão concedida por `pm grant` não garante que o serviço BYD aceite o uid do app.
+- Não houve acesso ao carro, mudança de comandos seguros, escrita CAN/SDK, manifesto ou launcher.
+  Checklist específico e limites em `docs/PLANO.md` (issues #2/#5/#6).
+
+Validação local desta etapa: 87 testes JVM (14 novos), `assembleDebug` concluído,
+`lintDebug` com 0 erros e 105 avisos. Sandbox exigiu `GRADLE_USER_HOME=/tmp/painel-gradle`
+e `ANDROID_USER_HOME=/tmp/painel-cluster-android` (chave debug temporária, sem alterar a assinatura
+release). Captura das preferências e testes Android/carro continuam pendentes.

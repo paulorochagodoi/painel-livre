@@ -114,7 +114,7 @@ object Places {
         } else {
             Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=${p.lat},${p.lon}")).setPackage(NavRepository.PKG_MAPS)
         }
-        return start(ctx, i)
+        return startRoute(ctx, i)
     }
 
     /** Busca por texto direto no app (quando não há resultado ou sem internet para a busca). */
@@ -125,7 +125,7 @@ object Places {
         } else {
             Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=$q")).setPackage(NavRepository.PKG_MAPS)
         }
-        return start(ctx, i)
+        return startRoute(ctx, i)
     }
 
     fun openApp(ctx: Context, app: String): Boolean {
@@ -137,6 +137,13 @@ object Places {
     fun isInstalled(ctx: Context, app: String): Boolean {
         val pkg = if (app == "waze") NavRepository.PKG_WAZE else NavRepository.PKG_MAPS
         return ctx.packageManager.getLaunchIntentForPackage(pkg) != null
+    }
+
+    private fun startRoute(ctx: Context, intent: Intent): Boolean {
+        if (!start(ctx, intent)) return false
+        // Não depende da notificação: ela pode demorar ou estar sem permissão na DiLink 3.
+        br.painellivre.cluster.ClusterService.start(ctx, br.painellivre.cluster.ClusterService.ACTION_ROUTE_REQUEST)
+        return true
     }
 
     private fun start(ctx: Context, i: Intent): Boolean = try {

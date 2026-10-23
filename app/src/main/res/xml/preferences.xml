@@ -23,6 +23,18 @@
 
     <PreferenceCategory app:title="Painel de instrumentos" app:iconSpaceReserved="false">
         <ListPreference
+            app:key="panel_content"
+            app:title="O que mostrar no painel"
+            app:defaultValue="integrated"
+            app:entries="@array/panel_content_entries"
+            app:entryValues="@array/panel_content_values"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <Preference
+            app:title="Sobre os mapas no painel"
+            app:summary="Mapa integrado: mapa próprio com manobras, sem linha da rota. App de navegação: leva Maps/Waze ao painel; compatibilidade depende da central. Escolha antes de ativar."
+            app:iconSpaceReserved="false" />
+        <ListPreference
             app:key="cluster_mode"
             app:title="Quando mostrar o mapa no painel"
             app:defaultValue="nav"

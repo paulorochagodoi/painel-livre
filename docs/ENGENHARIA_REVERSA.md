@@ -159,3 +159,37 @@ fora do escopo; o Painel Livre não altera arquivos do painel.
    pelo ADB ou instrução ao motorista).
 5. Para a Fase 4b: assinaturas e constantes reais em `/system/framework/bydauto*.jar` (só leitura,
    `adb pull`) e o mapeamento de cada botão de conforto.
+
+## 6. Issue #9 — estudo do menu nativo de navegação (2026-10-23, sem implementação)
+
+**Relato do dono:** opções Simples, Pequeno, Cheio e OFF, com aviso "Compatível apenas com Amap
+personalizado"; mesmo em OFF, o mapa aparece em tela cheia. Não há captura técnica nesta etapa
+que identifique qual app/tarefa desenhava, nem o estado do container durante essa observação.
+
+**Fatos no material disponível:** §3 documenta projeção AutoContainer 16 → 35 e abertura de Activity
+no display do painel; `SEALNAV_RE.md`, B/E, descreve esse mesmo caminho. No código atual,
+`ClusterController.activate()` usa essa sequência e `launchClusterUi()`/`launchNavigation()` pedem
+`--windowingMode 1` (tela cheia Android). O fallback integrado usa janela livre redimensionada ao
+painel. `panel_content` escolhe o conteúdo; não consulta nem acompanha o menu nativo. Nenhum desses
+caminhos escreve setting, propriedade ou broadcast para selecionar Simples/Pequeno/Cheio/OFF.
+Os códigos 29/30/31 são tamanhos físicos do painel, não essas opções; o aviso histórico de "modo
+simples" após tamanho errado não demonstra relação com o item Simples do menu.
+
+**Pistas sem mapeamento confirmado:** `sys.screen.current.mode` aparece no inventário de propriedades
+(§3), mas sem valores/significado associados ao menu e não é lida pelo app atual. O registrador
+`SETTING_NAVI_SCREEN_STATUS` (0x4C10E015, valor 3 no início da rota no estudo do DashCast) também não
+foi ligado a essas quatro opções; o Painel Livre não o escreve. Os broadcasts de estado de navegação
+listados no §2 não demonstram controle desse menu. A referência a AmapService no §3 é da DiLink 5.1:
+não comprova o contrato do menu da DiLink 3. Não foi examinado aqui o código da tela nativa do menu.
+
+**Hipótese:** o menu pode controlar a integração OEM do Amap personalizado, enquanto a projeção
+16/35 usa um caminho que ignora ou sobrepõe essa escolha. Isso explicaria OFF com mapa ainda visível;
+não está confirmado. Tela cheia Android e composição final do Qt são camadas distintas: não há
+prova de que `--windowingMode 1` sozinho determine o layout físico final. Mapa parecido nas duas
+telas também não prova espelhamento: no integrado há MapLibre próprio, sem linha da rota; no modo
+experimental tenta-se mover a tarefa Maps/Waze. O menu não fornece a geometria da rota ao app.
+
+**Impacto em #2/#5:** nenhum defeito adicional demonstrado pelo novo relato; mantido o código.
+A ativação ao pedir destino (#2) e a escolha de conteúdo (#5) continuam separadas desse menu.
+Não implementar sincronização, interpretar OFF como veto global ou experimentar códigos/registradores
+com base só nos rótulos. Teste observacional proposto em `PLANO.md`, seção da issue #9.

@@ -85,4 +85,5 @@
     <string name="weather_no_gps">Esperando a posição do GPS para buscar a previsão.</string>
     <string name="weather_unavailable">Previsão indisponível agora. Confira a internet e toque em Atualizar.</string>
     <string name="weather_credit">Dados: Open-Meteo</string>
+    <string name="open_native">Painel Livre</string>
 </resources>

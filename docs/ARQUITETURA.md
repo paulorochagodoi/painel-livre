@@ -257,3 +257,56 @@ e `app/build/reports/lint-results-debug.html`. Ambiente JDK/SDK indicado pelo do
 cache/chave debug fora da área gravável, `GRADLE_USER_HOME=/tmp/painel-gradle` e
 `ANDROID_USER_HOME=/tmp/painel-cluster-android`, com `--no-daemon` no build/lint. APK debug usa chave
 temporária; nenhuma alteração em keystore/local.properties/configuração de assinatura release.
+
+## Rota nativa opcional — issue #14 (não lançado)
+
+`nav_app=native` acrescenta **Painel Livre** aos botões da aba Navegação e aos Ajustes;
+`maps` continua sendo o padrão e `waze` continua disponível. `Places.navigate/navigateText`
+encaminham o destino ao serviço por `ACTION_NATIVE_ROUTE`, sem abrir app externo.
+`nav/native/NativeNavigation` acompanha o GPS no escopo do `ClusterService`; não depende de
+Activity visível nem de acesso às notificações. A geometria fica em um `StateFlow` próprio;
+a orientação usa `NavRepository` com fonte `br.painellivre`. Notificações externas não substituem
+uma orientação nativa ativa. Abrir uma rota externa com sucesso encerra a sessão nativa.
+
+O cálculo usa a API HTTPS do OSRM público (`router.project-osrm.org`), perfil driving, `steps=true`,
+`geometries=geojson`, `overview=full`: envia **coordenadas precisas de origem e destino**, sem
+identificador pessoal/chave. Busca textual continua no Photon; se houver ambiguidade, é necessário
+escolher o resultado na busca. Serviço público, sem garantia de disponibilidade, trânsito ou rotas
+atualizadas. Para uso diário avaliar servidor próprio/provedor; não há modo offline nem voz.
+Referência do protocolo: https://project-osrm.org/docs/v5.24.0/api/ (Route/RouteStep/StepManeuver).
+Não usa Ferrostar nesta primeira implementação: o acompanhamento simples está em Kotlin puro.
+
+`NativeRoute.kt` contém parser, coordenadas validadas, manobras em português e `RouteTracker`.
+Projeta o GPS nos segmentos e calcula distância até a próxima manobra e restante. O avanço é
+monótono, limitado a uma janela de 1500 m à frente; fixes a mais de 60 m não avançam a orientação.
+Recálculo exige desvio contínuo por 8 s e pelo menos 30 s desde o último pedido; o recálculo não é disparado enquanto outro cálculo está ativo.
+Trocar destino cancela o Job e impede publicar resposta antiga; a conexão HTTP cancelada pode
+levar até o timeout para terminar. Fixes com mais de 60 s ou precisão pior que 50 m são ignorados. GPS preciso/fresco
+é exigido também para iniciar. Chegada: menos de 30 m ao longo da linha e 40 m do destino.
+São heurísticas, **não map matching completo**: cruzamentos, túneis, pistas paralelas e retornos
+precisam de validação. Tempo estimado vem das durações OSRM, proporcional ao trecho restante;
+a chegada usa o relógio local, sem trânsito em tempo real.
+
+`NativeRouteLayer` desenha a mesma linha azul no mapa da central e do painel, reaplicada após
+carregamento/troca do estilo. Os cartões existentes mostram a seta, distância, rua e chegada.
+A rota nativa ativa força conteúdo integrado mesmo com a opção experimental externa selecionada;
+`PanelContent` cobre essa prioridade. A abertura segue `ACTION_ROUTE_REQUEST` e respeita o modo
+manual; o serviço elimina ativação duplicada quando o estado e o pedido explícito chegam juntos.
+Nenhum comando AutoContainer novo. Rota nativa termina na chegada ou por toque no cartão de rota
+ativa na aba Navegação → Encerrar. A devolução mantém o prazo configurado. A sessão é só em memória:
+morte do processo/serviço exige escolher o destino novamente; recriar apenas a Activity preserva a rota.
+
+`RouteIntentActivity` recebe `ACTION_SEND text/plain` e `ACTION_VIEW geo:/google.navigation:`.
+Mostra destino e escolha nativo/Maps/Waze antes de abrir. Texto para o nativo abre a busca visível;
+coordenadas seguem diretamente após a escolha. Reconhece URLs longas de Maps/Waze com query de
+destino; **não expande links curtos** (Maps/Waze podem compartilhar só um link desses), não faz
+requisições a hosts arbitrários. Nesses casos orienta buscar/compartilhar coordenadas.
+
+Regressões em `NativeRouteTest`: entradas, URLs, coordenadas inválidas, OSRM, rotatória, próxima
+manobra, avanço/distância/chegada, desvio e prioridade nativo/externo no painel. O cálculo e as
+regras de projeção não envolvem SDK/CAN. #9 e #15 continuam no branch separado de comandos/debug.
+
+Validação final da #14: `testDebugUnitTest` **129 testes, 0 falhas** (12 novos), `lintRelease`
+**0 erros, 109 avisos**, `assembleDebug` concluído, JDK 17/SDK indicados pelo dono. Consulta pública
+OSRM de exemplo (Berlim, sem coordenadas do dono) retornou `Ok`. Sem emulador/carro; não comprova
+lifecycle, renderização, entrega de intents nem compatibilidade da firmware. Capturas pendentes.

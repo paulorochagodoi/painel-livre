@@ -135,3 +135,22 @@ comportamento do DashCast. Nada escreve no CAN. Use por sua conta e risco; não 
   código, imagem, voz, chave ou servidor dele é usado.
 
 Licença: [MIT](LICENSE). Não é afiliado à BYD nem ao SealNav.
+
+### Rota nativa (em desenvolvimento, issue #14)
+
+Na aba Navegação escolha **Painel Livre**, busque o endereço e toque no resultado. Casa, Trabalho e
+recentes usam a mesma escolha. A linha da rota e a próxima manobra aparecem no mapa do painel;
+Maps e Waze continuam disponíveis. No modo manual, toque também em Mostrar no painel.
+Para encerrar, toque no cartão de rota ativa na aba Navegação e em **Encerrar**.
+
+O cálculo nativo usa o [OSRM público](https://project-osrm.org/) por HTTPS, sem chave. Envia ao
+`router.project-osrm.org` as **coordenadas precisas de origem e destino** (necessárias para calcular
+as ruas), sem nome, VIN ou identificador pessoal. Precisa de internet e GPS recente; o servidor
+público não garante disponibilidade. Não tem trânsito ao vivo, voz nem mapa/rota offline.
+A rota é independente da calculada pelo Maps/Waze. Para uso diário, avaliar instância própria.
+
+O app recebe compartilhamento de texto/coordenadas e intents `geo:`/`google.navigation:` e pede
+qual mapa usar. Endereço textual abre a busca para você conferir o resultado. Links curtos do Maps
+ou Waze ainda não são expandidos: nesse caso busque o endereço ou compartilhe coordenadas.
+Fechar só a tela mantém a orientação; encerrar o processo/serviço perde a rota atual.
+Esta função ainda precisa de validação no carro; veja o checklist em `docs/PLANO.md`.

@@ -73,10 +73,12 @@
     </string-array>
 
     <string-array name="nav_app_entries">
+        <item>Painel Livre (mapa nativo)</item>
         <item>Google Maps</item>
         <item>Waze</item>
     </string-array>
     <string-array name="nav_app_values">
+        <item>native</item>
         <item>maps</item>
         <item>waze</item>
     </string-array>

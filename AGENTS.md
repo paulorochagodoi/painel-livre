@@ -206,3 +206,13 @@ Validação local desta etapa: 87 testes JVM (14 novos), `assembleDebug` conclu�
 `lintDebug` com 0 erros e 105 avisos. Sandbox exigiu `GRADLE_USER_HOME=/tmp/painel-gradle`
 e `ANDROID_USER_HOME=/tmp/painel-cluster-android` (chave debug temporária, sem alterar a assinatura
 release). Captura das preferências e testes Android/carro continuam pendentes.
+
+## Continuação — issue #14 (não lançado)
+
+Pedido explícito do dono em #14 amplia a meta de rota apenas Maps/Waze: agora existe opção
+`nav_app=native`, com OSRM HTTPS independente, linha MapLibre e orientação simples em Kotlin.
+Código em `nav/native`; não confundir com mover Maps/Waze ao painel. OSRM recebe origem/destino
+precisos (README). Links curtos não são resolvidos. Sessão em memória, sem voz/trânsito/offline.
+A rota nativa ativa força integrado e ignora notificações externas; modo manual segue respeitado.
+Não há comando novo de painel nem implementação do menu nativo (#9/#15 ficam com Claude).
+O AVD não iniciou neste ambiente por falta de `/dev/kvm`: capturas e teste real pendentes.

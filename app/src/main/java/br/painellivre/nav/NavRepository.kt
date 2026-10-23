@@ -20,6 +20,7 @@ data class NavState(
         get() = when (sourcePackage) {
             NavRepository.PKG_MAPS, NavRepository.PKG_MAPS_REVANCED -> "Google Maps"
             NavRepository.PKG_WAZE -> "Waze"
+            "br.painellivre" -> "Painel Livre"
             null -> ""
             else -> "Simulação"
         }
@@ -35,6 +36,7 @@ object NavRepository {
     val state: StateFlow<NavState> = _state.asStateFlow()
 
     fun update(pkg: String, nav: ParsedNav, icon: Bitmap?, simulated: Boolean = false) {
+        if (_state.value.sourcePackage == "br.painellivre" && pkg != "br.painellivre") return
         _state.value = NavState(true, pkg, nav, icon, simulated, SystemClock.elapsedRealtime())
     }
 

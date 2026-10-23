@@ -34,7 +34,7 @@ data class Place(val name: String, val address: String, val lat: Double, val lon
 
 /**
  * Busca de endereços (Photon, sobre o OpenStreetMap — aberto, sem chave) e lugares guardados.
- * A rota em si é sempre do Google Maps ou do Waze: aqui só se escolhe o destino.
+ * O destino pode ir ao mapa nativo ou aos apps externos.
  */
 object Places {
     private const val KEY_HOME = "place_home"
@@ -109,6 +109,10 @@ object Places {
     /** Abre a navegação até [p] no Google Maps ou no Waze ([app] = "maps" ou "waze"). */
     fun navigate(ctx: Context, p: Place, app: String): Boolean {
         addRecent(ctx, p)
+        if (app == "native") {
+            br.painellivre.nav.native.NativeNavigation.start(ctx, "${p.lat},${p.lon}")
+            return true
+        }
         val i = if (app == "waze") {
             Intent(Intent.ACTION_VIEW, Uri.parse("https://waze.com/ul?ll=${p.lat},${p.lon}&navigate=yes")).setPackage(NavRepository.PKG_WAZE)
         } else {
@@ -119,6 +123,10 @@ object Places {
 
     /** Busca por texto direto no app (quando não há resultado ou sem internet para a busca). */
     fun navigateText(ctx: Context, query: String, app: String): Boolean {
+        if (app == "native") {
+            br.painellivre.nav.native.NativeNavigation.start(ctx, query)
+            return true
+        }
         val q = Uri.encode(query)
         val i = if (app == "waze") {
             Intent(Intent.ACTION_VIEW, Uri.parse("https://waze.com/ul?q=$q&navigate=yes")).setPackage(NavRepository.PKG_WAZE)
@@ -129,6 +137,7 @@ object Places {
     }
 
     fun openApp(ctx: Context, app: String): Boolean {
+        if (app == "native") return start(ctx, Intent(ctx, br.painellivre.ui.LauncherActivity::class.java))
         val pkg = if (app == "waze") NavRepository.PKG_WAZE else NavRepository.PKG_MAPS
         val i = ctx.packageManager.getLaunchIntentForPackage(pkg) ?: return false
         return start(ctx, i)
@@ -141,6 +150,7 @@ object Places {
 
     private fun startRoute(ctx: Context, intent: Intent): Boolean {
         if (!start(ctx, intent)) return false
+        br.painellivre.nav.native.NativeNavigation.stop()
         // Não depende da notificação: ela pode demorar ou estar sem permissão na DiLink 3.
         br.painellivre.cluster.ClusterService.start(ctx, br.painellivre.cluster.ClusterService.ACTION_ROUTE_REQUEST)
         return true

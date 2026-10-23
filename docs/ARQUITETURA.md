@@ -71,15 +71,21 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 ## Tela inicial (launcher)
 
 O alias `.ui.HomeAlias` (filtro `MAIN` + `HOME` + `DEFAULT`, alvo `LauncherActivity`, `singleTask`)
-vem **ligado** no manifesto desde a issue #7; antes vinha desligado e o app não era reconhecido como
-launcher. Fluxo de "Usar como tela inicial" (`SystemSetup.becomeHome` + `HomeChoice`):
+vem **desligado** no manifesto. A v0.4.0 o trazia ligado (issue #7) e a central da BYD recusou
+instalar o APK ("Fail in installation of desktop apps"; hipótese: o instalador recusa APK com launcher
+ativo — a confirmar no carro). Desde a v0.4.1 o app liga o alias em tempo de execução
+(`PackageManager.setComponentEnabledSetting`, `DONT_KILL_APP`, permitido para os próprios
+componentes), e só a pedido do motorista. Fluxo de "Usar como tela inicial" (`SystemSetup.becomeHome`
++ `HomeChoice`):
 
-1. Religa o alias (um "Voltar ao launcher da BYD" antigo pode tê-lo desligado).
-2. Com ADB: lê o launcher atual (`resolve-activity --brief`), guarda-o se for outro launcher de verdade
-   (nunca o seletor `ResolverActivity`), manda `cmd package set-home-activity br.painellivre/.ui.HomeAlias`
-   e lê de novo para dizer se funcionou.
-3. Sem ADB ou recusado: abre `Settings.ACTION_HOME_SETTINGS` ou, se a BYD tirou essa tela, o próprio
-   Início, para o Android mostrar o seletor com "Sempre".
+1. Lê o estado do alias (`getComponentEnabledSetting` → `HomeChoice.aliasOn`; "padrão" = desligado).
+2. Com ADB: lê o launcher atual (`resolve-activity --brief`) **antes** de ligar o alias (assim a BYD é
+   a única e não sai o seletor) e guarda-o se for outro launcher de verdade (nunca o `ResolverActivity`).
+3. Liga o alias se o próximo passo pedir (`HomeChoice.mustEnableAlias`): o `set-home-activity` recusa
+   componente desligado e a tela "Tela inicial"/o seletor só listam o app com o filtro ativo.
+4. Com ADB: manda `cmd package set-home-activity br.painellivre/.ui.HomeAlias` e lê de novo para dizer
+   se funcionou. Sem ADB ou recusado: abre `Settings.ACTION_HOME_SETTINGS` ou, se a BYD tirou essa
+   tela, o próprio Início, para o Android mostrar o seletor com "Sempre".
 
 "Voltar ao launcher da BYD" define o original guardado; se não houver original (ou a central recusar),
 desliga o alias para a BYD voltar a ser a única tela inicial. Com o alias ligado e nenhum preferido, o
@@ -173,7 +179,7 @@ rede ou espera de tempo real. Execute com JDK 17:
 | `PoseSmootherTest` | posição, rumo, limites de previsão e ruído de GPS |
 | `FreezeWatchTest` | vigia, orçamento de recuperação e convivência (`YieldPolicy`) |
 | `CockpitTest` | Photon, tema e códigos do tempo |
-| `HomeChoiceTest` | saída do `resolve-activity` (nosso, BYD, seletor, erro), launcher original, resultado do `set-home-activity`, próximo passo, restauração e o alias HOME ligado no manifesto |
+| `HomeChoiceTest` | saída do `resolve-activity` (nosso, BYD, seletor, erro), launcher original, resultado do `set-home-activity`, próximo passo, restauração, estado do alias e quando ligá-lo, alias HOME **desligado** no manifesto e nenhum outro componente com `HOME` |
 | `DialerTest` | teclado, limite, limpeza de número colado, mínimo de 3 dígitos, `tel:` com `#`, formato brasileiro, ordem dos caminhos de chamada (inclusive "nenhum app"), pedido de permissão e escolha do app do carro |
 | `ForecastTest` | agora/horas/dias do Open-Meteo, buracos `null`, respostas ruins, rótulos em português, textos, URL com posição arredondada e limite de pedidos |
 

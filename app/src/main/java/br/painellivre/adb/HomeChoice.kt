@@ -7,8 +7,29 @@ package br.painellivre.adb
  * desligado no manifesto, então nem o Android nem a BYD listavam o Painel Livre como tela inicial; e o
  * botão "Usar como tela inicial" podia guardar o seletor do Android (`ResolverActivity`) como "launcher
  * original", que depois não dá para restaurar.
+ *
+ * v0.4.1: a v0.4.0 passou a trazer o alias ligado no manifesto e a central da BYD recusou instalar
+ * ("Fail in installation of desktop apps" — hipótese: o instalador recusa APK que chega como launcher
+ * ativo). O alias voltou a vir desligado e só é ligado em tempo de execução, quando o motorista toca em
+ * "Usar como tela inicial" ([mustEnableAlias]).
  */
 object HomeChoice {
+
+    // Mesmos números de `PackageManager.COMPONENT_ENABLED_STATE_*`, repetidos aqui para não usar API
+    // Android nesta classe (testes na JVM).
+    const val STATE_DEFAULT = 0
+    const val STATE_ENABLED = 1
+    const val STATE_DISABLED = 2
+
+    /** O alias vem desligado no manifesto (v0.4.1): "padrão" quer dizer desligado. */
+    const val ALIAS_ENABLED_IN_MANIFEST = false
+
+    /** Resposta de `getComponentEnabledSetting` → o filtro HOME está ativo agora? */
+    fun aliasOn(state: Int, manifestEnabled: Boolean = ALIAS_ENABLED_IN_MANIFEST): Boolean = when (state) {
+        STATE_ENABLED -> true
+        STATE_DEFAULT -> manifestEnabled
+        else -> false
+    }
 
     /** O que `cmd package resolve-activity --brief … HOME` respondeu. */
     sealed class Resolved {
@@ -62,12 +83,19 @@ object HomeChoice {
         CHOOSER,
     }
 
-    fun nextStep(current: Resolved, adbOk: Boolean, hasHomeSettings: Boolean): Step = when {
-        current is Resolved.Ours -> Step.DONE
+    /** Com o alias desligado, um "nosso" na resposta é resto antigo: o Início não abriria o app. */
+    fun nextStep(current: Resolved, adbOk: Boolean, hasHomeSettings: Boolean, aliasOn: Boolean = true): Step = when {
+        current is Resolved.Ours && aliasOn -> Step.DONE
         adbOk -> Step.ADB
         hasHomeSettings -> Step.HOME_SETTINGS
         else -> Step.CHOOSER
     }
+
+    /**
+     * Ligar o alias antes do passo: o `set-home-activity` recusa componente desligado, e a tela "Tela
+     * inicial"/o seletor só listam o app com o filtro HOME ativo. Só depois do toque do motorista.
+     */
+    fun mustEnableAlias(step: Step, aliasOn: Boolean): Boolean = step != Step.DONE && !aliasOn
 
     /** Ao voltar ao launcher da BYD: com o original conhecido, define-o; sem ele, esconde o nosso filtro HOME. */
     fun restoreTarget(original: String?, ourPackage: String): String? =

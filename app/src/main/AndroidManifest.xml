@@ -52,12 +52,13 @@
             </intent-filter>
         </activity>
 
-        <!-- Alias HOME: ligado (issue #7). Desligado, o Android e a BYD não listavam o app como
-             tela inicial. "Usar como tela inicial" escolhe o preferido pelo ADB; "Voltar ao
-             launcher da BYD" desliga o alias se não souber qual era o original. -->
+        <!-- Alias HOME: desligado no manifesto (v0.4.1). Ligado, a central da BYD recusou instalar
+             a v0.4.0 ("Fail in installation of desktop apps"). "Usar como tela inicial" liga o alias
+             em tempo de execução e escolhe o preferido; "Voltar ao launcher da BYD" desliga o alias
+             se não souber qual era o original. -->
         <activity-alias
             android:name=".ui.HomeAlias"
-            android:enabled="true"
+            android:enabled="false"
             android:exported="true"
             android:targetActivity=".ui.LauncherActivity">
             <intent-filter>

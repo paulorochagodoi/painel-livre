@@ -23,8 +23,10 @@ e de entender, igual a ele; a única diferença é a rota vir do Google Maps ou 
 
 ## Central — issues #7, #3, #4 (2026-10-23, não lançado)
 
-- **#7 launcher**: alias HOME ligado no manifesto (era a causa), "Usar como tela inicial" conferido e
-  com plano B sem ADB, Início volta à aba Início. Detalhes em `ARQUITETURA.md`, "Tela inicial".
+- **#7 launcher**: "Usar como tela inicial" conferido e com plano B sem ADB, Início volta à aba
+  Início. Detalhes em `ARQUITETURA.md`, "Tela inicial". A v0.4.0 trazia o alias HOME ligado no
+  manifesto e **não instalou no carro** ("Fail in installation of desktop apps"); na v0.4.1 o alias
+  volta desligado e o botão o liga em tempo de execução (causa ainda é hipótese, ver Fase 1, item 8).
 - **#3 telefone**: discador próprio com quatro caminhos para ligar (`ARQUITETURA.md`, "Telefone").
 - **#4 tempo**: tela de previsão (agora, 24 h, 7 dias) do mesmo pedido ao Open-Meteo.
 - 26 testes JVM novos (99 no total). Validado só na JVM e no build/lint; **falta emulador e carro**
@@ -137,8 +139,12 @@ o menu pela aplicação.
 7. Desligar e ligar o carro: o Diagnóstico mostra "Último boot recebido"? O serviço sobe sozinho?
    Se não, testar "Usar como tela inicial".
 8. **Central (issues #7, #3, #4)** — só o carro confirma:
+   - *Instalar (v0.4.1)*: o APK instala pela central sem "Fail in installation of desktop apps"? Se
+     instalar, confirma a hipótese (a BYD recusa APK com launcher ativo no manifesto). Se ainda falhar,
+     anotar a mensagem exata e o logcat da instalação (`PackageManager`, `PackageInstaller`).
    - *Tela inicial*: no Diagnóstico → Info da central, anotar `tela_inicial=` e a lista `launchers:`
-     (o Painel Livre deve aparecer). Tocar em "Usar como tela inicial" e depois no Início da BYD (botão
+     (antes do botão o Painel Livre **não** deve aparecer; o alias vem desligado). Tocar em "Usar como
+     tela inicial" (agora deve aparecer na lista) e depois no Início da BYD (botão
      da tela e do volante, se houver): abre o Painel Livre? Se a BYD abrir o launcher dela mesmo assim,
      é porque o botão Início da ROM chama o pacote direto (sem passar pelo HOME do Android) — anotar o
      pacote do launcher dela e o que aparece no logcat ao tocar (`ActivityTaskManager: START`). Depois

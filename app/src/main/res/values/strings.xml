@@ -26,6 +26,7 @@
 
     <string name="settings_title">Configurações</string>
     <string name="diag_title">Diagnóstico</string>
+    <string name="debug_title">Modo de debug</string>
     <string name="simulate">Simular rota</string>
 
     <string name="address_missing">Cadastre o endereço em Configurações.</string>

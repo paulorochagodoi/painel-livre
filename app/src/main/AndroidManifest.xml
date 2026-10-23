@@ -105,6 +105,12 @@
             android:label="@string/settings_title" />
 
         <activity
+            android:name=".ui.DebugActivity"
+            android:exported="false"
+            android:theme="@style/Theme.PainelLivre.WithBar"
+            android:label="@string/debug_title" />
+
+        <activity
             android:name=".ui.DiagnosticsActivity"
             android:exported="false"
             android:theme="@style/Theme.PainelLivre.WithBar"

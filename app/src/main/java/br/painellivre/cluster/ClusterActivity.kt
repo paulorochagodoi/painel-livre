@@ -151,7 +151,9 @@ open class ClusterActivity : ComponentActivity() {
         overlay = FrameLayout(this)
         root.addView(overlay, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         buildOverlay()
-        setContentView(root)
+        // Moldura do menu de navegação do painel (issue #9): área e o que aparece em cada opção.
+        val menuFrame = PanelMenuFrame(this, root)
+        setContentView(menuFrame.frame)
         if (preview) overlay.setOnClickListener { finish() } // por cima do mapa, que consome o toque
 
         root.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or_, ob ->
@@ -188,6 +190,12 @@ open class ClusterActivity : ComponentActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { NavRepository.state.collect { render(it) } }
                 launch { LocationRepository.location.collect { it?.let(::onFix) } }
+                launch {
+                    PanelMenuWatcher.layouts(this@ClusterActivity).collect {
+                        menuFrame.apply(it)
+                        carView.alpha = if (it.showCar) 1f else 0f
+                    }
+                }
                 launch {
                     // Dia/noite: troca o tema do mapa e dos cartões quando a hora vira.
                     while (true) { delay(60_000); applyTheme() }

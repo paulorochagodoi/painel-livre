@@ -40,6 +40,15 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
     /** Recriar a superfície do mapa se ele congelar andando (vigia, docs/SEALNAV_RE.md achado G). */
     val autoHeal: Boolean get() = sp.getBoolean(KEY_AUTO_HEAL, true)
 
+    /** Modo de debug (issue #9): registra settings, propriedades e broadcasts. Desligado por padrão. */
+    val debugMode: Boolean get() = sp.getBoolean(KEY_DEBUG_MODE, false)
+    /** Seguir o menu de navegação do painel (Simples/Pequeno/Cheio/OFF). Experimental, desligado. */
+    val panelMenuFollow: Boolean get() = sp.getBoolean(KEY_PANEL_MENU_FOLLOW, false)
+    /** Ações de broadcast extras que o debug escuta (digitadas pelo motorista). */
+    var debugActions: Set<String>
+        get() = sp.getStringSet(KEY_DEBUG_ACTIONS, null)?.toSet() ?: emptySet()
+        set(v) = sp.edit().putStringSet(KEY_DEBUG_ACTIONS, v).apply()
+
     /** Projeção ligada por este app e ainda não desligada (para limpar estado velho no boot). */
     var projectionPowered: Boolean
         get() = sp.getBoolean(KEY_PROJECTION_POWERED, false)
@@ -84,6 +93,9 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
         const val KEY_CAR_PHOTO = "car_photo"
         const val KEY_MAX_FPS = "max_fps"
         const val KEY_AUTO_HEAL = "auto_heal"
+        const val KEY_DEBUG_MODE = "debug_mode"
+        const val KEY_PANEL_MENU_FOLLOW = "panel_menu_follow"
+        private const val KEY_DEBUG_ACTIONS = "debug_actions"
         private const val KEY_PROJECTION_POWERED = "projection_powered"
         private const val KEY_PANEL_GEOMETRY = "panel_geometry"
         private const val KEY_LAST_BOOT = "last_boot_at"

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Painel Livre</string>
+    <string name="channel_service">Painel de instrumentos</string>
+
+    <string name="cluster_show">Mostrar no painel</string>
+    <string name="cluster_restore">Painel original</string>
+    <string name="cluster_title">Painel de instrumentos</string>
+
+    <string name="nav_title">Navegação</string>
+    <string name="nav_idle">Nenhuma rota ativa. Inicie uma rota no Google Maps ou no Waze.</string>
+    <string name="open_maps">Google Maps</string>
+    <string name="open_waze">Waze</string>
+    <string name="go_home">Casa</string>
+    <string name="go_work">Trabalho</string>
+    <string name="search_dest">Buscar destino</string>
+
+    <string name="car_title">Carro</string>
+    <string name="apps_title">Apps</string>
+
+    <string name="setup_title">Configuração inicial</string>
+    <string name="setup_notif">Permitir leitura das notificações do Maps/Waze</string>
+    <string name="setup_location">Permitir localização (GPS do mapa no painel)</string>
+    <string name="setup_adb">Autorizar ADB local (toque e aceite \"Permitir depuração USB\")</string>
+    <string name="setup_grant_all">Conceder tudo pelo ADB</string>
+
+    <string name="settings_title">Configurações</string>
+    <string name="diag_title">Diagnóstico</string>
+    <string name="simulate">Simular rota</string>
+
+    <string name="address_missing">Cadastre o endereço em Configurações.</string>
+
+    <string name="cluster_title_short">Painel</string>
+    <string name="panel_native">Painel original</string>
+    <string name="panel_on">Mapa no painel</string>
+    <string name="panel_auto_hint">Liga sozinho quando a rota começa</string>
+    <string name="panel_working">Ligando o painel…</string>
+    <string name="panel_yielded">Outro app está no painel</string>
+    <string name="destination">Destino</string>
+    <string name="destination_hint">Para onde vamos?</string>
+    <string name="media_choose">Escolher música</string>
+    <string name="media_open">Toque para abrir a mídia</string>
+    <string name="media_prev">Anterior</string>
+    <string name="media_play">Tocar ou pausar</string>
+    <string name="media_next">Próxima</string>
+    <string name="battery">Bateria</string>
+    <string name="car_data_unavailable">Dados do carro indisponíveis</string>
+    <string name="tab_home">Início</string>
+    <string name="tab_media">Mídia</string>
+    <string name="tab_phone">Telefone</string>
+    <string name="tab_settings">Ajustes</string>
+    <string name="search_hint">Para onde?</string>
+    <string name="clear">Limpar</string>
+    <string name="places">Lugares</string>
+    <string name="results">Resultados</string>
+    <string name="setup_now">Configurar</string>
+    <string name="set_home">Definir casa</string>
+    <string name="set_work">Definir trabalho</string>
+    <string name="pick_home">Escolha o endereço de casa na busca</string>
+    <string name="pick_work">Escolha o endereço do trabalho na busca</string>
+    <string name="good_morning">Bom dia</string>
+    <string name="good_afternoon">Boa tarde</string>
+    <string name="good_evening">Boa noite</string>
+</resources>

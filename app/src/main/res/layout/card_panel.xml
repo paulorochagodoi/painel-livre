@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cartão do painel de instrumentos: estado da projeção e o botão de mostrar/voltar. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/cardPanel"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:padding="18dp"
+    android:tag="card_click">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_speed"
+            android:tag="icon_accent" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/panelTitle"
+                style="@style/CcTitle"
+                android:text="@string/panel_native" />
+
+            <TextView
+                android:id="@+id/panelSub"
+                style="@style/CcSub"
+                android:text="@string/panel_auto_hint" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <TextView
+        android:id="@+id/panelToggle"
+        style="@style/CcChipButton"
+        android:layout_width="match_parent"
+        android:tag="chip_on"
+        android:text="@string/cluster_show" />
+
+    <LinearLayout style="@style/CcFooter">
+
+        <ImageView
+            style="@style/CcFooterIcon"
+            android:src="@drawable/ic_speed" />
+
+        <TextView
+            style="@style/CcFooterText"
+            android:text="@string/cluster_title" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,26 @@
+# Gradle / Android Studio
+.gradle/
+.kotlin/
+build/
+app/build/
+captures/
+local.properties
+*.iml
+.idea/
+.DS_Store
+
+# Segredos: chave de assinatura e senhas ficam só na máquina do dono
+keystore/
+*.jks
+*.keystore
+keystore.properties
+
+# Binários: APKs (nossos e de terceiros) não entram no repositório
+*.apk
+*.aab
+*.apks
+*.dex
+
+# Saída de descompilação / estudo de APKs
+re-out/
+jadx-out/

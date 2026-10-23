@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="cluster_mode_entries">
+        <item>Só durante a navegação</item>
+        <item>Sempre</item>
+        <item>Manual (só pelos botões)</item>
+    </string-array>
+    <string-array name="cluster_mode_values">
+        <item>nav</item>
+        <item>always</item>
+        <item>manual</item>
+    </string-array>
+
+    <!-- Código do AutoContainer: 30 = 12,3", 31 = 10,25", 29 = 8,8". O app bloqueia um código
+         que não combine com o painel medido (ver cluster/PanelSize.kt). -->
+    <string-array name="panel_size_entries">
+        <item>Automático (Song Plus / Seal U → 12,3\")</item>
+        <item>12,3\" (código 30)</item>
+        <item>10,25\" (código 31)</item>
+        <item>8,8\" (código 29)</item>
+        <item>Não enviar (como o DashCast)</item>
+    </string-array>
+    <string-array name="panel_size_values">
+        <item>auto</item>
+        <item>30</item>
+        <item>31</item>
+        <item>29</item>
+        <item>off</item>
+    </string-array>
+
+    <string-array name="theme_entries">
+        <item>Automático (claro de dia, escuro à noite)</item>
+        <item>Sempre claro</item>
+        <item>Sempre escuro</item>
+    </string-array>
+    <string-array name="theme_values">
+        <item>auto</item>
+        <item>day</item>
+        <item>night</item>
+    </string-array>
+
+
+    <string-array name="max_fps_entries">
+        <item>60 quadros/s (mais suave)</item>
+        <item>30 quadros/s (mais leve)</item>
+    </string-array>
+    <string-array name="max_fps_values">
+        <item>60</item>
+        <item>30</item>
+    </string-array>
+
+    <string-array name="map_style_entries">
+        <item>Automático (segue o tema)</item>
+        <item>Escuro</item>
+        <item>Colorido (Liberty)</item>
+        <item>Claro (Positron)</item>
+        <item>Azul-escuro (Fiord)</item>
+    </string-array>
+    <string-array name="map_style_values">
+        <item>auto</item>
+        <item>dark</item>
+        <item>liberty</item>
+        <item>positron</item>
+        <item>fiord</item>
+    </string-array>
+
+    <string-array name="nav_app_entries">
+        <item>Google Maps</item>
+        <item>Waze</item>
+    </string-array>
+    <string-array name="nav_app_values">
+        <item>maps</item>
+        <item>waze</item>
+    </string-array>
+</resources>

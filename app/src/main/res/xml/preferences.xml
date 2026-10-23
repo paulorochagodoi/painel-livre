@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="Aparência" app:iconSpaceReserved="false">
+        <ListPreference
+            app:key="theme"
+            app:title="Tema (central e mapa)"
+            app:defaultValue="auto"
+            app:entries="@array/theme_entries"
+            app:entryValues="@array/theme_values"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <Preference
+            app:key="car_photo_pick"
+            app:title="Usar uma foto do meu carro"
+            app:summary="Aparece no lugar da ilustração na tela inicial."
+            app:iconSpaceReserved="false" />
+        <Preference
+            app:key="car_photo_clear"
+            app:title="Voltar à ilustração do carro"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Painel de instrumentos" app:iconSpaceReserved="false">
+        <ListPreference
+            app:key="cluster_mode"
+            app:title="Quando mostrar o mapa no painel"
+            app:defaultValue="nav"
+            app:entries="@array/cluster_mode_entries"
+            app:entryValues="@array/cluster_mode_values"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <ListPreference
+            app:key="panel_size"
+            app:title="Tamanho do painel (enviado antes de ligar a projeção)"
+            app:defaultValue="auto"
+            app:entries="@array/panel_size_entries"
+            app:entryValues="@array/panel_size_values"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <EditTextPreference
+            app:key="restore_delay"
+            app:title="Segundos até voltar ao painel original após a rota"
+            app:defaultValue="20"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <ListPreference
+            app:key="map_style"
+            app:title="Estilo do mapa no painel"
+            app:defaultValue="auto"
+            app:entries="@array/map_style_entries"
+            app:entryValues="@array/map_style_values"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <EditTextPreference
+            app:key="map_tilt"
+            app:title="Inclinação do mapa (0–60°)"
+            app:defaultValue="45"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <ListPreference
+            app:key="max_fps"
+            app:title="Fluidez do mapa andando (parado fica em 5 quadros/s)"
+            app:defaultValue="60"
+            app:entries="@array/max_fps_entries"
+            app:entryValues="@array/max_fps_values"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat
+            app:key="auto_heal"
+            app:title="Recuperar o mapa se ele travar"
+            app:summary="Redesenha e, se preciso, recria a imagem do mapa (no máximo 3 vezes a cada 10 min)."
+            app:defaultValue="true"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        app:title="Margens no painel (pixels do painel)"
+        app:summary="Use se os instrumentos da BYD cobrirem parte do mapa."
+        app:iconSpaceReserved="false">
+        <EditTextPreference app:key="inset_left" app:title="Esquerda" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="inset_top" app:title="Topo" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="inset_right" app:title="Direita" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="inset_bottom" app:title="Base" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Navegação" app:iconSpaceReserved="false">
+        <ListPreference
+            app:key="nav_app"
+            app:title="App de navegação dos atalhos"
+            app:defaultValue="maps"
+            app:entries="@array/nav_app_entries"
+            app:entryValues="@array/nav_app_values"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Testes e ajuda" app:iconSpaceReserved="false">
+        <Preference
+            app:key="simulate"
+            app:title="Simular rota"
+            app:summary="Mostra uma rota de teste no painel, com o carro parado."
+            app:iconSpaceReserved="false" />
+        <Preference
+            app:key="grant_all"
+            app:title="Conceder permissões pelo ADB"
+            app:summary="Localização, notificações do Maps/Waze, dados do carro e segundo plano."
+            app:iconSpaceReserved="false" />
+        <Preference
+            app:key="diagnostics"
+            app:title="Diagnóstico"
+            app:summary="Informações da central e do painel, para copiar e enviar."
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Sistema" app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat
+            app:key="start_on_boot"
+            app:title="Iniciar junto com o carro"
+            app:defaultValue="true"
+            app:iconSpaceReserved="false" />
+        <Preference
+            app:key="become_home"
+            app:title="Usar o Painel Livre como tela inicial"
+            app:summary="Substitui o launcher da BYD (dá para voltar a qualquer momento)."
+            app:iconSpaceReserved="false" />
+        <Preference
+            app:key="restore_home"
+            app:title="Voltar ao launcher da BYD"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+</PreferenceScreen>

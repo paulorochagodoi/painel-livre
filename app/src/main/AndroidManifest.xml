@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Só para o ícone de Bluetooth ligado/desligado na barra de cima. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+
+    <!-- Leitura de dados do carro (bateria, autonomia, combustível, hodômetro) pelo SDK BYD.
+         Mesmas permissões de leitura que o BYD Navigator (Telenav) declara. Só leitura. -->
+    <uses-permission android:name="android.permission.BYDAUTO_STATISTIC_GET" />
+    <uses-permission android:name="android.permission.BYDAUTO_BODYWORK_GET" />
+    <uses-permission android:name="android.permission.BYDAUTO_CHARGING_GET" />
+    <uses-permission android:name="android.permission.BYDAUTO_SPEED_GET" />
+    <uses-permission android:name="android.permission.BYDAUTO_INSTRUMENT_GET" />
+
+    <uses-feature android:glEsVersion="0x00030000" android:required="true" />
+
+    <application
+        android:name=".App"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.PainelLivre"
+        android:usesCleartextTraffic="false"
+        tools:targetApi="29">
+
+        <!-- Tela inicial (launcher) da central -->
+        <activity
+            android:name=".ui.LauncherActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:configChanges="keyboardHidden|uiMode"
+            android:windowSoftInputMode="adjustNothing"
+            android:resumeWhilePausing="true"
+            android:stateNotNeeded="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Alias HOME: desligado por padrão. Ligado só quando o usuário escolhe
+             "Usar como tela inicial", para não abrir o seletor de launcher sem pedir. -->
+        <activity-alias
+            android:name=".ui.HomeAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:targetActivity=".ui.LauncherActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Tela do painel de instrumentos. Exportada porque é aberta por
+             "am start" com a opção de display (uid 2000), que não pode abrir componentes não exportados.
+             allowEmbedded é exigido pelo Android para abrir em display virtual de outro dono. -->
+        <activity
+            android:name=".cluster.ClusterActivity"
+            android:allowEmbedded="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|keyboardHidden|uiMode"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleInstance"
+            android:resizeableActivity="true"
+            android:screenOrientation="unspecified"
+            android:taskAffinity="br.painellivre.cluster"
+            android:theme="@style/Theme.PainelLivre.Cluster" />
+
+        <activity
+            android:name=".cluster.ClusterPreviewActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|keyboardHidden|uiMode"
+            android:exported="false"
+            android:theme="@style/Theme.PainelLivre.Cluster" />
+
+        <activity
+            android:name=".ui.SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.PainelLivre.WithBar"
+            android:label="@string/settings_title" />
+
+        <activity
+            android:name=".ui.DiagnosticsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.PainelLivre.WithBar"
+            android:label="@string/diag_title" />
+
+        <service
+            android:name=".nav.NavNotificationListener"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".cluster.ClusterService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

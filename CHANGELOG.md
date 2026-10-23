@@ -4,6 +4,22 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 Nenhuma versão foi testada no carro ainda: todos os testes foram no emulador (`docs/AMBIENTE.md`).
 
+## Não lançado
+
+### Issue #14 — rota no mapa nativo
+
+- Opção **Painel Livre** ao lado de Maps/Waze; destinos por busca, guardados, recentes,
+  compartilhamento e intents geo/google.navigation, com confirmação da fonte na entrada externa.
+- Rota independente por OSRM HTTPS, linha no mapa da central/painel, próxima manobra, distância,
+  restante/chegada e recálculo por desvio. Serviço acompanha GPS sem depender das notificações.
+- Prioridade para o integrado ao navegar nativamente, sessão encerrável na aba Navegação e proteção
+  contra ativação duplicada. Notificações externas não sobrescrevem a orientação nativa.
+- Novo serviço externo documentado no README: OSRM recebe origem/destino precisos. Requer rede;
+  sem voz/trânsito/offline; links curtos não são expandidos. Sessão não persiste ao matar o processo.
+- Validação: 129 testes JVM (12 novos), zero falhas; `lintRelease` com 0 erros/109 avisos;
+  `assembleDebug` concluído. Roteiro do carro em `docs/PLANO.md`. Emulador indisponível
+  por falta de `/dev/kvm`; capturas e validação real pendentes. Sem mudança de versão/publicação.
+
 ## 0.4.1 — 2026-10-23 — APK volta a instalar no carro (pré-release de teste)
 
 APK `PainelLivre-v0.4.1-release.apk`, SHA-256 `95e10a175c7352918353127c242691fd0594948d6e05674a7ffe7f324b40005d`.

@@ -319,3 +319,45 @@ carro parado responde com o carro andando.
 ## Fase 5 — Extras
 
 Câmeras no painel ao dar seta, voz em português sem TTS da central, launcher com carro 3D (Filament).
+
+## Issue #14 — rota nativa opcional (não lançado)
+
+Implementada a primeira versão da Fase 3, item 7, com OSRM HTTPS + MapLibre e acompanhamento
+Kotlin, sem Ferrostar: escolha Painel Livre/Maps/Waze, busca/Casa/Trabalho/recentes, compartilhamento
+e intents `geo:`/`google.navigation:`, linha azul, próxima manobra, restante/chegada e recálculo.
+A decisão do dono em #14 amplia a meta anterior, mantendo os apps externos. Não lê a linha da rota
+do Maps/Waze: o percurso nativo é independente e pode ser diferente. Sem voz/trânsito/offline.
+O menu Simples/Pequeno/Cheio/OFF e seu debug (#9/#15) pertencem ao trabalho separado do Claude.
+
+Checklist adicional no carro (pelo dono, começando parado; sem acesso ADB do agente):
+
+- [ ] Instalar build desta etapa; em Navegação escolher **Painel Livre**, buscar um endereço e tocar
+  no resultado. Com localização permitida/GPS recente e internet, conferir cálculo, linha azul e
+  manobra no painel, sem precisar abrir Maps/Waze nem liberar suas notificações.
+- [ ] Repetir Casa, Trabalho e recente. Verificar modo Só com rota / Sempre; em Manual a rota fica
+  pronta mas só Mostrar no painel ativa. Com conteúdo experimental externo selecionado, a rota
+  nativa deve abrir o integrado. Conferir log sem ativação AutoContainer duplicada.
+- [ ] Compartilhar coordenadas e endereço; testar `geo:0,0?q=lat,lon`, `geo:lat,lon` e
+  `google.navigation:q=...`. Confirmar escolha entre as três fontes; texto deve permitir escolher
+  resultado correto. Link curto não resolvido deve avisar, sem abrir destino errado.
+- [ ] Com navegação real e observação segura, conferir manobra antes/depois da curva, rotatória,
+  distâncias, hora de chegada, linha e carro alinhados. Comparar cruzamentos, retornos e pistas
+  paralelas; não tratar a heurística simples como validada apenas pelos testes JVM.
+- [ ] Desvio seguro: após >8 s fora da linha e >30 s do cálculo anterior, conferir recálculo;
+  sem rede, aviso e instrução de fora da rota, sem repetir pedidos sem limite. Retomar internet.
+- [ ] Sem permissão/GPS antigo/impreciso: não iniciar orientação inventada. Sem rede/OSRM recusando:
+  erro visível; Maps/Waze permanecem selecionáveis. Novo destino deve cancelar cálculo anterior.
+- [ ] Abrir outro app na central e voltar: orientação continua. Recriar tela/trocar tema: linha volta.
+  Sumir display: Activity fecha se cair na central; vigia não envia AutoContainer novamente.
+- [ ] Notificação de Maps/Waze não deve tomar a orientação nativa. Abrir rota externa explicitamente
+  deve encerrar a nativa. Tocar na rota ativa da aba Navegação → Encerrar deve limpar linha/cartões
+  e devolver o painel após o prazo. Chegada deve encerrar automaticamente.
+- [ ] Matar processo/serviço e abrir: sessão anterior não é retomada automaticamente; selecionar
+  destino novamente. Conferir impacto de internet/GPU na central.
+
+Emulador/capturas pendentes: o AVD `dilink3` não iniciou neste ambiente (sem `/dev/kvm`).
+Nenhum teste no carro nesta etapa. Não alterados comandos seguros, CAN/SDK, versão ou assinatura.
+
+Validação da #14: 129 testes JVM passando (12 novos), `lintRelease` com 0 erros/109 avisos e
+`assembleDebug` concluído. Consulta OSRM com coordenadas públicas de exemplo retornou `Ok`.
+Entrega de intents, GPS/recálculo em execução e projeção precisam do roteiro Android/carro acima.

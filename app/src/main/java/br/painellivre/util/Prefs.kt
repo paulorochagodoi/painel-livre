@@ -5,8 +5,8 @@ import android.content.SharedPreferences
 import androidx.preference.PreferenceManager
 
 /** Acesso tipado às preferências (as chaves batem com res/xml/preferences.xml). */
-class Prefs(context: Context) {
-    private val sp: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context.applicationContext)
+class Prefs internal constructor(private val sp: SharedPreferences) {
+    constructor(context: Context) : this(PreferenceManager.getDefaultSharedPreferences(context.applicationContext))
 
     /** "nav" = só durante a navegação, "always" = sempre, "manual" = só pelos botões. */
     val clusterMode: String get() = sp.getString(KEY_CLUSTER_MODE, "nav") ?: "nav"

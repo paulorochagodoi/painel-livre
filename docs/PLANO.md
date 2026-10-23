@@ -28,6 +28,14 @@ modos do painel e atraso de restauração com tempo virtual, preferências e reg
 Corrigido o cancelamento da própria restauração automática antes de completar a sequência 18 → 0.
 Detalhes e limites em `ARQUITETURA.md`, seção Testes. O primeiro teste no carro continua pendente.
 
+> **Lembrete (pedido do dono, 2026-10-23): desenvolver os testes de regressão.** A suíte JVM já cobre a
+> lógica pura (73 testes). Falta: (1) automatizar no emulador os roteiros de `AMBIENTE.md` (ativação,
+> bloqueio 8,8", estado velho, ADB no boot, convivência, restaurar, fim de rota) com um script que
+> confira o log `PainelLivre`; (2) testes instrumentados da interface (cockpit, aba Navegação, painel);
+> (3) depois do primeiro teste no carro, transformar o que o carro mostrar (formato real das
+> notificações, margens, sequência do AutoContainer) em casos fixos; (4) reativar o CI quando a
+> cobrança do GitHub for resolvida.
+
 ## Fase 1 — Primeiro teste no carro
 
 1. Instalar `PainelLivre-v0.3.0-release.apk`, aceitar "Permitir depuração USB" e tocar em **Configurar**

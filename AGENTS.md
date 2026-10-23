@@ -31,8 +31,10 @@ Brasil**, frases simples, sem jargão desnecessário.
 1. Fase 1 — primeiro teste no carro (checklist em `docs/PLANO.md`). Depende do dono.
 2. Fase 4b, passo 1 — extrair dos moldes do SDK BYD (dentro do APK do BYD Navigator) as constantes de
    clima, bancos, vidros e porta-malas. Não precisa do carro.
-3. Ajustes que o teste no carro mostrar (margens, parser das notificações, autoinício).
-4. Ajudante uid 2000 próprio (só leitura primeiro) → Fases 4 e 4b.
+3. **Lembrete do dono**: ampliar os testes de regressão (roteiros do emulador automatizados, testes de
+   interface, casos vindos do carro) — detalhes no topo da Fase 1 de `docs/PLANO.md`.
+4. Ajustes que o teste no carro mostrar (margens, parser das notificações, autoinício).
+5. Ajudante uid 2000 próprio (só leitura primeiro) → Fases 4 e 4b.
 
 ## 3. Mapa da documentação
 

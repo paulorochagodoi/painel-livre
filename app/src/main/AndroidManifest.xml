@@ -14,6 +14,9 @@
     <!-- Discador interno (issue #3): ligar direto quando a central tiver o serviço de chamadas.
          Pedida só ao tocar em Ligar; sem ela o discador abre o app de telefone com o número. -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
+    <!-- Issue #15: achar a conta de chamada do Bluetooth (HFP) no Telecom e saber se a chamada
+         começou. Pedida junto com CALL_PHONE; o número e o estado não vão para o log. -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
     <!-- Leitura de dados do carro (bateria, autonomia, combustível, hodômetro) pelo SDK BYD.
          Mesmas permissões de leitura que o BYD Navigator (Telenav) declara. Só leitura. -->

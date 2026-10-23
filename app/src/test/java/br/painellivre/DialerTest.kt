@@ -1,5 +1,6 @@
 package br.painellivre
 
+import br.painellivre.phone.CallAccounts
 import br.painellivre.phone.CallPlan
 import br.painellivre.phone.CallPlan.Route
 import br.painellivre.phone.DialNumber
@@ -67,8 +68,10 @@ class DialerTest {
         assertEquals("", DialNumber.format(""))
     }
 
-    private fun env(perm: Boolean = false, call: Boolean = false, dial: Boolean = false, telecom: Boolean = false, car: Boolean = false) =
-        CallPlan.Env(perm, call, dial, telecom, car)
+    private fun env(
+        perm: Boolean = false, call: Boolean = false, dial: Boolean = false, telecom: Boolean = false, car: Boolean = false,
+        hfpAccount: Boolean = false, callIsApp: Boolean = false, hfpDevice: Boolean = false,
+    ) = CallPlan.Env(perm, call, dial, telecom, car, hfpAccount, callIsApp, hfpDevice)
 
     @Test fun noPhoneAppNoCrash() {
         // Exatamente o caso da issue: nada responde ao ACTION_DIAL e não há app do carro.
@@ -77,14 +80,57 @@ class DialerTest {
     }
 
     @Test fun routesInOrder() {
+        // Issue #15: ligar direto (Telecom) vem antes de abrir o discador ou o app do carro.
         assertEquals(
-            listOf(Route.CALL_INTENT, Route.DIAL_INTENT, Route.PLACE_CALL, Route.CAR_PHONE_APP),
+            listOf(Route.CALL_INTENT, Route.PLACE_CALL, Route.DIAL_INTENT, Route.CAR_PHONE_APP),
             CallPlan.routes(env(perm = true, call = true, dial = true, telecom = true, car = true)),
         )
         // Sem a permissão não tenta ligar direto, mas ainda abre o discador do sistema ou o app do carro.
         assertEquals(listOf(Route.DIAL_INTENT, Route.CAR_PHONE_APP), CallPlan.routes(env(call = true, dial = true, telecom = true, car = true)))
         assertEquals(listOf(Route.PLACE_CALL), CallPlan.routes(env(perm = true, telecom = true)))
         assertEquals(listOf(Route.CAR_PHONE_APP), CallPlan.routes(env(car = true)))
+    }
+
+    @Test fun bluetoothAccountComesFirstAndCarAppCallIntentIsOnlyAFallback() {
+        // Caso do carro: o ACTION_CALL é atendido pelo app de telefone da BYD e havia conta HFP.
+        assertEquals(
+            listOf(Route.PLACE_CALL_HFP, Route.HFP_DIAL, Route.PLACE_CALL, Route.CALL_INTENT_APP, Route.DIAL_INTENT, Route.CAR_PHONE_APP),
+            CallPlan.routes(env(perm = true, call = true, dial = true, telecom = true, car = true, hfpAccount = true, callIsApp = true, hfpDevice = true)),
+        )
+        // Sem CALL_PHONE: o cliente HFP ainda liga direto (só precisa de BLUETOOTH).
+        assertEquals(listOf(Route.HFP_DIAL, Route.DIAL_INTENT), CallPlan.routes(env(dial = true, hfpAccount = true, hfpDevice = true, telecom = true)))
+        // Conta HFP sem Telecom não vale.
+        assertEquals(emptyList<Route>(), CallPlan.routes(env(perm = true, hfpAccount = true)))
+    }
+
+    @Test fun directRoutesAreTheOnesThatDoNotOpenAnotherApp() {
+        assertEquals(setOf(Route.PLACE_CALL_HFP, Route.CALL_INTENT, Route.HFP_DIAL, Route.PLACE_CALL), Route.values().filter { it.direct }.toSet())
+    }
+
+    @Test fun afterCheckNeverRetriesAlone() {
+        assertEquals(CallPlan.Outcome.CALLING, CallPlan.afterCheck(Route.PLACE_CALL_HFP, true))
+        assertEquals(CallPlan.Outcome.NOT_CONFIRMED, CallPlan.afterCheck(Route.HFP_DIAL, false))
+        assertEquals(CallPlan.Outcome.UNKNOWN, CallPlan.afterCheck(Route.CALL_INTENT, null)) // sem READ_PHONE_STATE
+        assertEquals(CallPlan.Outcome.OPENED_APP, CallPlan.afterCheck(Route.DIAL_INTENT, false))
+        assertEquals(CallPlan.Outcome.OPENED_APP, CallPlan.afterCheck(Route.CALL_INTENT_APP, true))
+    }
+
+    @Test fun findsTheBluetoothCallAccount() {
+        val sim = CallAccounts.Account("com.android.phone", "com.android.services.telephony.TelephonyConnectionService", "SIM 1")
+        val sip = CallAccounts.Account("com.android.phone", "com.android.services.telephony.sip.SipConnectionService", "SIP")
+        val hfp = CallAccounts.Account("com.android.bluetooth", "com.android.bluetooth.hfpclient.connserv.HfpClientConnectionService", "Meu celular")
+        val byd = CallAccounts.Account("com.byd.btphone", "com.byd.btphone.BtConnectionService", "Bluetooth")
+        assertEquals(hfp, CallAccounts.pickHfp(listOf(sim, sip, hfp)))
+        assertEquals(byd, CallAccounts.pickHfp(listOf(sim, byd)))
+        assertNull(CallAccounts.pickHfp(listOf(sim, sip)))
+        assertNull(CallAccounts.pickHfp(emptyList()))
+    }
+
+    @Test fun knowsWhenCallIntentGoesToAnApp() {
+        assertFalse(CallAccounts.callIntentIsApp(null))
+        assertFalse(CallAccounts.callIntentIsApp("com.android.server.telecom"))
+        assertFalse(CallAccounts.callIntentIsApp("com.android.phone"))
+        assertTrue(CallAccounts.callIntentIsApp("com.byd.btphone"))
     }
 
     @Test fun asksCallPermissionOnceAndOnlyIfUseful() {

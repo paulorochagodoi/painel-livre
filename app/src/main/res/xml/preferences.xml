@@ -122,7 +122,7 @@
         <Preference
             app:key="grant_all"
             app:title="Conceder permissões pelo ADB"
-            app:summary="Localização, notificações do Maps/Waze, dados do carro e segundo plano."
+            app:summary="Localização, notificações do Maps/Waze, dados do carro, telefone e segundo plano."
             app:iconSpaceReserved="false" />
         <SwitchPreferenceCompat
             app:key="debug_mode"

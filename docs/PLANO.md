@@ -78,6 +78,35 @@ Pendências: primeiro teste real, capturas das novas preferências no emulador, 
 apps externos, SDK real e ajudante uid 2000. Não houve acesso ao carro, escrita CAN/SDK, mudança de
 manifesto, launcher, telefone/clima, assinatura, versão ou publicação nesta etapa.
 
+## Issue #9 — estudo do menu nativo, sem implementação (2026-10-23)
+
+Relato e hipóteses em `ENGENHARIA_REVERSA.md`, §6. Não há vínculo confirmado do menu
+Simples/Pequeno/Cheio/OFF com property, setting, broadcast ou comando AutoContainer.
+Nenhuma mudança de código ou execução no carro nesta etapa; testes/build/lint não repetidos
+porque a alteração é apenas documental.
+
+Roteiro futuro, pelo dono, com carro parado e acesso ao carro previamente combinado:
+
+1. Registrar a opção inicial, app/versão, `panel_content`, modo automático/manual e outros apps de
+   projeção ativos. Comparar as quatro opções primeiro sem projeção de terceiros ativa; ausência
+   de Amap compatível impede concluir se o menu funciona na integração OEM.
+2. Repetir separadamente com mapa integrado e navegador experimental, mantendo as demais condições.
+   Comparar mudar o menu antes de ativar e durante a projeção. Registrar imagem, horário e Log do app:
+   a ativação pode sobrepor uma escolha que funcionava antes. Ao fim, restaurar a opção inicial.
+3. Com coleta somente leitura autorizada, comparar `getprop sys.screen.current.mode`,
+   `settings list system`, `settings list secure`, `settings list global`, `dumpsys display`,
+   `dumpsys activity activities` e logcat nos mesmos instantes. Comparar localmente os settings e
+   compartilhar só diferenças relevantes, sem identificadores pessoais. Ausência de diferença não
+   descarta estado interno do Qt/MCU; correlacionar mudanças não prova sua função.
+4. Conferir qual pacote/Activity está retomado em cada display. Para investigar espelhamento, mudar
+   apenas a tela visível na central enquanto o painel está ativo e observar se o painel acompanha.
+   Separar cópia da tela, mapa próprio e tarefa do navegador movida; não assumir pelo visual parecido.
+   Registrar também o efeito de Painel original (18 → 0), sem inventar comandos de teste.
+
+Não usar `setprop`, `settings put`, broadcasts adivinhados, escrita SDK/CAN ou novos códigos de
+AutoContainer. O objetivo é identificar o mecanismo e eventual interferência em #2/#5, não controlar
+o menu pela aplicação.
+
 ## Fase 1 — Primeiro teste no carro
 
 1. Instalar `PainelLivre-v0.3.0-release.apk`, aceitar "Permitir depuração USB" e tocar em **Configurar**

@@ -21,6 +21,8 @@ Brasil**, frases simples, sem jargão desnecessário.
 - **v0.4.0**, lançada em 2026-10-23: painel/telemetria (#2, #5, #6) e central (#7 tela inicial, #3 discador,
   #4 previsão do tempo), com **113 testes JVM passando** e lint sem erros. A v0.3.0 foi testada só no emulador;
   o que entrou na v0.4.0 foi validado só na JVM/build/lint. Conferir no carro: `docs/PLANO.md`, Fase 1, item 8.
+  **A v0.4.0 não instalou no carro** ("Fail in installation of desktop apps"); a **v0.4.1** (não lançada)
+  volta o alias HOME a desligado no manifesto (ver §9).
   **Nada foi testado no carro ainda** — o próximo passo combinado é o primeiro teste no carro
   (`docs/PLANO.md`, Fase 1). O dono ainda não liberou acesso ADB ao carro para o agente.
 - Funciona (emulador): tela central estilo cockpit (dia/noite, deitada/em pé), aba Navegação com busca
@@ -165,9 +167,15 @@ porque o GitHub recusou a execução por cobrança da conta; depois que o dono r
 - adb como root é recusado no `am start --display`; o carro usa uid 2000.
 - O display simulado do emulador aparece como janela e engole toques; `uiautomator` falha com o mapa
   animando; SwiftShader desenha traços no mapa que não existem no carro.
-- Filtro HOME desligado no manifesto = o app não aparece como launcher em lugar nenhum (issue #7).
-  Não desligue o `HomeAlias` por padrão; `cmd package resolve-activity` pode responder com o seletor
-  (`ResolverActivity`), que não é um launcher para guardar/restaurar.
+- **`HomeAlias` ligado no manifesto = o APK não instala no carro** (v0.4.0: "Fail in installation of
+  desktop apps"; a v0.3.0, com o alias desligado, instalava). Hipótese até confirmar no carro: o
+  instalador da BYD recusa APK que chega como launcher ativo. Desde a v0.4.1 o alias vem
+  `enabled="false"` e só "Usar como tela inicial" o liga em tempo de execução
+  (`setComponentEnabledSetting`, `DONT_KILL_APP`); nada liga sozinho (nem na primeira abertura).
+  Nenhum componente ligado pode declarar `HOME` (`HomeChoiceTest`). Com o alias desligado o app não
+  aparece como launcher — por isso o botão o liga antes do `set-home-activity`/seletor (issue #7).
+  `cmd package resolve-activity` pode responder com o seletor (`ResolverActivity`), que não é um
+  launcher para guardar/restaurar; o launcher original é lido antes de ligar o alias.
 - `ACTION_DIAL` pode não ter app na DiLink (issue #3): use o `DialerActivity`, nunca `ACTION_DIAL` cru.
 - O MapLibre só desenha quando algo muda: carro parado sem quadros é normal (o vigia sabe disso).
 

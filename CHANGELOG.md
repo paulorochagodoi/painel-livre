@@ -4,6 +4,24 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 Nenhuma versão foi testada no carro ainda: todos os testes foram no emulador (`docs/AMBIENTE.md`).
 
+## 0.4.1 — 2026-10-23 — APK volta a instalar no carro (pré-release de teste)
+
+APK `PainelLivre-v0.4.1-release.apk`, SHA-256 `95e10a175c7352918353127c242691fd0594948d6e05674a7ffe7f324b40005d`.
+
+- **Problema (no carro)**: a v0.4.0 não instalava na central (Song Plus DM-i 2025, DiLink 3): "Fail in
+  installation of desktop apps". A v0.3.0 instalava.
+- **Causa (hipótese até confirmar no carro)**: a v0.4.0 (issue #7) passou a trazer o alias `HomeAlias`
+  (`MAIN` + `HOME` + `DEFAULT`) **ligado** no manifesto; o instalador da BYD parece recusar APK que chega
+  declarando um launcher ativo ("desktop app").
+- **Correção**: o alias volta a vir `android:enabled="false"`. "Usar como tela inicial" agora o liga em
+  tempo de execução (`setComponentEnabledSetting`, `DONT_KILL_APP`) antes do `set-home-activity` ou do
+  seletor, e lê o launcher original antes de ligá-lo (a BYD sai como original, não o seletor). Nada
+  liga o alias sozinho, nem na primeira abertura. "Voltar ao launcher da BYD" segue igual.
+- Testes: `HomeChoiceTest` com estado do alias, quando ligá-lo, "nosso" velho com alias desligado,
+  alias desligado no manifesto e nenhum outro componente com `HOME` — 117 no total.
+- Validação: `testDebugUnitTest` 117/117, `lintRelease` com 0 erros (108 avisos), `assembleDebug`
+  concluído. Sem emulador nem carro; conferir no carro em `docs/PLANO.md` (Fase 1, item 8).
+
 ## 0.4.0 — 2026-10-23 — painel, telemetria e central (issues #1 a #7)
 
 APK `PainelLivre-v0.4.0-release.apk`, SHA-256 `21aad317dd33e6e8b49641208c566d910b66bcbd3547b6b6265359eb9fcb401f`.

@@ -70,9 +70,10 @@ object SystemSetup {
     }
 
     // ── Launcher padrão ─────────────────────────────────────────────────────
-    // Issue #7: o filtro HOME (alias `HomeAlias`) agora vem ligado no manifesto, para o Android e a
-    // BYD reconhecerem o Painel Livre como tela inicial. "Usar como tela inicial" só escolhe o
-    // preferido; as decisões ficam em `HomeChoice` (testadas na JVM).
+    // v0.4.1: o filtro HOME (alias `HomeAlias`) vem desligado no manifesto, porque a central da BYD
+    // recusou instalar a v0.4.0, que o trazia ligado ("Fail in installation of desktop apps").
+    // "Usar como tela inicial" liga o alias em tempo de execução e escolhe o preferido; as decisões
+    // ficam em `HomeChoice` (testadas na JVM). Nada liga o alias sozinho.
 
     private fun homeAlias(ctx: Context) = ComponentName(ctx.packageName, "${ctx.packageName}.ui.HomeAlias")
 
@@ -82,6 +83,9 @@ object SystemSetup {
     suspend fun currentHome(ctx: Context): HomeChoice.Resolved =
         HomeChoice.parseResolved(SelfAdb.shellText(ctx, "$RESOLVE_HOME 2>&1"), ctx.packageName)
 
+    private fun aliasOn(ctx: Context) = HomeChoice.aliasOn(ctx.packageManager.getComponentEnabledSetting(homeAlias(ctx)))
+
+    // O próprio app pode ligar/desligar componentes seus, sem ADB nem permissão extra.
     private fun setAlias(ctx: Context, enabled: Boolean) {
         ctx.packageManager.setComponentEnabledSetting(
             homeAlias(ctx),
@@ -95,13 +99,19 @@ object SystemSetup {
 
     suspend fun becomeHome(ctx: Context): HomeResult {
         val prefs = Prefs(ctx)
-        // Religa o alias caso um "Voltar ao launcher da BYD" antigo o tenha desligado.
-        setAlias(ctx, true)
+        val wasOn = aliasOn(ctx)
         val adbOk = SelfAdb.shell(ctx, "echo ok") is SelfAdb.Result.Ok
+        // Lido antes de ligar o alias: com ele desligado a BYD é a única tela inicial e sai como
+        // "original"; depois de ligado o Android poderia responder com o seletor.
         val cur = if (adbOk) currentHome(ctx) else HomeChoice.Resolved.Unknown
         HomeChoice.originalToSave(cur)?.let { prefs.originalHome = it }
         val hasSettings = Intent(Settings.ACTION_HOME_SETTINGS).resolveActivity(ctx.packageManager) != null
-        return when (val step = HomeChoice.nextStep(cur, adbOk, hasSettings)) {
+        val step = HomeChoice.nextStep(cur, adbOk, hasSettings, wasOn)
+        if (HomeChoice.mustEnableAlias(step, wasOn)) {
+            setAlias(ctx, true)
+            AppLog.i("Alias HOME ligado a pedido do motorista")
+        }
+        return when (step) {
             HomeChoice.Step.DONE -> HomeResult("O Painel Livre já é a tela inicial.")
             HomeChoice.Step.ADB -> {
                 val r = SelfAdb.shellText(ctx, "cmd package set-home-activity ${homeAlias(ctx).flattenToString()} 2>&1")

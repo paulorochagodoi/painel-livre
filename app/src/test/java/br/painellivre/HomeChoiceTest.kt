@@ -63,17 +63,68 @@ class HomeChoiceTest {
         assertNull(HomeChoice.restoreTarget("lixo", us))
     }
 
-    /** Regressão da causa da issue: o filtro HOME/DEFAULT precisa vir ligado no manifesto. */
-    @Test fun manifestDeclaresEnabledHomeFilter() {
+    @Test fun aliasStateFromPackageManager() {
+        // Manifesto desligado (v0.4.1): "padrão" = desligado; só o estado ligado pelo app conta.
+        assertFalse(HomeChoice.aliasOn(HomeChoice.STATE_DEFAULT))
+        assertTrue(HomeChoice.aliasOn(HomeChoice.STATE_ENABLED))
+        assertFalse(HomeChoice.aliasOn(HomeChoice.STATE_DISABLED))
+        assertFalse(HomeChoice.aliasOn(3)) // DISABLED_USER
+        assertTrue(HomeChoice.aliasOn(HomeChoice.STATE_DEFAULT, manifestEnabled = true))
+        // Mesmos números do Android (PackageManager.COMPONENT_ENABLED_STATE_*).
+        assertEquals(0, HomeChoice.STATE_DEFAULT)
+        assertEquals(1, HomeChoice.STATE_ENABLED)
+        assertEquals(2, HomeChoice.STATE_DISABLED)
+    }
+
+    @Test fun aliasIsEnabledBeforeChoosingHome() {
+        // Instalação nova: alias desligado, BYD é o launcher → liga antes do set-home-activity.
+        val fresh = HomeChoice.nextStep(Resolved.Other("com.byd.launcher/.Launcher"), adbOk = true, hasHomeSettings = true, aliasOn = false)
+        assertEquals(Step.ADB, fresh)
+        assertTrue(HomeChoice.mustEnableAlias(fresh, aliasOn = false))
+        // Sem ADB também: a tela "Tela inicial" e o seletor só listam o app com o filtro ativo.
+        assertTrue(HomeChoice.mustEnableAlias(Step.HOME_SETTINGS, aliasOn = false))
+        assertTrue(HomeChoice.mustEnableAlias(Step.CHOOSER, aliasOn = false))
+        // Já ligado ou já é a tela inicial: não mexe.
+        assertFalse(HomeChoice.mustEnableAlias(Step.ADB, aliasOn = true))
+        assertFalse(HomeChoice.mustEnableAlias(Step.DONE, aliasOn = true))
+    }
+
+    @Test fun staleOursWithAliasOffIsNotDone() {
+        // Preferido antigo apontando para o alias desligado: o Início não abriria o app.
+        assertEquals(Step.ADB, HomeChoice.nextStep(Resolved.Ours, adbOk = true, hasHomeSettings = false, aliasOn = false))
+        assertEquals(Step.CHOOSER, HomeChoice.nextStep(Resolved.Ours, adbOk = false, hasHomeSettings = false, aliasOn = false))
+        assertEquals(Step.DONE, HomeChoice.nextStep(Resolved.Ours, adbOk = true, hasHomeSettings = false, aliasOn = true))
+    }
+
+    private fun manifest(): String {
         val f = listOf("src/main/AndroidManifest.xml", "app/src/main/AndroidManifest.xml").map(::File).first { it.exists() }
-        val xml = f.readText().replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), "")
+        return f.readText().replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), "")
+    }
+
+    /**
+     * Regressão da v0.4.0: a central da BYD recusou instalar o APK com o alias HOME ligado ("Fail in
+     * installation of desktop apps"). O filtro HOME/DEFAULT existe, mas vem desligado; o app liga depois.
+     */
+    @Test fun manifestDeclaresDisabledHomeFilter() {
+        val xml = manifest()
         val alias = Regex("<activity-alias[^>]*HomeAlias[^>]*>.*?</activity-alias>", RegexOption.DOT_MATCHES_ALL).find(xml)?.value
             ?: error("HomeAlias sumiu do manifesto")
-        assertTrue(alias.contains("android:enabled=\"true\""))
+        assertTrue("o alias HOME precisa vir desligado", alias.contains("android:enabled=\"false\""))
+        assertEquals(HomeChoice.ALIAS_ENABLED_IN_MANIFEST, alias.contains("android:enabled=\"true\""))
         assertTrue(alias.contains("android.intent.category.HOME"))
         assertTrue(alias.contains("android.intent.category.DEFAULT"))
         assertTrue(alias.contains("android:targetActivity=\".ui.LauncherActivity\""))
         val launcher = Regex("<activity\\s[^>]*\\.ui\\.LauncherActivity[^>]*>", RegexOption.DOT_MATCHES_ALL).find(xml)?.value ?: error("sem LauncherActivity")
         assertTrue("o Início precisa reaproveitar a mesma tela", launcher.contains("singleTask"))
+    }
+
+    /** Nenhum outro componente pode declarar HOME: o APK chegaria à BYD como launcher ativo. */
+    @Test fun onlyTheDisabledAliasDeclaresHome() {
+        val xml = manifest()
+        val components = Regex("<(activity|activity-alias)\\s[^>]*>.*?</\\1>", RegexOption.DOT_MATCHES_ALL).findAll(xml).map { it.value }
+        val withHome = components.filter { it.contains("android.intent.category.HOME") }.toList()
+        assertEquals(1, withHome.size)
+        assertTrue(withHome.single().contains(".ui.HomeAlias"))
+        assertTrue(withHome.single().contains("android:enabled=\"false\""))
     }
 }

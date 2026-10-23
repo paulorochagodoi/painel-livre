@@ -374,3 +374,13 @@ de base; depois só o que mudou, com ★ nos candidatos). Receptores para as aç
 digitadas pelo motorista mostram os extras. Sem ADB, só o SDK continua e o ADB é tentado a cada 30 s;
 a coleta pelo ADB para em 30 min (Retomar na tela). Registro separado do `AppLog` (`DebugLog`), também
 usado pelo telefone (issue #15). A fotografia completa esconde números de telefone e MACs.
+
+## Carro 3D na tela inicial (não publicado)
+
+`SongCarView` substitui apenas `carArt` no hero da central e recebe o mesmo snapshot do cartão.
+`CarOverlay` é Kotlin puro: decide vista e mapeia estados e coordenadas em frações da imagem.
+Dois WebP locais (base 3/4 e superior horizontal) ficam em cache compartilhado; nenhum decode
+ocorre no desenho. Transição de 250 ms; pulso apenas durante carga; ocultar/desanexar para animações.
+`CarStatusView` pequeno e mapa do painel não mudam. Fotos pessoais continuam funcionando.
+`CarOverlayTest` cobre aberturas, vidros/teto, carga, trava, pressões e dados desconhecidos.
+Coordenadas, limites visuais, fontes e simulação: [TELEMETRIA.md](TELEMETRIA.md#carro-3d-na-tela-inicial-não-publicado).

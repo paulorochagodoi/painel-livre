@@ -53,7 +53,7 @@ import br.painellivre.nav.NavState
 import br.painellivre.nav.Place
 import br.painellivre.nav.Places
 import br.painellivre.ui.cockpit.BackdropDrawable
-import br.painellivre.ui.cockpit.CarArtDrawable
+import br.painellivre.ui.cockpit.SongCarView
 import br.painellivre.ui.cockpit.Palette
 import br.painellivre.ui.cockpit.WeatherIconDrawable
 import br.painellivre.util.Prefs
@@ -215,15 +215,18 @@ class LauncherActivity : AppCompatActivity() {
     }
 
     private fun renderCarArt() {
-        val iv = findViewById<ImageView>(R.id.carArt)
+        val iv = findViewById<SongCarView>(R.id.carArt)
+        iv.palette = palette
+        iv.modelEnabled = true
         val photo = prefs.carPhoto
         if (photo != null) {
             try {
-                contentResolver.openInputStream(Uri.parse(photo))?.use { iv.setImageDrawable(Drawable.createFromStream(it, "carro")) }
+                contentResolver.openInputStream(Uri.parse(photo))?.use { iv.modelEnabled = false; iv.setImageDrawable(Drawable.createFromStream(it, "carro")) }
                 return
             } catch (t: Throwable) { /* foto removida: volta à ilustração */ }
         }
-        iv.setImageDrawable(CarArtDrawable(palette.dark))
+        iv.setImageDrawable(null)
+        iv.invalidate()
     }
 
     private fun mapStyleUri() = "https://tiles.openfreemap.org/styles/" + if (palette.dark) "dark" else "positron"
@@ -293,6 +296,7 @@ class LauncherActivity : AppCompatActivity() {
     private var lastSdk: VehicleData.Snapshot? = null
 
     private fun renderTelemetry(t: TelemetrySnapshot) {
+        findViewById<SongCarView>(R.id.carArt).snapshot = t
         val card = findViewById<View>(R.id.telemetryCard) ?: return
         val show = t.status == TelemetrySnapshot.Status.OK && t.hasData
         card.visibility = if (show) View.VISIBLE else View.GONE

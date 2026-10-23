@@ -147,15 +147,15 @@ class DebugActivity : AppCompatActivity() {
         lifecycleScope.launch { VehicleTelemetry.debugReadAll(this@DebugActivity) }
     }
 
-    private var simStep = 0
-
     /** Só em build debug: alterna cenários falsos (o emulador não tem o serviço da BYD). */
     private fun simulateCar() {
         if (!BuildConfig.DEBUG) return
-        val sim = if (simStep == 2) null else VehicleTelemetry.simulation(simStep)
-        simStep = (simStep + 1) % 3
-        VehicleTelemetry.simulated = sim
-        toast(if (sim == null) "Simulação dos dados do carro desligada" else "Simulação: ${br.painellivre.car.TelemetryText.headline(sim)}")
+        val labels = arrayOf("Porta e carga", "Padrão · trancado", "Carregando", "Pneu em alerta", "Vidro e teto", "Tampa de carga", "Porta dianteira esquerda", "Porta dianteira direita", "Porta traseira esquerda", "Porta traseira direita", "Capô", "Porta-malas", "Desligar simulação")
+        android.app.AlertDialog.Builder(this).setTitle("Simular dados do carro")
+            .setItems(labels) { _, index ->
+                VehicleTelemetry.simulated = if (index == 12) null else VehicleTelemetry.simulation(index)
+                toast("Simulação: ${labels[index]}")
+            }.show()
     }
 
     private fun snapshot() {

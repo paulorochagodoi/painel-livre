@@ -4,6 +4,16 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
+## Não publicado — carro 3D na tela inicial
+
+- Renders locais do Song Plus em 3/4 e vista superior com transição suave e overlays
+  de portas, capô, porta-malas, carga, vidros/teto/cortina e pressão dos pneus.
+- Cadeado discreto, cache dos bitmaps e simulação debug por cenário.
+- Layout, cartões, barra inferior, mapa do painel, versão e assinatura preservados.
+- Testes de regressão da decisão de vista e mapeamento dos estados. Sem acesso ao carro.
+- Validação: 180 testes JVM, lintDebug sem erros (114 avisos), assembleDebug; capturas
+  de padrão/porta/carga/pneu no emulator-5580 em docs/telas/carro-3d-*.png.
+
 ## Não lançado — revisão da telemetria (issue #16)
 
 - Revisados os commits b622959 e 99d7782: telemetria restrita às leituras autoservice 5/7;

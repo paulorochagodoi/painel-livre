@@ -408,3 +408,11 @@ Entrega de intents, GPS/recálculo em execução e projeção precisam do roteir
 - [ ] Dono conferir IDs, escalas e formato da transação 7 na firmware do Song Plus.
   Roteiro e tabela (itens **a confirmar**) em [TELEMETRIA.md](TELEMETRIA.md).
   Nenhum acesso ao carro pelo agente nesta etapa; nenhuma escrita autorizada.
+
+### Carro 3D central (não publicado)
+
+Renders locais e overlays somente visuais; detalhes e coordenadas em TELEMETRIA.md.
+Conferir posição da tampa traseira direita e limites visuais de pneus com o dono, sem novos comandos.
+
+Validado no emulator-5580: padrão, porta aberta, carregando e pneu baixo.
+180 testes JVM; lintDebug 0 erros/114 avisos; assembleDebug concluído. Sem teste no carro.

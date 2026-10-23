@@ -175,8 +175,7 @@ exceção, serviço ausente, texto ASCII que parece hex e saída truncada. A sen
 Os testes tentam montar código 6 para cada endereço e protocolo e injetá-lo no lote: tudo deve falhar.
 O lote normal e a leitura completa do debug também são conferidos.
 
-Na build debug, em **Abrir o registro do debug → Simular dados do carro**, três toques alternam:
-porta/porta-malas abertos e carga; fechado e trancado; simulação desligada. Para observar na central,
+Na build debug, em **Abrir o registro do debug → Simular dados do carro**, um toque abre a lista de cenários descrita na seção Carro 3D abaixo. Para observar na central,
 ligar **Ler dados do carro**; para o painel, ligar também o aviso. Dados são fictícios e não validam IDs.
 O polling simulado não chama autoservice; **Ler dados do carro** no debug continua sendo uma leitura
 real, não uma simulação. Ao desligar a simulação, os dados falsos são apagados imediatamente.
@@ -208,3 +207,46 @@ percentuais dos vidros/teto, IDs CAN versus CAN-FD e unidades dos pneus.
 A conferência do descriptor é uma barreira adicional, **não prova** que uma firmware preserva
 o contrato das transações. A autorização desta tarefa limita o transporte a 5 e 7 e não autoriza
 execução pelo agente no carro nem escrita futura.
+
+## Carro 3D na tela inicial (não publicado)
+
+A ilustração central usa renders WebP locais do modelo do Song Plus fornecido pelo dono,
+sem biblioteca 3D. Layout, cartões, barra inferior e mapa do painel permanecem iguais.
+A foto pessoal, quando configurada, continua tendo preferência. Sem destaque, aparece
+a vista 3/4; portas, capô, porta-malas, tampa de carga, carga, vidro/teto/cortina abertos
+ou pressão fora da faixa visual trocam para a vista superior horizontal, com crossfade de 250 ms.
+Os overlays indicam estados: não são renders de peças articuladas. Trava desconhecida não mostra cadeado.
+
+`CarOverlay.kt` reúne todas as posições em frações da imagem **inteira** car_top.webp:
+frente à esquerda, lado esquerdo do veículo embaixo, direito em cima. `openings` guarda
+dobradiça/ponta das portas e faixas do capô/porta-malas; `windows` guarda faixas dos vidros,
+teto e cortina; `tyres` guarda o centro de cada pneu. `charger`, `lock` e `baseLock` são âncoras.
+O encaixe usa a mesma transformação da imagem, mantendo os overlays alinhados ao redimensionar.
+Pressão disponível aparece em bar e cor verde; indisponível fica cinza com travessão;
+abaixo de 220 ou acima de 310 kPa fica âmbar e ativa destaque. Esses limites são apenas
+critérios visuais configuráveis em constantes, não a recomendação da BYD nem um alarme TPMS lido.
+Não há sinal de alarme de pneu separado no catálogo atual.
+
+Tampa de carga: âncora configurável `charger = (.84, .15)`, na traseira direita.
+Referência consultada: [localização descrita para Song Plus DM-i](https://www.bitauto.com/ask/10016625117/).
+O [manual oficial BYD](https://www.byd.com/content/dam/byd-site/mea-public/after-sales/manual/gcc/BYD_SONG_PLUS_DM_i_Owner%E2%80%99s_Manual.pdf)
+foi localizado, mas não confirmou a posição para o ano brasileiro 2025 nesta etapa;
+manter como provisória até conferência pelo dono. Não usar a antiga posição traseira esquerda do desenho pequeno como referência.
+
+`SongCarView` só afeta o carro central. Dois bitmaps (1200 px de largura, cerca de 6,5 MiB
+ARGB somados) ficam em cache compartilhado, sem decodificar durante desenho/animação.
+Somente a transição e o pulso de carga geram quadros; ocultar/desanexar interrompe animações.
+A telemetria existente fornece os estados; nenhuma leitura, comando ou transação foi acrescentada.
+
+Debug → Simular dados do carro abre uma lista de cenários: padrão trancado, carga, pneu baixo,
+vidro/teto, tampa de carga, cada porta, capô e porta-malas, além de desligar.
+Ligar “Ler dados do carro” para manter a simulação na tela; os dados são fictícios.
+Testes JVM `CarOverlayTest` cobrem decisão de vista, mapeamento independente, limites
+de pressão e valores desconhecidos. Validação no emulador não valida o carro.
+
+Validação desta etapa (23/10/2026): 180 testes JVM passando, `lintDebug` sem erros
+e com 114 avisos, `assembleDebug` concluído. APK instalado no **emulator-5580** após
+backup do APK e dados em `/tmp/pl-car3d-ref/emulador-original.apk` e
+`emulador-dados-original.tar`. Capturas da vista padrão, porta, carga e pneu em alerta:
+`docs/telas/carro-3d-*.png` e `/tmp/pl-car3d-ref/print-*.png`.
+A posição da tampa e os estados reais continuam pendentes de conferência pelo dono.

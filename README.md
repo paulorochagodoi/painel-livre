@@ -154,3 +154,12 @@ qual mapa usar. Endereço textual abre a busca para você conferir o resultado. 
 ou Waze ainda não são expandidos: nesse caso busque o endereço ou compartilhe coordenadas.
 Fechar só a tela mantém a orientação; encerrar o processo/serviço perde a rota atual.
 Esta função ainda precisa de validação no carro; veja o checklist em `docs/PLANO.md`.
+
+## Carro 3D na tela inicial (não publicado)
+
+O centro da tela mostra renders locais do Song Plus do dono: vista 3/4 normalmente e
+vista superior com indicações de portas, carga, pneus e vidros/teto quando há destaque.
+Layout, cartões e barra inferior permanecem iguais. Uma foto pessoal configurada continua
+tendo preferência. A simulação debug permite conferir cada destaque sem carro.
+Dados desconhecidos não são tratados como fechados. Limites visuais de pressão e posição
+provisória da tampa de carga estão documentados em [Telemetria](docs/TELEMETRIA.md#carro-3d-na-tela-inicial-não-publicado).

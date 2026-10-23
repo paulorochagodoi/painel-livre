@@ -26,6 +26,24 @@ Nenhuma versão foi testada no carro ainda: todos os testes foram no emulador (`
   carro nesta etapa; o que depende do carro está em `docs/PLANO.md` (Fase 1, item 8).
 - Sem novo APK de release nem mudança da versão 0.3.0.
 
+## Não lançado — 2026-10-23 — painel e telemetria (issues #2, #5 e #6)
+
+- #2: pedido de destino agora pede ativação do painel nos modos navegação/sempre, sem depender
+  da chegada da notificação. Modo manual preservado; Maps/Waze continua recebendo o destino.
+- #5: escolha entre mapa integrado (padrão, manobras sem linha da rota) e Maps/Waze no painel
+  (experimental). Abre pelo ADB no display conhecido e só confirma sucesso se a Activity retomada
+  estiver nesse display; falha aparece no estado/notificação e no log, com indicação do mapa integrado.
+  Vigias e eventos de cobertura do mapa próprio não disputam o painel com o navegador.
+- #6: chamadas BYD deixam de descartar falhas; dados parciais são preservados e cada método com
+  erro é identificado no diagnóstico. Log registra mudanças, sem repetição a cada leitura.
+  Info da central inclui dados, indisponibilidade de portas/travas e permissão estatística real do app.
+- Parcial: SDK ainda consultado pelo uid comum; ajudante uid 2000 e leitura de portas/travas pendentes.
+  Nada escreve no carro. Projeção externa, restauração e dados reais exigem validação no carro.
+- 14 testes JVM novos (87 no total, todos passando): conteúdo/modos do painel, confirmação por display, preferência, valores BYD,
+  exceções de reflexão/permissão e apresentação de leituras parciais. `assembleDebug` concluído;
+  `lintDebug`: 0 erros, 105 avisos. Sem emulador/carro e sem novo release. Build usou cache e chave
+  debug temporários em `/tmp` pelas restrições de escrita; assinatura release não alterada.
+
 ## Não lançado — 2026-10-22 — regressão JVM (issue #1)
 
 - 32 testes novos (73 no total): notificações Maps/Waze, manobras, distância, rua, resumo e chegada;

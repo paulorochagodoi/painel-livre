@@ -214,6 +214,31 @@ class ClusterController(context: Context) {
         return false
     }
 
+    /** Somente os dois navegadores escolhidos pelo motorista; nunca abre no display central. */
+    suspend fun launchNavigation(target: Target, pkg: String): Boolean {
+        require(target.displayId > 0 && pkg in setOf(PanelContent.MAPS, PanelContent.WAZE))
+        val component = ctx.packageManager.getLaunchIntentForPackage(pkg)?.component ?: run {
+            AppLog.w("App de navegação não instalado: $pkg")
+            return false
+        }
+        ClusterActivity.finishInstance()
+        val cmp = component.flattenToString()
+        // Componente vem do PackageManager, mas ainda recebe aspas para não virar código shell.
+        val quoted = "'" + cmp.replace("'", "'\"'\"'") + "'"
+        val result = SelfAdb.shell(ctx,
+            "am start --display ${target.displayId} --windowingMode 1 -n $quoted -f 0x10020000 2>&1")
+        if (result !is SelfAdb.Result.Ok || result.exitCode != 0) return false
+        repeat(10) {
+            if (PanelContent.isResumedOnDisplay(SelfAdb.shellText(ctx, "dumpsys activity activities"), target.displayId, pkg)) {
+                AppLog.i("App de navegação confirmado no painel: $pkg (display ${target.displayId})")
+                return true
+            }
+            delay(300)
+        }
+        AppLog.w("Não foi possível confirmar $pkg no painel; a central pode recusar mover a tarefa. Use mapa integrado.")
+        return false
+    }
+
     /** Fecha e reabre a tela do painel (sem mexer no AutoContainer). */
     suspend fun relaunch(target: Target): Boolean {
         ClusterActivity.finishInstance()

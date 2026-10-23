@@ -200,3 +200,54 @@ Relatórios locais: `app/build/reports/tests/testDebugUnitTest/` e
 
 Regra: lógica nova que dá para separar do Android vai para Kotlin puro com teste.
 `org.json` real entra só nos testes (`testImplementation("org.json:json")`); no app é o do Android.
+
+## Painel e telemetria — issues #2/#5/#6 (não lançado, 2026-10-23)
+
+`Places.navigate` e `navigateText`, depois de abrir com sucesso o destino no navegador, enviam
+`ClusterService.ACTION_ROUTE_REQUEST`. O serviço respeita `cluster_mode` (`manual` não ativa),
+limpa a restauração pendente e ativa o painel. Assim a abertura não depende da notificação chegar;
+o listener continua sendo necessário para manobras e encerramento automático da navegação.
+Sem acesso às notificações, o motorista precisa devolver o painel pelo botão Painel original.
+`openApp` continua apenas abrindo o navegador, sem iniciar uma rota ou projeção.
+
+Nova preferência `panel_content`: `integrated` por padrão, `navigation` opcional. No integrado,
+`ClusterActivity` mostra mapa/GPS e cartões das notificações; **não há geometria da rota** nessas
+notificações. Na opção externa, o controlador resolve a Activity de entrada de Maps/Waze instalado
+(lista fechada de pacotes) e usa `am start --display N --windowingMode 1`, preservando a tarefa/rota
+já iniciada. Nunca escolhe display 0 como destino de projeção. `PanelContent`, Kotlin puro,
+confirma no `dumpsys activity activities` a Activity retomada no display esperado; retorno OK do
+shell sozinho não prova projeção. Dump desconhecido resulta em falha visível, sem afirmar sucesso.
+Essa opção é experimental: a firmware ou o app pode impedir a movimentação da tarefa.
+
+A escolha é aplicada na ativação; configure antes de ativar. Durante projeção externa, o vigia e os
+avisos de cobertura de `ClusterActivity` são ignorados para não abrir o mapa próprio sobre o navegador.
+Não há vigia/controle de ciclo de vida do app externo. Restaurar mantém a sequência segura 18 → 0;
+não força encerramento nem apaga a rota de outro app. Retorno da tarefa externa à central e conservação
+da rota são pontos de teste no carro, sem garantia nesta etapa. Sem novos comandos AutoContainer.
+
+`VehicleReadings` concentra validação numérica e classificação de falhas de reflexão, sem Android.
+`VehicleData` consulta os mesmos cinco getters estatísticos documentados no SDK, mantém apenas
+valores finitos nos intervalos aceitos e preenche `Snapshot.error` com falhas por método. Valores zero
+são válidos; indisponibilidade não vira zero. O dispositivo é reutilizado, mas cada leitura tenta
+novamente os getters, permitindo recuperação após concessão de permissões. Falha de inicialização é
+reavaliada na próxima leitura. O log só registra mudanças de erro, sem repetir a cada atualização.
+
+`Snapshot.diagnosticText` mostra cada campo ausente como indisponível. Diagnóstico → Dados do carro
+usa esse texto; Info da central também o inclui e informa a permissão `BYDAUTO_STATISTIC_GET` real.
+A tela inicial existente já avisa Dados do carro indisponíveis; não foi alterada nesta tarefa.
+Portas/travas não eram consultadas e continuam explicitamente indisponíveis. `getDoorState(int)`
+exige constantes confirmadas; trava não é sinônimo de porta fechada. Não foram adicionados nomes
+alternativos de getters nem propriedades `getprop` sem evidência. AutoContainer controla projeção,
+não fornece estes dados. Mesmo com `pm grant`, o SDK/Binder BYD pode recusar o uid comum;
+o ajudante uid 2000 somente leitura/autenticado permanece como etapa separada.
+
+Regressões novas em `PanelContentTest`, `VehicleReadingsTest` e `PrefsTest`. Validam política,
+parse de confirmação, ausência/invalidade, falhas parciais e diagnóstico; não validam Binder, tarefas
+Android, GPU ou dados reais do carro. Sem emulador nesta etapa; captura das preferências pendente.
+
+Validação desta alteração: **87 testes JVM, 0 falhas** (14 novos), `assembleDebug` concluído,
+`lintDebug` com **0 erros e 105 avisos**. Relatórios em `app/build/reports/tests/testDebugUnitTest/`
+e `app/build/reports/lint-results-debug.html`. Ambiente JDK/SDK indicado pelo dono; para contornar
+cache/chave debug fora da área gravável, `GRADLE_USER_HOME=/tmp/painel-gradle` e
+`ANDROID_USER_HOME=/tmp/painel-cluster-android`, com `--no-daemon` no build/lint. APK debug usa chave
+temporária; nenhuma alteração em keystore/local.properties/configuração de assinatura release.

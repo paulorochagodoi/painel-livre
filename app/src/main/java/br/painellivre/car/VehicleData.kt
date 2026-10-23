@@ -20,40 +20,53 @@ object VehicleData {
         val odometerKm: Int?,
         val error: String? = null,
     ) {
+        fun diagnosticText(): String = listOf(
+            "Bateria: ${batteryPercent?.let { "$it %" } ?: "indisponível"}",
+            "Autonomia elétrica: ${evRangeKm?.let { "$it km" } ?: "indisponível"}",
+            "Combustível: ${fuelPercent?.let { "$it %" } ?: "indisponível"}",
+            "Autonomia a combustível: ${fuelRangeKm?.let { "$it km" } ?: "indisponível"}",
+            "Hodômetro: ${odometerKm?.let { "$it km" } ?: "indisponível"}",
+            "Portas/travas: indisponível (leitura ainda não implementada; constantes do SDK precisam ser confirmadas no carro)",
+            error ?: "Leituras estatísticas disponíveis",
+        ).joinToString("\n")
         val isEmpty get() = listOf(batteryPercent, evRangeKm, fuelPercent, fuelRangeKm, odometerKm).all { it == null }
     }
 
     private var statistic: Any? = null
     private var lastError: String? = null
 
+    @Synchronized
     fun read(ctx: Context): Snapshot {
         val dev = statistic ?: device(ctx, "android.hardware.bydauto.statistic.BYDAutoStatisticDevice")?.also { statistic = it }
             ?: return Snapshot(null, null, null, null, null, lastError ?: "SDK BYD indisponível")
-        return Snapshot(
-            batteryPercent = (call(dev, "getElecPercentageValue") as? Number)?.toDouble()?.takeIf { it in 0.0..100.0 },
-            evRangeKm = (call(dev, "getElecDrivingRangeValue") as? Number)?.toInt()?.takeIf { it in 0..2000 },
-            fuelPercent = (call(dev, "getFuelPercentageValue") as? Number)?.toInt()?.takeIf { it in 0..100 },
-            fuelRangeKm = (call(dev, "getFuelDrivingRangeValue") as? Number)?.toInt()?.takeIf { it in 0..3000 },
-            odometerKm = (call(dev, "getTotalMileageValue") as? Number)?.toInt()?.takeIf { it in 0..3_000_000 },
-        )
+        val reader = VehicleReadings { method -> dev.javaClass.getMethod(method).invoke(dev) }
+        val battery = reader.number("getElecPercentageValue", 100.0)
+        val ev = reader.number("getElecDrivingRangeValue", 2000.0)?.toInt()
+        val fuel = reader.number("getFuelPercentageValue", 100.0)?.toInt()
+        val range = reader.number("getFuelDrivingRangeValue", 3000.0)?.toInt()
+        val odo = reader.number("getTotalMileageValue", 3_000_000.0)?.toInt()
+        val error = reader.errors.takeIf { it.isNotEmpty() }?.joinToString("; ")
+        report(error)
+        return Snapshot(battery, ev, fuel, range, odo, error)
+    }
+
+    private fun report(error: String?) {
+        // A tela consulta periodicamente: só registra mudanças para não inundar o diagnóstico.
+        if (error != lastError) {
+            if (error != null) AppLog.w("Dados do carro indisponíveis/parciais: $error")
+            else if (lastError != null) AppLog.i("Leitura dos dados do carro recuperada")
+        }
+        lastError = error
     }
 
     private fun device(ctx: Context, cls: String): Any? = try {
         Class.forName(cls).getMethod("getInstance", Context::class.java).invoke(null, ctx.applicationContext)
-    } catch (t: Throwable) {
-        val cause = (t as? java.lang.reflect.InvocationTargetException)?.targetException ?: t
-        lastError = when (cause) {
-            is ClassNotFoundException -> "SDK BYD não encontrado (não é uma central BYD?)"
-            is SecurityException -> "Sem permissão BYDAUTO_STATISTIC_GET — use Diagnóstico › Conceder permissões"
-            else -> "${cause.javaClass.simpleName}: ${cause.message}"
-        }
-        AppLog.w("VehicleData: $lastError")
+            .also { if (it == null) report("SDK BYD retornou dispositivo indisponível") }
+    } catch (t: Exception) {
+        report(VehicleReadings.failure(t))
         null
-    }
-
-    private fun call(target: Any, method: String): Any? = try {
-        target.javaClass.getMethod(method).invoke(target)
-    } catch (t: Throwable) {
+    } catch (t: LinkageError) {
+        report("SDK BYD incompatível (${t.javaClass.simpleName})")
         null
     }
 }

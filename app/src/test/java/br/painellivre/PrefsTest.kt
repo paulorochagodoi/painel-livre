@@ -23,6 +23,7 @@ class PrefsTest {
 
     @Test fun defaults() {
         val p = prefs()
+        assertEquals("integrated", p.panelContent)
         assertEquals("nav", p.clusterMode)
         assertEquals(20, p.restoreDelaySec)
         assertEquals("auto", p.panelSize)
@@ -37,6 +38,11 @@ class PrefsTest {
         assertNull(p.panelGeometry)
         assertNull(p.carPhoto)
         assertEquals(0L, p.lastBootAt)
+    }
+
+    @Test fun panelContentIsConfigurableAndNullFallsBack() {
+        assertEquals("navigation", prefs(Prefs.KEY_PANEL_CONTENT to "navigation").panelContent)
+        assertEquals("integrated", prefs(Prefs.KEY_PANEL_CONTENT to null).panelContent)
     }
 
     @Test fun modesAndNavigationAppAreReadFromStorage() {
@@ -84,6 +90,7 @@ class PrefsTest {
     @Test fun nullStringsKeepDefaults() {
         val p = prefs(Prefs.KEY_CLUSTER_MODE to null, Prefs.KEY_NAV_APP to null,
             Prefs.KEY_THEME to null, Prefs.KEY_PANEL_SIZE to null, Prefs.KEY_MAP_STYLE to null)
+        assertEquals("integrated", p.panelContent)
         assertEquals("nav", p.clusterMode)
         assertEquals("maps", p.navApp)
         assertEquals("auto", p.theme)

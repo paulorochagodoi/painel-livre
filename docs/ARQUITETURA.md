@@ -54,7 +54,8 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | `info` | `WeatherRepository.kt` | Open-Meteo (posição arredondada a 0,1°, no máximo a cada 15 min; sem dados, 1 vez por minuto): `weather` (cartão) e `forecast` (tela de previsão) do mesmo pedido |
 | | `Forecast.kt` | **Kotlin puro.** `ForecastParser` (URL e leitura de agora, 24 h e 7 dias, rótulos "Agora"/"15h"/"Hoje"/"Amanhã"/"Sáb 25") e `ForecastText` |
 | | `MediaRepository.kt` | Sessão de mídia ativa (`MediaSessionManager`, usa o acesso às notificações) e controles |
-| `phone` | `DialNumber.kt` | **Kotlin puro.** `DialNumber` (teclas aceitas, limpeza, formato brasileiro, `tel:` com `#` escapado), `CallPlan` (ordem de tentativas para ligar e quando pedir `CALL_PHONE`), `PhoneApps` (acha o app de telefone/Bluetooth do carro) |
+| `phone` | `DialNumber.kt` | **Kotlin puro.** `DialNumber` (teclas aceitas, limpeza, formato brasileiro, `tel:` com `#` escapado), `CallPlan` (ordem de tentativas para ligar, caminhos diretos, conferência depois de ligar, quando pedir `CALL_PHONE`), `CallAccounts` (conta HFP, quem atende o `ACTION_CALL`), `PhoneApps` (acha o app de telefone/Bluetooth do carro) |
+| | `CallPaths.kt` | Contas de chamada do Telecom, proxy do cliente HFP (`HEADSET_CLIENT`) e `dial` por reflexão, `isInCall` |
 | `car` | `VehicleData.kt` | Leitura por reflexão de `BYDAutoStatisticDevice` (bateria, autonomias, hodômetro). Só leitura |
 | | `InstrumentSdk.kt` | Leitura por reflexão de `BYDAutoInstrumentDevice`: `INSTRUMENT_NAVI_TYPE` pelo `get(device, feature)` e getters candidatos do debug. Só leitura |
 | `debug` | `DebugLog.kt` | **Kotlin puro.** `DebugBuffer`: registro do modo de debug (3000 linhas, horário, origem), só grava ligado |
@@ -100,12 +101,30 @@ Android pode mostrar o seletor uma vez ao tocar em Início — é o comportament
 
 ## Telefone
 
-A central não tem chip; a ligação é do celular pelo Bluetooth. `CallPlan.routes` tenta, nesta ordem:
-`ACTION_CALL` (com `CALL_PHONE`, pedida uma vez no primeiro Ligar) → `ACTION_DIAL` com o número →
-`TelecomManager.placeCall` → abrir o app de telefone do carro (`PhoneApps.pick`) com o número na
-área de transferência. Cada falha (`ActivityNotFound`, `SecurityException`) passa para a próxima; sem
-nenhuma, a tela avisa para usar o volante/celular. `uses-feature android.hardware.telephony` é
-opcional. O número nunca vai para o `AppLog`.
+A central não tem chip; a ligação é do celular pelo Bluetooth (HFP). No AOSP de carro, o
+`HfpClientConnectionService` (`com.android.bluetooth`) registra no Telecom uma conta de chamada por
+celular conectado; é por ela que a ligação sai pelo celular. Issue #15: no carro a chamada ia para o
+app de telefone da BYD; por isso os caminhos **diretos** vêm primeiro. `CallPlan.routes`:
+
+1. `PLACE_CALL_HFP` — `TelecomManager.placeCall` com `EXTRA_PHONE_ACCOUNT_HANDLE` da conta Bluetooth
+   (`CallAccounts.pickHfp`: classe com "hfp", pacote `com.android.bluetooth` ou "bluetooth" no nome).
+2. `CALL_INTENT` — `ACTION_CALL`, só se quem atende for o Telecom do Android
+   (`CallAccounts.SYSTEM_CALL_HANDLERS`).
+3. `HFP_DIAL` — `BluetoothHeadsetClient.dial(device, número)` por reflexão (perfil 16, celular conectado).
+4. `PLACE_CALL` — `placeCall` com a conta padrão.
+5. `CALL_INTENT_APP` — `ACTION_CALL` atendido por um app (o telefone da BYD): pode só abrir o app.
+6. `DIAL_INTENT` — `ACTION_DIAL` com o número. 7. `CAR_PHONE_APP` — app do carro com o número copiado.
+
+Os caminhos 1–4 precisam de `CALL_PHONE` (menos o 3); `READ_PHONE_STATE` é pedida junto (sem ela o
+Telecom não lista as contas) e as duas entram no "Conceder permissões pelo ADB". Cada falha
+(`ActivityNotFound`, `SecurityException`, `dial` nulo) passa para a próxima. Depois de um caminho
+direto o app confere `TelecomManager.isInCall` em 3 s (`CallPlan.afterCheck`) e, sem confirmação,
+**só avisa** ("toque em App do carro"): nunca tenta outro caminho sozinho, para não ligar duas vezes.
+A tela de chamada em andamento é a do discador padrão da central (InCallService): o Android a mostra
+com qualquer caminho. Com o modo de debug ligado, o discador registra quem atende cada intent, as
+contas do Telecom, o cliente HFP, a ordem, o caminho usado, as falhas e a resposta do sistema —
+sem o número, com números e MACs escondidos (`ProbeParse.redactPersonal`). O número nunca vai para o
+`AppLog`. `uses-feature android.hardware.telephony` é opcional.
 
 ## Ciclo do painel
 
@@ -172,7 +191,7 @@ Frações da altura `h` e largura `w` do display (1920×720 no Song Plus), dentr
 
 ## Testes
 
-`app/src/test` tem **138 testes JVM** (117 até a v0.4.1 + 21 da issue #9), sem carro, emulador,
+`app/src/test` tem **143 testes JVM** (117 até a v0.4.1 + 21 da issue #9 + 5 da issue #15), sem carro, emulador,
 rede ou espera de tempo real. Execute com JDK 17:
 
 ```bash
@@ -190,7 +209,7 @@ rede ou espera de tempo real. Execute com JDK 17:
 | `FreezeWatchTest` | vigia, orçamento de recuperação e convivência (`YieldPolicy`) |
 | `CockpitTest` | Photon, tema e códigos do tempo |
 | `HomeChoiceTest` | saída do `resolve-activity` (nosso, BYD, seletor, erro), launcher original, resultado do `set-home-activity`, próximo passo, restauração, estado do alias e quando ligá-lo, alias HOME **desligado** no manifesto e nenhum outro componente com `HOME` |
-| `DialerTest` | teclado, limite, limpeza de número colado, mínimo de 3 dígitos, `tel:` com `#`, formato brasileiro, ordem dos caminhos de chamada (inclusive "nenhum app"), pedido de permissão e escolha do app do carro |
+| `DialerTest` | teclado, limite, limpeza de número colado, mínimo de 3 dígitos, `tel:` com `#`, formato brasileiro, ordem dos caminhos de chamada (inclusive "nenhum app"), conta HFP primeiro e `ACTION_CALL` desviado só de reserva, caminhos diretos, conferência sem nova tentativa, escolha da conta Bluetooth, quem atende o `ACTION_CALL`, pedido de permissão e escolha do app do carro |
 | `PanelMenuTest` | valores do menu, constante do SDK x molde, desenho de cada modo, opcional/teste do debug, `Follower` (sem piscar, volta ao normal), só getters, nenhum código novo em `SAFE_COMMANDS` |
 | `DebugProbeTest` | registro desligado por padrão e limite, comando de coleta só leitura, seções, `settings`/`getprop`, diff, histórico de broadcasts, candidatos, linha de base e novidades, seções ausentes, esconder número/MAC |
 | `ForecastTest` | agora/horas/dias do Open-Meteo, buracos `null`, respostas ruins, rótulos em português, textos, URL com posição arredondada e limite de pedidos |

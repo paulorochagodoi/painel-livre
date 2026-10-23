@@ -129,6 +129,31 @@ Não fazer: `service call autoservice …` à mão sem antes confirmar o número
 (pode ser um setter nesta firmware), `setprop`, `settings put`, broadcasts adivinhados, códigos 17/39
 no AutoContainer. Se o carro confirmar outro mapeamento, ajustar `PanelMenu.modeOf` e o teste.
 
+## Issue #15 — discador liga direto pelo celular (2026-10-23, não lançado)
+
+No carro (v0.4.1) a ligação ia para o app de telefone da BYD. Agora os caminhos diretos vêm antes
+(conta HFP no Telecom → `ACTION_CALL` do Telecom → cliente HFP → `placeCall` padrão) e os que abrem app
+ficam de reserva (`ARQUITETURA.md`, "Telefone"). Validação: 143 testes JVM, lint 0 erros; emulador:
+primeiro Ligar pede a permissão "Telefone", depois `CALL_INTENT` → tela de chamada → `CALLING` em 3 s,
+registro do debug sem o número. O emulador não tem HFP: os caminhos 1 e 3 só o carro confirma.
+
+Hipóteses: (a) a DiLink 3 usa o `HfpClientConnectionService` do AOSP (ou outra conta "bluetooth") e o
+Telecom a lista; (b) na v0.4.1 o `ACTION_CALL` era atendido pelo app da BYD, ou faltava `CALL_PHONE` e
+caía no `ACTION_DIAL`; (c) mesmo ligando direto, a tela de chamada da BYD aparece (é o InCallService
+dela) — isso é esperado; o que muda é não precisar discar de novo.
+
+Checklist no carro (carro parado, celular pareado, número conhecido que não seja de emergência):
+
+1. Ajustes → Conceder permissões pelo ADB (deve mostrar ✓ em `CALL_PHONE` e `READ_PHONE_STATE`) e
+   ligar o Modo de debug.
+2. Telefone → digitar o número → Ligar. Se pedir permissão, Permitir. Anotar: a chamada começou sem
+   discar de novo? Saiu pelo som do carro? Apareceu a tela da BYD?
+3. Abrir o registro do debug e copiar as linhas `[telefone]`: quem atende o `ACTION_CALL`, contas do
+   Telecom, cliente HFP, ordem, caminho usado e "resposta do sistema 3 s depois".
+4. Fotografia completa → seção `# telecom` e `# serviços`: anotar a conta do Bluetooth e serviços de
+   telefone da BYD (pacotes com bt/phone). Se a conta não for reconhecida, ajustar `CallAccounts.isBluetooth`.
+5. Se a resposta for `NOT_CONFIRMED` sem ligar, tocar em App do carro (reserva) e mandar o registro.
+
 ## Fase 1 — Primeiro teste no carro
 
 1. Instalar `PainelLivre-v0.3.0-release.apk`, aceitar "Permitir depuração USB" e tocar em **Configurar**
@@ -162,8 +187,8 @@ no AutoContainer. Se o carro confirmar outro mapeamento, ajustar `PanelMenu.mode
      do boot, a central abre direto no Painel Livre? Conferir se aparece o seletor de launcher sem
      pedir. "Voltar ao launcher da BYD" volta mesmo?
    - *Telefone*: com o celular pareado, discar um número conhecido (não emergência) com o carro
-     parado. Anotar qual caminho o Log do app mostra (`Telefone: chamada por …`) e se a ligação sai
-     pelo som do carro. O Diagnóstico lista `telefone:` (apps que respondem a `ACTION_DIAL`) e pacotes
+     parado. Anotar qual caminho o Log do app mostra (`Telefone: chamada por …` e `depois de … →`) e
+     se a ligação sai pelo som do carro (roteiro completo na seção da issue #15). O Diagnóstico lista `telefone:` (apps que respondem a `ACTION_DIAL`) e pacotes
      com `phone`/`bluetooth`; se a BYD tiver um app próprio que aceite o número por intent, levar o
      pacote para `PhoneApps`/`CallPlan`.
    - *Tempo*: tocar no tempo, conferir horas/dias e a leitura de dia e de noite, deitada e em pé.

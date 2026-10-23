@@ -25,6 +25,18 @@ Nenhuma versão foi testada no carro ainda: todos os testes foram no emulador (`
   emulador: coleta, fotografia, salvar e os quatro desenhos de teste (`docs/telas/7-modo-debug.png`).
   Sem carro; o mapeamento dos valores e a leitura na DiLink 3 são hipóteses (`docs/PLANO.md`, issue #9).
 
+### Discador liga direto pelo celular (issue #15)
+
+- **Problema (no carro, v0.4.1)**: a ligação do discador ia para o app de telefone da BYD.
+- **Mudança**: ordem nova do `CallPlan` — `placeCall` com a conta Bluetooth/HFP do Telecom →
+  `ACTION_CALL` só se quem atende for o Telecom do Android → `BluetoothHeadsetClient.dial` (reflexão)
+  → `placeCall` padrão → `ACTION_CALL` atendido por app → `ACTION_DIAL` → app do carro (comportamento
+  antigo como reserva). Confere a chamada em 3 s (`isInCall`) e só avisa; nunca liga duas vezes.
+- `READ_PHONE_STATE` nova (pedida junto com `CALL_PHONE`; as duas no Conceder pelo ADB).
+- Modo de debug registra o caminho usado e a resposta do sistema, sem o número.
+- Testes: `DialerTest` — 143 no total. Validação: `testDebugUnitTest` 143/143, `lintRelease` 0 erros;
+  emulador: `CALL_INTENT` → chamada confirmada. HFP só no carro (`docs/PLANO.md`, issue #15).
+
 ## 0.4.1 — 2026-10-23 — APK volta a instalar no carro (pré-release de teste)
 
 APK `PainelLivre-v0.4.1-release.apk`, SHA-256 `95e10a175c7352918353127c242691fd0594948d6e05674a7ffe7f324b40005d`.

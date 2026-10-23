@@ -32,8 +32,9 @@ Brasil**, frases simples, sem jargão desnecessário.
 - Histórico em `CHANGELOG.md`. Telas em `docs/telas/`.
 
 - **Não lançado (branch `feat/comandos-painel-debug`)**: issue #9 — modo de debug (Ajustes, desligado por
-  padrão) e "Seguir o menu de navegação do painel" (experimental, desligado); 138 testes JVM. Checklist em
-  `docs/PLANO.md`, issue #9.
+  padrão) e "Seguir o menu de navegação do painel" (experimental, desligado); issue #15 — discador liga
+  direto pelo celular (conta HFP, `ACTION_CALL` do Telecom, cliente HFP; app do carro de reserva);
+  143 testes JVM. Checklists em `docs/PLANO.md`, issues #9 e #15.
 
 **Próximos passos, em ordem**:
 1. Fase 1 — primeiro teste no carro (checklist em `docs/PLANO.md`). Depende do dono.
@@ -184,6 +185,10 @@ porque o GitHub recusou a execução por cobrança da conta; depois que o dono r
   `cmd package resolve-activity` pode responder com o seletor (`ResolverActivity`), que não é um
   launcher para guardar/restaurar; o launcher original é lido antes de ligar o alias.
 - `ACTION_DIAL` pode não ter app na DiLink (issue #3): use o `DialerActivity`, nunca `ACTION_DIAL` cru.
+- `ACTION_CALL` pode ser atendido pelo app de telefone da BYD (só abre o app, issue #15): o `CallPlan`
+  prefere a conta HFP do Telecom e só usa o `ACTION_CALL` direto se quem atende for o Telecom do
+  Android. A tela de chamada da BYD aparecer é normal (InCallService). Sem confirmação em 3 s, o
+  discador só avisa — nunca tenta outro caminho sozinho (ligaria duas vezes).
 - Menu de navegação do painel (Simples/Pequeno/Cheio/OFF, issue #9): nenhum app de terceiros o segue;
   o OFF não esconde a projeção 16/35. O Painel Livre só muda o próprio desenho (`PanelMenuFrame`) e só
   com "Seguir o menu" ligado; mapeamento 1–4 vem do DiPlay (DiLink 5.0), não confirmado na DiLink 3.

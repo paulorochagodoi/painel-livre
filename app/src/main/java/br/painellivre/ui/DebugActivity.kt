@@ -69,6 +69,7 @@ class DebugActivity : AppCompatActivity() {
         }
         button(actions, "Fotografia completa") { snapshot() }
         button(actions, "Ler dados do carro") { readCar() }
+        if (BuildConfig.DEBUG) button(actions, "Simular dados do carro") { simulateCar() }
         button(actions, "Escutar ação…") {
             askText("Ação de broadcast para escutar", "com.exemplo.ACAO") { DebugProbe.addAction(this, it) }
         }
@@ -144,6 +145,17 @@ class DebugActivity : AppCompatActivity() {
         if (!DebugLog.enabled) { toast("Ligue o modo de debug em Ajustes"); return }
         // A varredura não lança: falha de ADB/serviço vira uma linha no registro.
         lifecycleScope.launch { VehicleTelemetry.debugReadAll(this@DebugActivity) }
+    }
+
+    private var simStep = 0
+
+    /** Só em build debug: alterna cenários falsos (o emulador não tem o serviço da BYD). */
+    private fun simulateCar() {
+        if (!BuildConfig.DEBUG) return
+        val sim = if (simStep == 2) null else VehicleTelemetry.simulation(simStep)
+        simStep = (simStep + 1) % 3
+        VehicleTelemetry.simulated = sim
+        toast(if (sim == null) "Simulação dos dados do carro desligada" else "Simulação: ${br.painellivre.car.TelemetryText.headline(sim)}")
     }
 
     private fun snapshot() {

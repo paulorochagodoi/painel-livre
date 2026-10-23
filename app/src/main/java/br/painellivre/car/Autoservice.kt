@@ -36,7 +36,7 @@ object Autoservice {
     val INT_SENTINELS = setOf(NO_DATA, WRONG_TRANSACTION, LINK_ERROR, NOT_INITIALIZED)
     const val FLOAT_INVALID_BITS = 0xBF800000.toInt() // -1.0f
 
-    private val READ_LINE = Regex("""service call autoservice [57] i32 1\d{3} i32 -?\d{1,10}""")
+    private val READ_LINE = Regex("""service call autoservice [57] i32 10\d{2} i32 -?\d{1,10}""")
 
     /** Comando de uma leitura. O fid vai em decimal com sinal (bit alto → negativo), como o shell pede. */
     fun command(tx: Int, dev: Int, fid: Int): String {
@@ -108,7 +108,9 @@ object Autoservice {
         }
         val start = text.indexOf("Parcel(")
         if (start < 0) return Reply.Garbled(text.take(120))
-        val body = text.substring(start + 7).replace(OFFSET, " ").substringBefore('\'')
+        // Descarta a coluna ASCII de cada linha, sem perder palavras das linhas seguintes.
+        val body = text.substring(start + 7).substringBefore(')').lineSequence()
+            .joinToString(" ") { it.substringBefore('\'').replace(OFFSET, " ") }
         val words = WORD.findAll(body).map { it.value.toLong(16).toInt() }.toList()
         if (words.isEmpty()) return Reply.Garbled(text.take(120))
         if (words[0] != 0) return Reply.Failure(words[0])

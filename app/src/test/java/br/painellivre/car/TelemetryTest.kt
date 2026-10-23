@@ -40,6 +40,39 @@ class TelemetryTest {
         assertTrue(Autoservice.parse("Result: Parcel(00000000 '....')") is Reply.Garbled)
     }
 
+    @Test fun parcelHexIgnoresAsciiAndKeepsMultilinePayload() {
+        assertTrue(Autoservice.parse("Result: Parcel(00000000 'deadbeef')") is Reply.Garbled)
+        assertEquals(Reply.Value(-10011), Autoservice.parse("""
+            Result: Parcel(
+              0x00000000: 00000000 'deadbeef'
+              0x00000004: FFFFD8E5 '........')
+        """.trimIndent()))
+        for (signal in TelemetryCatalog.SIGNALS) {
+            val reading = TelemetrySnapshot.reading(signal, signal.fid, Autoservice.parse(NO_DATA))
+            assertNull(signal.key, reading.value)
+        }
+    }
+
+    @Test fun setterIsRejectedForEveryCatalogAddressAndProtocol() {
+        assertEquals(setOf(5, 7), Autoservice.READ_TRANSACTIONS)
+        for (signal in TelemetryCatalog.SIGNALS) {
+            for (protocol in Autoservice.Protocol.values()) {
+                val fid = signal.fidFor(protocol)
+                try {
+                    Autoservice.command(6, signal.dev, fid)
+                    fail("Setter montado para ${signal.key}")
+                } catch (_: IllegalArgumentException) {}
+                val setter = "service call autoservice 6 i32 ${signal.dev} i32 $fid"
+                assertFalse(Autoservice.isReadOnly(setter))
+                try {
+                    Autoservice.batch(listOf(signal.command(fid), setter))
+                    fail("Lote aceitou setter para ${signal.key}")
+                } catch (_: IllegalArgumentException) {}
+            }
+        }
+        assertFalse(Autoservice.isReadOnly("service call autoservice 5 i32 1999 i32 1"))
+    }
+
     @Test fun sentinelsAreUnavailableNotZero() {
         for (w in listOf(-10011, -10013, 0xFFFF, 0xFFFFF)) assertNull(Autoservice.intValue(w))
         assertEquals(0, Autoservice.intValue(0))
@@ -204,6 +237,12 @@ class TelemetryTest {
         assertEquals("Tudo fechado e trancado", TelemetryText.headline(s))
     }
 
+    @Test fun partialReadingsNeverClaimEverythingIsClosed() {
+        assertEquals("Trancado", TelemetryText.headline(snapshot("lock" to word(2), "door_fl" to ZERO)))
+        assertEquals("Carro", TelemetryText.headline(snapshot("door_fl" to ZERO, "door_rr" to NO_DATA)))
+        assertEquals("Destrancado", TelemetryText.headline(snapshot("lock" to word(1), "door_fl" to ZERO)))
+    }
+
     @Test fun hoodAndTrunkTextAndSeveralOpenings() {
         assertEquals("Capô aberto", TelemetryText.panel(snapshot("hood" to ONE)))
         assertEquals("Porta-malas aberto", TelemetryText.panel(snapshot("trunk" to ONE)))
@@ -235,7 +274,9 @@ class TelemetryTest {
             "Abertos: vidro dianteiro direito 40 %",
         ), lines)
         assertTrue(TelemetryText.details(snapshot("tyre_p_fl" to NO_DATA)).isEmpty())
-        assertEquals(listOf("Vidros fechados"), TelemetryText.details(snapshot("win_fl" to ZERO)))
+        assertTrue(TelemetryText.details(snapshot("win_fl" to ZERO)).isEmpty())
+        assertEquals(listOf("Vidros fechados"), TelemetryText.details(snapshot(
+            "win_fl" to ZERO, "win_fr" to ZERO, "win_rl" to ZERO, "win_rr" to ZERO)))
     }
 
     @Test fun debugLineShowsAddressRawAndConfidence() {

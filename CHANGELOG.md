@@ -4,6 +4,17 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
+## Não lançado — revisão da telemetria (issue #16)
+
+- Revisados os commits b622959 e 99d7782: telemetria restrita às leituras autoservice 5/7;
+  teste adicional recusa código 6 para todos os endereços/protocolos e lotes.
+- Leituras parciais não afirmam que todas as portas/vidros estão fechados.
+- Concluída a simulação debug; desligar apaga os dados fictícios imediatamente.
+- Parser Parcel ignora ASCII por linha e preserva payload multilinha; regressão da sentinela
+  0xffffd8e5 em todos os sinais. Documentação e roteiro em docs/TELEMETRIA.md.
+- Validação: 174 testes JVM passando; lintDebug com 0 erros e 112 avisos.
+- Sem mudança de versão/assinatura. Validação visual e confirmação dos IDs no carro pendentes.
+
 ## 0.5.0 — 2026-10-23 — rota nativa, menu do painel, modo de debug e discador (pré-release de teste)
 
 APK `PainelLivre-v0.5.0-release.apk` (versionCode 6), SHA-256 `1fb15b4ddfe371b4443f1f072a5701996884e0d84140ae4a6853a9e62f2fca06`.

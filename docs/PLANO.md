@@ -397,3 +397,14 @@ Nenhum teste no carro nesta etapa. Não alterados comandos seguros, CAN/SDK, ver
 Validação da #14: 129 testes JVM passando (12 novos), `lintRelease` com 0 erros/109 avisos e
 `assembleDebug` concluído. Consulta OSRM com coordenadas públicas de exemplo retornou `Ok`.
 Entrega de intents, GPS/recálculo em execução e projeção precisam do roteiro Android/carro acima.
+
+## Issue #16 — revisão local da telemetria (2026-10-23)
+
+- [x] Revisar b622959/99d7782 e concluir simulação debug e documentação.
+- [x] Lista restrita de leitura autoservice 5/7; teste recusa 6 para todos os sinais/protocolos.
+- [x] Regressões de Parcel hex/multilinha/ASCII e sentinela indisponível.
+- [x] testDebugUnitTest: 174 testes sem falhas; lintDebug: 0 erros, 112 avisos.
+- [ ] Validar cartão/animações e capturar telas no emulador.
+- [ ] Dono conferir IDs, escalas e formato da transação 7 na firmware do Song Plus.
+  Roteiro e tabela (itens **a confirmar**) em [TELEMETRIA.md](TELEMETRIA.md).
+  Nenhum acesso ao carro pelo agente nesta etapa; nenhuma escrita autorizada.

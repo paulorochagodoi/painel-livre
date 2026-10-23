@@ -1,6 +1,7 @@
 package br.painellivre.car
 
 import android.content.Context
+import br.painellivre.BuildConfig
 import br.painellivre.adb.SelfAdb
 import br.painellivre.debug.DebugLog
 import br.painellivre.util.AppLog
@@ -40,6 +41,15 @@ object VehicleTelemetry {
     private val _state = MutableStateFlow(TelemetrySnapshot(TelemetrySnapshot.Status.OFF))
     val state: StateFlow<TelemetrySnapshot> = _state.asStateFlow()
 
+    /** Só em build debug: dados falsos para ver as telas no emulador (sem `autoservice`). */
+    @Volatile var simulated: TelemetrySnapshot? = null
+        set(v) {
+            check(BuildConfig.DEBUG) { "Simulação disponível só em build debug" }
+            field = v
+            // Limpa imediatamente os dados falsos ao desligar, mesmo sem observadores.
+            _state.value = v ?: TelemetrySnapshot(TelemetrySnapshot.Status.WAITING)
+        }
+
     @Volatile private var environment: Autoservice.Environment? = null
     private val resolved = HashMap<String, Int?>()
     private var lastStatus: TelemetrySnapshot.Status? = null
@@ -71,7 +81,7 @@ object VehicleTelemetry {
                 continue
             }
             if (_state.value.status == TelemetrySnapshot.Status.OFF) _state.value = TelemetrySnapshot(TelemetrySnapshot.Status.WAITING)
-            val snap = sweep(app, TelemetryCatalog.POLLED)
+            val snap = simulated?.takeIf { BuildConfig.DEBUG } ?: sweep(app, TelemetryCatalog.POLLED)
             publish(snap)
             // Serviço inexistente ou bloqueado não muda sozinho: tenta de novo bem devagar.
             val wait = when (snap.status) {
@@ -138,6 +148,25 @@ object VehicleTelemetry {
             val n = s.readings.values.count { it.value != null }
             DebugLog.add("carro", "$n de ${s.readings.size} com valor. Compare com o que o carro mostra e anote.")
         }
+    }
+
+    /** Cenários da simulação do debug: porta aberta + carregando, depois tudo fechado e trancado. */
+    fun simulation(step: Int): TelemetrySnapshot {
+        fun word(v: Int) = Autoservice.Reply.Value(v)
+        fun float(f: Float) = Autoservice.Reply.Value(java.lang.Float.floatToIntBits(f))
+        val open = step % 2 == 0
+        val values = mapOf(
+            "door_fl" to word(if (open) 1 else 0), "door_fr" to word(0), "door_rl" to word(0), "door_rr" to word(0),
+            "hood" to word(0), "trunk" to word(if (open) 1 else 0), "lock" to word(if (open) 1 else 2),
+            "charge_lid" to word(if (open) 1 else 0), "gun" to word(if (open) 2 else 1), "bms" to word(if (open) 1 else 2),
+            "charge_kw" to float(6.6f), "charge_h" to word(1), "charge_min" to word(20),
+            "soc" to float(63f), "ev_range" to word(71), "fuel_range" to word(612),
+            "ac_temp_driver" to word(22), "ac_temp_pass" to word(23), "temp_out" to word(29), "ac_fan" to word(3),
+            "seat_vent_driver" to word(3), "tyre_p_fl" to word(250), "tyre_p_fr" to word(251),
+            "tyre_p_rl" to word(248), "tyre_p_rr" to word(249), "win_fl" to word(if (open) 30 else 0), "win_fr" to word(0),
+        )
+        val readings = values.mapValues { (k, r) -> TelemetryCatalog.byKey(k).let { TelemetrySnapshot.reading(it, it.fid, r) } }
+        return TelemetrySnapshot(TelemetrySnapshot.Status.OK, "SIMULAÇÃO dos dados do carro", readings, System.currentTimeMillis())
     }
 
     /** `BYDAutoFeatureIds$Grupo.NOME` da própria central (só leitura de constante), ou null. */

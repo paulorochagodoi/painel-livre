@@ -167,12 +167,12 @@ object TelemetryText {
 
     /** Título do cartão "Carro" na central. */
     fun headline(s: TelemetrySnapshot): String = panel(s) ?: when (s.locked) {
-        true -> "Tudo fechado e trancado"
+        true -> if (openingsKnown(s)) "Tudo fechado e trancado" else "Trancado"
         false -> if (s.openings.isEmpty() && openingsKnown(s)) "Fechado, destrancado" else "Destrancado"
         null -> if (openingsKnown(s)) "Portas fechadas" else "Carro"
     }
 
-    private fun openingsKnown(s: TelemetrySnapshot) = TelemetrySnapshot.OPENING_KEYS.any { s.isOpen(it) != null }
+    private fun openingsKnown(s: TelemetrySnapshot) = TelemetrySnapshot.OPENING_KEYS.all { s.isOpen(it) == false }
 
     /** Aviso compacto do painel (só o que importa ao motorista). */
     fun panel(s: TelemetrySnapshot): String? {
@@ -216,9 +216,9 @@ object TelemetryText {
         val windows = listOf("win_fl", "win_fr", "win_rl", "win_rr", "sunroof").mapNotNull { k ->
             s.value(k)?.takeIf { it > 0 }?.let { "${TelemetryCatalog.byKey(k).label.lowercase(BR)} ${it.toInt()} %" }
         }
-        val anyWindow = listOf("win_fl", "win_fr", "win_rl", "win_rr").any { s.value(it) != null }
+        val allWindowsClosed = listOf("win_fl", "win_fr", "win_rl", "win_rr").all { s.value(it) == 0.0 }
         if (windows.isNotEmpty()) lines += "Abertos: " + windows.joinToString(" · ")
-        else if (anyWindow) lines += "Vidros fechados"
+        else if (allWindowsClosed) lines += "Vidros fechados"
         return lines
     }
 

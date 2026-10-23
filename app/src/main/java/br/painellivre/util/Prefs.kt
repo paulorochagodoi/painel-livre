@@ -48,6 +48,12 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
     val debugMode: Boolean get() = sp.getBoolean(KEY_DEBUG_MODE, false)
     /** Seguir o menu de navegação do painel (Simples/Pequeno/Cheio/OFF). Experimental, desligado. */
     val panelMenuFollow: Boolean get() = sp.getBoolean(KEY_PANEL_MENU_FOLLOW, false)
+    /** Ler dados do carro pelo `autoservice` via ADB local (issue #16). Experimental, desligado. */
+    val telemetryEnabled: Boolean get() = sp.getBoolean(KEY_TELEMETRY, false)
+    /** Aviso compacto no painel (porta aberta, carregando). Desligado por padrão. */
+    val telemetryPanel: Boolean get() = sp.getBoolean(KEY_TELEMETRY_PANEL, false)
+    /** Segundos entre leituras dos dados do carro (5–60). */
+    val telemetryIntervalSec: Int get() = sp.getString(KEY_TELEMETRY_INTERVAL, "10")?.toIntOrNull()?.coerceIn(5, 60) ?: 10
     /** Ações de broadcast extras que o debug escuta (digitadas pelo motorista). */
     var debugActions: Set<String>
         get() = sp.getStringSet(KEY_DEBUG_ACTIONS, null)?.toSet() ?: emptySet()
@@ -100,6 +106,9 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
         const val KEY_AUTO_HEAL = "auto_heal"
         const val KEY_DEBUG_MODE = "debug_mode"
         const val KEY_PANEL_MENU_FOLLOW = "panel_menu_follow"
+        const val KEY_TELEMETRY = "telemetry"
+        const val KEY_TELEMETRY_PANEL = "telemetry_panel"
+        const val KEY_TELEMETRY_INTERVAL = "telemetry_interval"
         private const val KEY_DEBUG_ACTIONS = "debug_actions"
         private const val KEY_PROJECTION_POWERED = "projection_powered"
         private const val KEY_PANEL_GEOMETRY = "panel_geometry"

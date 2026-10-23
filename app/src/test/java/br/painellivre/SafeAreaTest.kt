@@ -138,4 +138,22 @@ class SafeAreaTest {
         val p = SafeArea.plan(1920, 720, songPlus(), Rect(0, 600, 1920, 720))
         assertEquals(Rect(0, 0, 1920, 120), p.safe)
     }
+    @Test fun telemetryStaysInsideSafeAreaWithMenuAndFineAdjust() {
+        val l = PanelMenu.SMALL_LAYOUT
+        val small = Rect((1920 * l.left).toInt(), (720 * l.top).toInt(),
+            1920 - (1920 * l.right).toInt(), 720 - (720 * l.bottom).toInt())
+        for (content in listOf(full, small)) {
+            for (adjust in listOf(SafeArea.NONE, Insets(400, 400, 400, 400),
+                Insets(-400, -400, -400, -400), Insets(400, -400, 400, -400))) {
+                val p = SafeArea.plan(1920, 720, songPlus(adjust), content)
+                assertTrue("telemetria fora da área: $p", p.safe.contains(p.telemetryBounds))
+                val half = (p.unit * SafeArea.CAR_SIZE / 2).toInt()
+                assertFalse(p.telemetryBounds.intersects(Rect(p.carX - half, p.carY - half,
+                    p.carX + half, p.carY + half)))
+            }
+        }
+        val p = SafeArea.plan(1920, 720, songPlus(), full)
+        for (o in SafeArea.SONG_PLUS_OVERLAYS) assertFalse(p.telemetryBounds.intersects(o))
+    }
+
 }

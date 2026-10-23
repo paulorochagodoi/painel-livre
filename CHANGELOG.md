@@ -4,9 +4,14 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
-## 0.5.1 (teste) — 2026-10-23 — "Seguir o menu do painel" funcionando na DiLink 3
+## 0.5.2 (teste) — 2026-10-23 — área segura, menu do painel, telemetria e carro 3D
 
-versionCode 7. Não lançada; sem APK assinado. Falta conferir no carro.
+versionCode 8. Não lançada; consolida a 0.5.1, telemetria só leitura (#16) e carro 3D.
+Validação conjunta local: 209 testes JVM, sem falhas; `lintDebug` com 0 erros e 116 avisos;
+`assembleDebug` concluído. Validação visual conjunta no emulador e teste no carro pendentes.
+
+- Aviso de telemetria limitado ao canto superior direito da área segura, inclusive no modo Pequeno
+  e com ajuste fino. Cartões, carro, crédito OSM e contorno debug preservados.
 
 - Revisão local dos commits `bac5aa0` e `05c289c`: rejeita Parcel truncado, palavras inválidas e
   valor fora do Parcel; confere o código de saída do shell e pausa também após falhas do serviço/parser.
@@ -41,6 +46,27 @@ versionCode 7. Não lançada; sem APK assinado. Falta conferir no carro.
   ligado, o painel mostra o contorno da área segura e as margens finais.
 - Testes: `SafeAreaTest` (11) e `PrefsTest` atualizado — 179 no total, 0 falhas; `lintRelease` com 0 erros.
   Conferido no emulador (pré-visualização 1920×720 com rota simulada, `docs/telas/1` e `8`); falta o carro.
+
+### Carro 3D na tela inicial
+
+- Renders locais do Song Plus em 3/4 e vista superior com transição suave e overlays
+  de portas, capô, porta-malas, carga, vidros/teto/cortina e pressão dos pneus.
+- Cadeado discreto, cache dos bitmaps e simulação debug por cenário.
+- Layout da central, cartões e barra inferior preservados; assinatura sem alteração.
+- Testes de regressão da decisão de vista e mapeamento dos estados. Sem acesso ao carro.
+- Validação: 180 testes JVM, lintDebug sem erros (114 avisos), assembleDebug; capturas
+  de padrão/porta/carga/pneu no emulator-5580 em docs/telas/carro-3d-*.png.
+
+### Telemetria só leitura (issue #16)
+
+- Revisados os commits b622959 e 99d7782: telemetria restrita às leituras autoservice 5/7;
+  teste adicional recusa código 6 para todos os endereços/protocolos e lotes.
+- Leituras parciais não afirmam que todas as portas/vidros estão fechados.
+- Concluída a simulação debug; desligar apaga os dados fictícios imediatamente.
+- Parser Parcel ignora ASCII por linha e preserva payload multilinha; regressão da sentinela
+  0xffffd8e5 em todos os sinais. Documentação e roteiro em docs/TELEMETRIA.md.
+- Validação: 174 testes JVM passando; lintDebug com 0 erros e 112 avisos.
+- Validação visual conjunta e confirmação dos IDs no carro pendentes; nenhuma escrita no carro.
 
 ## 0.5.0 — 2026-10-23 — rota nativa, menu do painel, modo de debug e discador (pré-release de teste)
 

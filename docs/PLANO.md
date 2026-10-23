@@ -420,3 +420,31 @@ Entrega de intents, GPS/recálculo em execução e projeção precisam do roteir
   O agente não acessou o carro; nenhum comando novo de carro foi adicionado.
 
 Validação local: 183 testes JVM, 0 falhas; lintDebug com 0 erros e 114 avisos; assembleDebug concluído.
+
+## Issue #16 — revisão local da telemetria (2026-10-23)
+
+- [x] Revisar b622959/99d7782 e concluir simulação debug e documentação.
+- [x] Lista restrita de leitura autoservice 5/7; teste recusa 6 para todos os sinais/protocolos.
+- [x] Regressões de Parcel hex/multilinha/ASCII e sentinela indisponível.
+- [x] testDebugUnitTest: 174 testes sem falhas; lintDebug: 0 erros, 112 avisos.
+- [ ] Validar cartão/animações e capturar telas no emulador.
+- [ ] Dono conferir IDs, escalas e formato da transação 7 na firmware do Song Plus.
+  Roteiro e tabela (itens **a confirmar**) em [TELEMETRIA.md](TELEMETRIA.md).
+  Nenhum acesso ao carro pelo agente nesta etapa; nenhuma escrita autorizada.
+
+### Carro 3D central (não publicado)
+
+Renders locais e overlays somente visuais; detalhes e coordenadas em TELEMETRIA.md.
+Conferir posição da tampa traseira direita e limites visuais de pneus com o dono, sem novos comandos.
+
+Validado no emulator-5580: padrão, porta aberta, carregando e pneu baixo.
+180 testes JVM; lintDebug 0 erros/114 avisos; assembleDebug concluído. Sem teste no carro.
+
+## Integração 0.5.2 (teste), versionCode 8
+
+Consolida menu ADB e área segura da 0.5.1 com telemetria só leitura e carro 3D.
+Aviso/estado de telemetria limitado à área segura, no canto superior direito; testes incluem
+modo Pequeno e ajustes extremos. Transação 6 continua bloqueada. Nenhuma mudança de assinatura.
+Validação conjunta local: 209 testes JVM sem falhas, lintDebug com 0 erros/116 avisos e
+assembleDebug concluído. Conferir visualmente navegação + aviso de telemetria,
+modo Pequeno, ajuste fino e contorno debug no emulador e depois com o dono no carro.

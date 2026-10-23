@@ -419,11 +419,31 @@ usado pelo telefone (issue #15). A fotografia completa esconde números de telef
 valores e ignora a prévia ASCII. Nunca procura o valor depois do fechamento. `PanelMenuReader` só usa
 saída de shell com exitCode 0 e aplica a pausa de 5 s a erros de conexão, shell, Binder e parser.
 Leituras fora de 1..4 produzem UNKNOWN; o Follower volta ao desenho normal após as falhas previstas.
-O único comando autoservice executável continua a constante de leitura da transação 5, após recusa
-por permissão do SDK e somente na API 29. Não há transação 6 nem escrita CAN/SDK.
+No leitor do menu, o único comando autoservice executável continua a constante de leitura da
+transação 5, após recusa por permissão do SDK e somente na API 29. A telemetria (#16) tem sua
+lista separada de leituras 5/7, com verificação da interface (docs/TELEMETRIA.md). Não há transação 6
+nem escrita CAN/SDK.
 
 `SafeArea.resolve` usa intermediários Long/Double para margens extremas e reserva ao menos um pixel
 em displays mínimos. `SafeArea.plan` limita a unidade dos cartões também pela largura segura, para
 que o mínimo do cartão não alcance o carro em áreas estreitas. O padrão 1920×720 não muda.
 As chaves antigas inset_* são intencionalmente reinterpretadas como ajuste aditivo, limitado a ±400;
 não há conversão de margens absolutas nem gravação automática das preferências antigas.
+
+## Carro 3D na tela inicial (não publicado)
+
+`SongCarView` substitui apenas `carArt` no hero da central e recebe o mesmo snapshot do cartão.
+`CarOverlay` é Kotlin puro: decide vista e mapeia estados e coordenadas em frações da imagem.
+Dois WebP locais (base 3/4 e superior horizontal) ficam em cache compartilhado; nenhum decode
+ocorre no desenho. Transição de 250 ms; pulso apenas durante carga; ocultar/desanexar para animações.
+`CarStatusView` pequeno e mapa do painel não mudam. Fotos pessoais continuam funcionando.
+`CarOverlayTest` cobre aberturas, vidros/teto, carga, trava, pressões e dados desconhecidos.
+Coordenadas, limites visuais, fontes e simulação: [TELEMETRIA.md](TELEMETRIA.md#carro-3d-na-tela-inicial-não-publicado).
+
+### Integração 0.5.2 (teste)
+
+O aviso de telemetria do painel usa `SafeArea.Plan.telemetryBounds`, no canto superior direito,
+com largura e altura limitadas pela área segura. Ícone e texto ficam dentro desse cartão;
+a largura restante do texto respeita ícone e preenchimento. Não aumenta a pilha manobra/chegada.
+O cálculo considera o modo Pequeno e os ajustes finos; regressão em `SafeAreaTest`.
+Mantidos foco/carro, crédito OSM, contorno debug e ajustes aditivos da 0.5.1.

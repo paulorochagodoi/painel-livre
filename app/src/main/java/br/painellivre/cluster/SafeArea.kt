@@ -106,7 +106,14 @@ object SafeArea {
         val unit: Float,
         /** Largura do cartão da manobra: não passa do carro. */
         val cardWidth: Int,
-    )
+    ) {
+        /** Aviso de telemetria no canto superior direito, limitado pela área segura. */
+        val telemetryBounds: Rect get() {
+            val width = cardWidth.coerceIn(1, safe.width)
+            val height = (unit * 0.20f).roundToInt().coerceIn(1, safe.height)
+            return Rect(safe.right - width, safe.top, safe.right, safe.top + height)
+        }
+    }
 
     /** Fração de [Plan.unit] ocupada pelos cartões (manobra + chegada) e a atribuição, com folga. */
     const val CARDS_HEIGHT_UNITS = 0.45f

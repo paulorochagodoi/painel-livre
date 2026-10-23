@@ -44,6 +44,20 @@ class PrefsTest {
         assertFalse(p.panelMenuFollow)
     }
 
+    @Test fun telemetryIsOffByDefaultAndIntervalIsBounded() {
+        // Issue #16: a leitura pelo autoservice e o aviso no painel só ligam pelo motorista.
+        val p = prefs()
+        assertFalse(p.telemetryEnabled)
+        assertFalse(p.telemetryPanel)
+        assertEquals(10, p.telemetryIntervalSec)
+        assertTrue(prefs(Prefs.KEY_TELEMETRY to true).telemetryEnabled)
+        assertTrue(prefs(Prefs.KEY_TELEMETRY_PANEL to true).telemetryPanel)
+        assertEquals(5, prefs(Prefs.KEY_TELEMETRY_INTERVAL to "1").telemetryIntervalSec)
+        assertEquals(60, prefs(Prefs.KEY_TELEMETRY_INTERVAL to "999").telemetryIntervalSec)
+        assertEquals(10, prefs(Prefs.KEY_TELEMETRY_INTERVAL to "x").telemetryIntervalSec)
+        assertEquals(30, prefs(Prefs.KEY_TELEMETRY_INTERVAL to "30").telemetryIntervalSec)
+    }
+
     @Test fun debugAndPanelMenuSwitchesAreReadFromStorage() {
         assertTrue(prefs(Prefs.KEY_DEBUG_MODE to true).debugMode)
         assertTrue(prefs(Prefs.KEY_PANEL_MENU_FOLLOW to true).panelMenuFollow)

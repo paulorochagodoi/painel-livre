@@ -8,6 +8,15 @@ A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais val
 
 versionCode 7. Não lançada; sem APK assinado. Falta conferir no carro.
 
+- Revisão local dos commits `bac5aa0` e `05c289c`: rejeita Parcel truncado, palavras inválidas e
+  valor fora do Parcel; confere o código de saída do shell e pausa também após falhas do serviço/parser.
+  Valores fora de 1..4 continuam sem escolher modo; nenhum setter ou novo comando do carro.
+- Área segura: cálculo sem overflow com margens extremas, ao menos um pixel livre em displays mínimos
+  e redução dos cartões também pela largura para não invadirem o carro com ajustes laterais grandes.
+  Preferências antigas continuam como ajuste somado ao padrão (decisão da v0.5.1), cobertas por regressão.
+- Validação da revisão: 183 testes JVM, 0 falhas; `lintDebug` com 0 erros e 114 avisos;
+  `assembleDebug` concluído. Sem validação visual nova no emulador ou teste no carro.
+
 - **Correção (issue #9)**: no carro (DiLink 3.0, Android 10) o SDK BYD recusava a leitura do menu no
   processo do app ("permissão BYD recusada … ajudante uid 2000 pendente"), então "Seguir o menu" nunca
   mudava nada. Agora, quando o SDK recusa por permissão, o app lê `INSTRUMENT_NAVI_TYPE` pelo ADB local

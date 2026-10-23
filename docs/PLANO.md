@@ -409,3 +409,14 @@ Nenhum teste no carro nesta etapa. Não alterados comandos seguros, CAN/SDK, ver
 Validação da #14: 129 testes JVM passando (12 novos), `lintRelease` com 0 erros/109 avisos e
 `assembleDebug` concluído. Consulta OSRM com coordenadas públicas de exemplo retornou `Ok`.
 Entrega de intents, GPS/recálculo em execução e projeção precisam do roteiro Android/carro acima.
+
+### Regressão da revisão local v0.5.1 (2026-10-23)
+
+- Cobertos na JVM: ADB desconectado e recuperação, shell com saída não zero, serviço ausente,
+  Parcel truncado/inválido, valores fora de 1..4, preferências antigas aditivas e ajustes extremos.
+- Corrigidos overflow das margens e cartões que alcançavam o carro em áreas estreitas.
+- Pendente no emulador/carro: conferir cartões e carro com ajuste lateral +400 e no modo Pequeno,
+  e desligar/religar o ADB local observando o retorno ao desenho normal e a recuperação do menu.
+  O agente não acessou o carro; nenhum comando novo de carro foi adicionado.
+
+Validação local: 183 testes JVM, 0 falhas; lintDebug com 0 erros e 114 avisos; assembleDebug concluído.

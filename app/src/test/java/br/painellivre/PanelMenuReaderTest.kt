@@ -47,6 +47,9 @@ class PanelMenuReaderTest {
     @Test fun badAnswersAreErrors() {
         for (bad in listOf(
             "", "service: command not found", "Service autoservice does not exist",
+            "Result: Parcel(00000000 00000001", // truncado
+            "Result: Parcel(00000000)\n00000001", // valor fora do Parcel
+            "Result: Parcel(lixo 00000000 00000001)",
             "Result: Parcel()", "Result: Parcel(00000000)",
             "Result: Parcel(ffffffff 00000004 '....')", // exceção do Binder: não usa o valor
             "Result: Parcel(fffffffc 0000001c 00740053 '....S.t.')",
@@ -125,6 +128,29 @@ class PanelMenuReaderTest {
         now = 5_000
         assertEquals(Mode.SIMPLE, reader.read().mode)
         assertEquals(2, adb.commands.size)
+    }
+
+    @Test fun shellAndParcelFailuresBackOffAndUnknownValuesNeverSelectAMode() = runTest {
+        for (answer in listOf(
+            SelfAdb.Result.Ok(parcel("00000001"), 1),
+            SelfAdb.Result.Ok("Service autoservice does not exist", 0),
+            SelfAdb.Result.Ok("Result: Parcel(00000000 00000001", 0),
+        )) {
+            var now = 0L
+            val adb = FakeAdb(answer)
+            val reader = PanelMenuReader({ denied }, adb::run, true, clock = { now })
+            assertEquals(Mode.UNKNOWN, reader.read().mode)
+            now = 1000
+            reader.read()
+            assertEquals(1, adb.commands.size)
+            now = 5000
+            adb.answer = SelfAdb.Result.Ok(parcel("00000004"), 0)
+            assertEquals(Mode.FULL, reader.read().mode)
+        }
+        for (word in listOf("00000000", "00000005", "ffffffff", "7fffffff")) {
+            val adb = FakeAdb(SelfAdb.Result.Ok(parcel(word), 0))
+            assertEquals(Mode.UNKNOWN, PanelMenuReader({ denied }, adb::run, true).read().mode)
+        }
     }
 
     @Test fun followerReactsToAdbReadings() = runTest {

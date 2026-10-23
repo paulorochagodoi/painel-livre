@@ -37,13 +37,16 @@ class PanelMenuReader(
         lastAdbFailure?.let { if (clock() < adbPauseUntil) return it }
         val r = when (val out = adb(PanelMenu.ADB_READ_COMMAND)) {
             is SelfAdb.Result.Error -> InstrumentSdk.Reading(null, "ADB: ${out.message}", "", source = "ADB")
-                .also { lastAdbFailure = it; adbPauseUntil = clock() + retryMs }
+
             is SelfAdb.Result.Ok -> {
-                lastAdbFailure = null
-                val p = PanelMenu.parseParcel(out.output)
+                val p = if (out.exitCode == 0) PanelMenu.parseParcel(out.output)
+                    else PanelMenu.ParcelValue(null, "comando ADB falhou (saída ${out.exitCode})")
                 InstrumentSdk.Reading(p.raw, p.error, "ADB uid 2000, transação ${PanelMenu.GET_TRANSACTION}", source = "ADB")
             }
         }
+        // Falha do shell, serviço ausente e Parcel inválido também precisam de pausa.
+        lastAdbFailure = r.takeIf { it.error != null }
+        if (lastAdbFailure != null) adbPauseUntil = clock() + retryMs
         return r
     }
 }

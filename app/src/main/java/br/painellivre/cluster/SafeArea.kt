@@ -73,17 +73,19 @@ object SafeArea {
      */
     fun resolve(w: Int, h: Int, base: Insets, adjust: Insets): Insets {
         if (w <= 0 || h <= 0) return NONE
-        fun side(b: Int, a: Int) = max(0, b + a.coerceIn(-ADJUST_LIMIT, ADJUST_LIMIT))
-        val sx = w.toFloat() / REF_W
-        val sy = h.toFloat() / REF_H
-        var l = (side(base.left, adjust.left) * sx).roundToInt()
-        var r = (side(base.right, adjust.right) * sx).roundToInt()
-        var t = (side(base.top, adjust.top) * sy).roundToInt()
-        var b = (side(base.bottom, adjust.bottom) * sy).roundToInt()
-        val maxX = w - (w * MIN_WIDTH_FRACTION).roundToInt()
-        if (l + r > maxX) { val k = maxX.toFloat() / (l + r); l = (l * k).toInt(); r = (r * k).toInt() }
-        val maxY = h - (h * MIN_HEIGHT_FRACTION).roundToInt()
-        if (t + b > maxY) { val k = maxY.toFloat() / (t + b); t = (t * k).toInt(); b = (b * k).toInt() }
+        fun axis(size: Int, ref: Int, first: Int, second: Int, a: Int, b: Int, fraction: Float): Pair<Int, Int> {
+            // Long/Double evitam overflow até em preferências restauradas com Int.MAX_VALUE.
+            fun side(base: Int, adjust: Int) =
+                max(0L, base.toLong() + adjust.coerceIn(-ADJUST_LIMIT, ADJUST_LIMIT)) * size.toDouble() / ref
+            val x = side(first, a)
+            val y = side(second, b)
+            val limit = size - (size * fraction.toDouble()).roundToInt().coerceAtLeast(1)
+            val scale = if (x + y > limit) limit / (x + y) else 1.0
+            return if (scale < 1.0) (x * scale).toInt() to (y * scale).toInt()
+                else x.roundToInt() to y.roundToInt()
+        }
+        val (l, r) = axis(w, REF_W, base.left, base.right, adjust.left, adjust.right, MIN_WIDTH_FRACTION)
+        val (t, b) = axis(h, REF_H, base.top, base.bottom, adjust.top, adjust.bottom, MIN_HEIGHT_FRACTION)
         return Insets(l, t, r, b)
     }
 
@@ -121,7 +123,10 @@ object SafeArea {
         val safe = Rect(sl, st, sr, sb)
         val carX = safe.centerX
         val carY = safe.top + (safe.height * CAR_Y_FRACTION).roundToInt()
-        val unit = min(ch.toFloat(), safe.height / CARDS_HEIGHT_UNITS)
+        // Em "Pequeno", reduzir também pela largura: o mínimo de meia unidade do
+        // cartão precisa caber antes do carro, incluindo o tamanho dele e a folga.
+        val unit = min(min(ch.toFloat(), safe.height / CARDS_HEIGHT_UNITS),
+            safe.width / (1f + CAR_SIZE + 0.06f))
         val carHalf = (unit * CAR_SIZE / 2).roundToInt()
         val cardWidth = min((cw * 0.30f).roundToInt(), carX - carHalf - (unit * 0.03f).roundToInt() - safe.left)
             .coerceAtLeast(min(safe.width, (unit * 0.5f).roundToInt()))

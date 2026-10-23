@@ -111,6 +111,29 @@ class SafeAreaTest {
         assertTrue(p.cardWidth <= p.safe.width)
     }
 
+    @Test fun narrowSafeAreasKeepCardsBeforeTheCar() {
+        val small = Rect(537, 86, 1383, 634)
+        for (content in listOf(small, full)) {
+            for (adjust in listOf(SafeArea.NONE, Insets(400, -400, 400, -400))) {
+                val p = SafeArea.plan(1920, 720, songPlus(adjust), content)
+                val carLeft = p.carX - (p.unit * SafeArea.CAR_SIZE / 2).toInt()
+                assertTrue("cartão invade carro: $p", p.safe.left + p.cardWidth < carLeft)
+                assertTrue(p.cardWidth <= p.safe.width)
+            }
+        }
+    }
+
+    @Test fun extremeInsetsCannotOverflowOrConsumeTinyDisplays() {
+        for (size in listOf(1, 2, 720, 1920)) {
+            val i = SafeArea.resolve(size, size,
+                Insets(Int.MAX_VALUE, Int.MIN_VALUE, Int.MAX_VALUE, Int.MAX_VALUE),
+                Insets(Int.MAX_VALUE, Int.MIN_VALUE, Int.MAX_VALUE, Int.MAX_VALUE))
+            assertTrue(i.left >= 0 && i.top >= 0 && i.right >= 0 && i.bottom >= 0)
+            assertTrue(i.left.toLong() + i.right < size)
+            assertTrue(i.top.toLong() + i.bottom < size)
+        }
+    }
+
     @Test fun contentOutsideSafeAreaFallsBackToContent() {
         val p = SafeArea.plan(1920, 720, songPlus(), Rect(0, 600, 1920, 720))
         assertEquals(Rect(0, 0, 1920, 120), p.safe)

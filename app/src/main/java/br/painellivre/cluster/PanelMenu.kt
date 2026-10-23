@@ -70,12 +70,16 @@ object PanelMenu {
     fun parseParcel(output: String): ParcelValue {
         val start = output.indexOf("Parcel(")
         if (start < 0) return ParcelValue(null, "resposta sem Parcel: ${output.trim().take(80)}")
-        val words = output.substring(start + "Parcel(".length).lineSequence()
+        val end = output.indexOf(')', start)
+        if (end < 0) return ParcelValue(null, "Parcel incompleto")
+        val payload = output.substring(start + "Parcel(".length, end)
+        val tokens = payload.lineSequence()
             .map { it.substringBefore('\'') } // o texto entre aspas é a prévia em ASCII
             .flatMap { line -> line.replace(OFFSET, " ").split(' ', '\t', ')').asSequence() }
-            .filter { WORD.matches(it) }
-            .map { it.toLong(16).toInt() }
+            .filter { it.isNotBlank() }
             .toList()
+        if (tokens.any { !WORD.matches(it) }) return ParcelValue(null, "Parcel inválido")
+        val words = tokens.map { it.toLong(16).toInt() }
         if (words.isEmpty()) return ParcelValue(null, "Parcel vazio")
         if (words[0] != 0) return ParcelValue(null, "autoservice recusou (exceção ${hex(words[0])})")
         val raw = words.getOrNull(1) ?: return ParcelValue(null, "Parcel sem valor")

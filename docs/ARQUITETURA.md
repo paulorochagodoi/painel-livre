@@ -412,3 +412,18 @@ de base; depois só o que mudou, com ★ nos candidatos). Receptores para as aç
 digitadas pelo motorista mostram os extras. Sem ADB, só o SDK continua e o ADB é tentado a cada 30 s;
 a coleta pelo ADB para em 30 min (Retomar na tela). Registro separado do `AppLog` (`DebugLog`), também
 usado pelo telefone (issue #15). A fotografia completa esconde números de telefone e MACs.
+
+### Revisão local da v0.5.1 (2026-10-23)
+
+`PanelMenu.parseParcel` exige fechamento do Parcel, aceita apenas palavras hexadecimais na parte de
+valores e ignora a prévia ASCII. Nunca procura o valor depois do fechamento. `PanelMenuReader` só usa
+saída de shell com exitCode 0 e aplica a pausa de 5 s a erros de conexão, shell, Binder e parser.
+Leituras fora de 1..4 produzem UNKNOWN; o Follower volta ao desenho normal após as falhas previstas.
+O único comando autoservice executável continua a constante de leitura da transação 5, após recusa
+por permissão do SDK e somente na API 29. Não há transação 6 nem escrita CAN/SDK.
+
+`SafeArea.resolve` usa intermediários Long/Double para margens extremas e reserva ao menos um pixel
+em displays mínimos. `SafeArea.plan` limita a unidade dos cartões também pela largura segura, para
+que o mínimo do cartão não alcance o carro em áreas estreitas. O padrão 1920×720 não muda.
+As chaves antigas inset_* são intencionalmente reinterpretadas como ajuste aditivo, limitado a ±400;
+não há conversão de margens absolutas nem gravação automática das preferências antigas.

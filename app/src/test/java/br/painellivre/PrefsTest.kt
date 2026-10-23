@@ -90,6 +90,15 @@ class PrefsTest {
         }
     }
 
+    @Test fun oldMarginsRemainAdditiveAndMalformedAdjustmentsFallBack() {
+        val old = prefs(Prefs.KEY_INSET_LEFT to "1500", Prefs.KEY_INSET_TOP to "90",
+            Prefs.KEY_INSET_RIGHT to "999999999999", Prefs.KEY_INSET_BOTTOM to "")
+        assertEquals("songplus", old.safeArea)
+        assertEquals(SafeArea.Insets(400, 90, 0, 0), old.insetAdjust)
+        val resolved = SafeArea.resolve(1920, 720, SafeArea.preset(old.safeArea), old.insetAdjust)
+        assertEquals(SafeArea.Insets(630, 180, 230, 230), resolved)
+    }
+
     @Test fun safeAreaPresetDefaultsToSongPlus() {
         assertEquals("songplus", prefs().safeArea)
         assertEquals("none", prefs(Prefs.KEY_SAFE_AREA to "none").safeArea)

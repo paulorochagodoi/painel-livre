@@ -4,6 +4,7 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
+import br.painellivre.debug.DebugProbe
 import br.painellivre.util.AppLog
 import org.maplibre.android.MapLibre
 
@@ -17,6 +18,7 @@ class App : Application() {
             )
         }
         AppLog.i("Painel Livre ${BuildConfig.VERSION_NAME} iniciado")
+        DebugProbe.sync(this) // só roda se o motorista ligou o modo de debug
     }
 
     companion object {

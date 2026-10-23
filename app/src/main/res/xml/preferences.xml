@@ -79,6 +79,12 @@
             app:useSimpleSummaryProvider="true"
             app:iconSpaceReserved="false" />
         <SwitchPreferenceCompat
+            app:key="panel_menu_follow"
+            app:title="Seguir o menu de navegação do painel (experimental)"
+            app:summary="Lê a opção Simples, Pequeno, Cheio ou OFF do painel e ajusta o mapa. Sem leitura, fica como sempre. Ainda não testado no carro."
+            app:defaultValue="false"
+            app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat
             app:key="auto_heal"
             app:title="Recuperar o mapa se ele travar"
             app:summary="Redesenha e, se preciso, recria a imagem do mapa (no máximo 3 vezes a cada 10 min)."
@@ -116,7 +122,18 @@
         <Preference
             app:key="grant_all"
             app:title="Conceder permissões pelo ADB"
-            app:summary="Localização, notificações do Maps/Waze, dados do carro e segundo plano."
+            app:summary="Localização, notificações do Maps/Waze, dados do carro, telefone e segundo plano."
+            app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat
+            app:key="debug_mode"
+            app:title="Modo de debug"
+            app:summary="Registra o que a central avisa (settings, propriedades, broadcasts, telefone) para descobrir o menu do painel. Deixe desligado no dia a dia."
+            app:defaultValue="false"
+            app:iconSpaceReserved="false" />
+        <Preference
+            app:key="debug_open"
+            app:title="Abrir o registro do debug"
+            app:summary="Marcar a opção escolhida no painel, testar o desenho, copiar e salvar."
             app:iconSpaceReserved="false" />
         <Preference
             app:key="diagnostics"

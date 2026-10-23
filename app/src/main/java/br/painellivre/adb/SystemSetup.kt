@@ -40,6 +40,9 @@ object SystemSetup {
             add("pm grant $pkg android.permission.ACCESS_FINE_LOCATION")
             add("pm grant $pkg android.permission.ACCESS_COARSE_LOCATION")
             BYD_PERMISSIONS.forEach { add("pm grant $pkg $it") }
+            // Discador (issue #15): ligar direto pelo celular e achar a conta do Bluetooth.
+            add("pm grant $pkg android.permission.CALL_PHONE")
+            add("pm grant $pkg android.permission.READ_PHONE_STATE")
             add("cmd notification allow_listener ${listenerComponent(ctx).flattenToString()}")
             add("dumpsys deviceidle whitelist +$pkg")
             // Rodar em segundo plano sem ser encerrado (ajuda a subir com o carro e a manter o painel).

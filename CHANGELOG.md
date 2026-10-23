@@ -20,6 +20,37 @@ Nenhuma versão foi testada no carro ainda: todos os testes foram no emulador (`
   `assembleDebug` concluído. Roteiro do carro em `docs/PLANO.md`. Emulador indisponível
   por falta de `/dev/kvm`; capturas e validação real pendentes. Sem mudança de versão/publicação.
 
+### Menu de navegação do painel e modo de debug (issue #9)
+
+- **Modo de debug** (Ajustes → Testes e ajuda, **desligado por padrão**): com ele ligado, o app
+  registra com horário e valores o que muda em `settings` (system/global/secure), `getprop`, histórico de
+  broadcasts (`dumpsys activity broadcasts history`), logcat filtrado, getters candidatos do SDK do
+  painel e broadcasts conhecidos com os extras. Tudo só leitura; a coleta pelo ADB para sozinha em
+  30 min. A tela "Abrir o registro do debug" marca a opção escolhida no painel (Simples/Pequeno/Cheio/OFF),
+  tira uma fotografia completa (pacotes, serviços, receptores, propriedades, telecom, telas por display),
+  escuta ações digitadas, testa o desenho de cada opção e copia, compartilha ou salva o registro.
+- **Seguir o menu do painel** (Ajustes → Painel, **experimental, desligado**): lê `INSTRUMENT_NAVI_TYPE`
+  pelo SDK BYD (getter genérico, por nome; device 1007, feature 0x40C03032 do DiPlay) e ajusta a nossa
+  tela: Pequeno = mapa e cartões no centro, Simples = só os cartões, OFF = tela preta, Cheio = como
+  sempre. Sem leitura ou valor estranho, fica como sempre; um modo novo só vale depois de 2 leituras
+  iguais. Nenhum comando novo ao AutoContainer (17 e 39 continuam fora), nada de `service call` cru.
+- Testes: `PanelMenuTest`, `DebugProbeTest` e `PrefsTest` — 138 no total.
+- Validação: `testDebugUnitTest` 138/138, `lintRelease` com 0 erros, `assembleDebug` concluído;
+  emulador: coleta, fotografia, salvar e os quatro desenhos de teste (`docs/telas/7-modo-debug.png`).
+  Sem carro; o mapeamento dos valores e a leitura na DiLink 3 são hipóteses (`docs/PLANO.md`, issue #9).
+
+### Discador liga direto pelo celular (issue #15)
+
+- **Problema (no carro, v0.4.1)**: a ligação do discador ia para o app de telefone da BYD.
+- **Mudança**: ordem nova do `CallPlan` — `placeCall` com a conta Bluetooth/HFP do Telecom →
+  `ACTION_CALL` só se quem atende for o Telecom do Android → `BluetoothHeadsetClient.dial` (reflexão)
+  → `placeCall` padrão → `ACTION_CALL` atendido por app → `ACTION_DIAL` → app do carro (comportamento
+  antigo como reserva). Confere a chamada em 3 s (`isInCall`) e só avisa; nunca liga duas vezes.
+- `READ_PHONE_STATE` nova (pedida junto com `CALL_PHONE`; as duas no Conceder pelo ADB).
+- Modo de debug registra o caminho usado e a resposta do sistema, sem o número.
+- Testes: `DialerTest` — 143 no total. Validação: `testDebugUnitTest` 143/143, `lintRelease` 0 erros;
+  emulador: `CALL_INTENT` → chamada confirmada. HFP só no carro (`docs/PLANO.md`, issue #15).
+
 ## 0.4.1 — 2026-10-23 — APK volta a instalar no carro (pré-release de teste)
 
 APK `PainelLivre-v0.4.1-release.apk`, SHA-256 `95e10a175c7352918353127c242691fd0594948d6e05674a7ffe7f324b40005d`.

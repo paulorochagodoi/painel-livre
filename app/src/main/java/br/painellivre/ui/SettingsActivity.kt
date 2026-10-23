@@ -16,6 +16,7 @@ import br.painellivre.R
 import br.painellivre.adb.HomeChoice
 import br.painellivre.adb.SystemSetup
 import br.painellivre.cluster.ClusterService
+import br.painellivre.debug.DebugProbe
 import br.painellivre.util.Prefs
 import kotlinx.coroutines.launch
 
@@ -64,6 +65,11 @@ class SettingsActivity : AppCompatActivity() {
                 Toast.makeText(requireContext(), "Simulação ligada/desligada", Toast.LENGTH_SHORT).show()
             }
             onClick("grant_all") { run { SystemSetup.grantAll(requireContext()) } }
+            findPreference<Preference>(Prefs.KEY_DEBUG_MODE)?.setOnPreferenceChangeListener { _, v ->
+                DebugProbe.sync(requireContext(), v as Boolean)
+                true
+            }
+            onClick("debug_open") { startActivity(Intent(requireContext(), DebugActivity::class.java)) }
             onClick("diagnostics") { startActivity(Intent(requireContext(), DiagnosticsActivity::class.java)) }
             onClick("become_home") { becomeHome() }
             onClick("restore_home") { run { SystemSetup.restoreHome(requireContext()) } }

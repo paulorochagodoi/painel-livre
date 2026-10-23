@@ -187,6 +187,7 @@ open class ClusterActivity : ComponentActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { NavRepository.state.collect { render(it) } }
+                launch { br.painellivre.nav.native.NativeNavigation.route.collect { drawNativeRoute() } }
                 launch { LocationRepository.location.collect { it?.let(::onFix) } }
                 launch {
                     // Dia/noite: troca o tema do mapa e dos cartões quando a hora vira.
@@ -426,7 +427,12 @@ open class ClusterActivity : ComponentActivity() {
 
     // ── Mapa e câmera por quadro ────────────────────────────────────────────
 
+    private fun drawNativeRoute() {
+        br.painellivre.nav.native.NativeRouteLayer.draw(map?.style)
+    }
+
     private fun onStyleReady() {
+        drawNativeRoute()
         if (!smoother.hasFix) {
             map?.moveCamera(CameraUpdateFactory.newCameraPosition(
                 CameraPosition.Builder().target(LatLng(-23.5505, -46.6333)).zoom(11.0).build()))

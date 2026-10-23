@@ -115,10 +115,14 @@ class LauncherActivity : AppCompatActivity() {
         }
         applyPalette(force = true)
         showPage(PAGE_HOME)
+        consumeRouteSearch()
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { NavRepository.state.collect { renderNav(it) } }
+                launch { br.painellivre.nav.native.NativeNavigation.route.collect {
+                    br.painellivre.nav.native.NativeRouteLayer.draw(navMapLibre?.style)
+                } }
                 launch { ClusterService.status.collect { renderCluster(it) } }
                 launch { MediaRepository.now.collect { renderMedia(it) } }
                 launch { WeatherRepository.weather.collect { renderWeather(it) } }
@@ -146,7 +150,15 @@ class LauncherActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        consumeRouteSearch()
         if (intent.hasCategory(Intent.CATEGORY_HOME) && page != PAGE_HOME) showPage(PAGE_HOME)
+    }
+
+    private fun consumeRouteSearch() {
+        val query = intent.getStringExtra("route_search") ?: return
+        intent.removeExtra("route_search")
+        showPage(PAGE_NAV)
+        findViewById<EditText>(R.id.navSearch).setText(query)
     }
 
     override fun onResume() {
@@ -192,7 +204,7 @@ class LauncherActivity : AppCompatActivity() {
         highlightTab()
         renderCluster(ClusterService.status.value)
         renderSegments()
-        navMapLibre?.setStyle(Style.Builder().fromUri(mapStyleUri()))
+        navMapLibre?.setStyle(Style.Builder().fromUri(mapStyleUri())) { br.painellivre.nav.native.NativeRouteLayer.draw(it) }
         navCar?.setImageDrawable(carArrow())
     }
 
@@ -390,13 +402,17 @@ class LauncherActivity : AppCompatActivity() {
         click(R.id.destWork) { goSaved("work") }
         click(R.id.destOpenApp) {
             val pkg = NavRepository.state.value.sourcePackage
+            if (pkg == "br.painellivre") { showPage(PAGE_NAV); return@click }
             val i = pkg?.let { packageManager.getLaunchIntentForPackage(it) }
             if (i != null) startSafely(i) else Places.openApp(this, prefs.navApp)
         }
         click(R.id.setupButton) { runSetup() }
         click(R.id.weatherCard) { startActivity(Intent(this, WeatherActivity::class.java)) } // issue #4
         click(R.id.dockPanel) { toggleCluster() }
-        click(R.id.dockNavApp) { if (!Places.openApp(this, prefs.navApp)) toast("App não instalado") }
+        click(R.id.dockNavApp) {
+            if (prefs.navApp == "native") showPage(PAGE_NAV)
+            else if (!Places.openApp(this, prefs.navApp)) toast("App não instalado")
+        }
     }
 
     private fun toggleCluster() {
@@ -470,23 +486,30 @@ class LauncherActivity : AppCompatActivity() {
             } else false
         }
         click(R.id.navClear) { search.setText("") }
+        click(R.id.appNative) { prefs.navApp = "native"; renderSegments() }
         click(R.id.appMaps) { prefs.navApp = "maps"; renderSegments() }
         click(R.id.appWaze) { prefs.navApp = "waze"; renderSegments() }
         click(R.id.navActive) {
             val pkg = NavRepository.state.value.sourcePackage
+            if (pkg == "br.painellivre") {
+                androidx.appcompat.app.AlertDialog.Builder(this).setMessage("Encerrar a rota no Painel Livre?")
+                    .setPositiveButton("Encerrar") { _, _ -> br.painellivre.nav.native.NativeNavigation.stop() }
+                    .setNegativeButton("Continuar", null).show()
+                return@click
+            }
             pkg?.let { packageManager.getLaunchIntentForPackage(it) }?.let { startSafely(it) }
         }
     }
 
     private fun renderSegments() {
         val waze = prefs.navApp == "waze"
-        listOf(R.id.appMaps to !waze, R.id.appWaze to waze).forEach { (id, on) ->
+        listOf(R.id.appNative to (prefs.navApp == "native"), R.id.appMaps to (prefs.navApp == "maps"), R.id.appWaze to waze).forEach { (id, on) ->
             val v = findViewById<TextView>(id)
             v.tag = if (on) "chip_on" else "chip"
             palette.apply(v, density)
             v.setTextColor(if (on) palette.onAccent else palette.text1)
         }
-        findViewById<TextView>(R.id.dockNavAppText)?.setText(if (waze) R.string.open_waze else R.string.open_maps)
+        findViewById<TextView>(R.id.dockNavAppText)?.setText(if (prefs.navApp == "native") R.string.open_native else if (waze) R.string.open_waze else R.string.open_maps)
     }
 
     private fun scheduleSearch(q: String, delayMs: Long) {
@@ -560,7 +583,7 @@ class LauncherActivity : AppCompatActivity() {
 
     private fun hasHome() = Places.home(this) != null || prefs.homeAddress.isNotBlank()
     private fun hasWork() = Places.work(this) != null || prefs.workAddress.isNotBlank()
-    private fun navAppName() = getString(if (prefs.navApp == "waze") R.string.open_waze else R.string.open_maps)
+    private fun navAppName() = getString(if (prefs.navApp == "native") R.string.open_native else if (prefs.navApp == "waze") R.string.open_waze else R.string.open_maps)
 
     private fun hideKeyboard() {
         getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(findViewById<View>(R.id.navSearch).windowToken, 0)
@@ -586,7 +609,10 @@ class LauncherActivity : AppCompatActivity() {
             m.uiSettings.isAttributionEnabled = false
             m.uiSettings.isLogoEnabled = false
             m.uiSettings.isCompassEnabled = false
-            m.setStyle(Style.Builder().fromUri(mapStyleUri())) { updateNavMap() }
+            m.setStyle(Style.Builder().fromUri(mapStyleUri())) {
+                br.painellivre.nav.native.NativeRouteLayer.draw(it)
+                updateNavMap()
+            }
         }
     }
 

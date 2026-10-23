@@ -52,6 +52,22 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".nav.native.RouteIntentActivity" android:exported="true"
+            android:excludeFromRecents="true" android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="geo" />
+                <data android:scheme="google.navigation" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
         <!-- Alias HOME: desligado no manifesto (v0.4.1). Ligado, a central da BYD recusou instalar
              a v0.4.0 ("Fail in installation of desktop apps"). "Usar como tela inicial" liga o alias
              em tempo de execução e escolhe o preferido; "Voltar ao launcher da BYD" desliga o alias

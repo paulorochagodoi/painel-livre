@@ -57,8 +57,12 @@ Brasil**, frases simples, sem jargão desnecessário.
 ```
 
 Ambiente (JDK 17, SDK, `local.properties`, chave de assinatura, emulador com display de painel
-simulado) em `docs/AMBIENTE.md`. O CI do GitHub (`.github/workflows/android.yml`) roda testes, lint e
-o build debug a cada envio.
+simulado) em `docs/AMBIENTE.md`.
+
+Repositório: <https://github.com/paulorochagodoi/painel-livre> (privado, branch `main`). O CI
+(`.github/workflows/android.yml`: testes, lint e build debug) está **desativado** desde 2026-10-22
+porque o GitHub recusou a execução por cobrança da conta; depois que o dono resolver, reativar com
+`gh workflow enable Android`. Até lá, rode os testes localmente antes de cada envio.
 
 ## 5. Regras que não se quebram
 

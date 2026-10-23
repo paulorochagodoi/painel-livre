@@ -23,7 +23,6 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -37,7 +36,6 @@ import androidx.recyclerview.widget.RecyclerView
 import br.painellivre.R
 import br.painellivre.adb.SelfAdb
 import br.painellivre.adb.SystemSetup
-import br.painellivre.car.VehicleData
 import br.painellivre.cluster.ClusterService
 import br.painellivre.cluster.ClusterStatus
 import br.painellivre.cluster.ManeuverView
@@ -52,12 +50,18 @@ import br.painellivre.ui.cockpit.BackdropDrawable
 import br.painellivre.ui.cockpit.CarArtDrawable
 import br.painellivre.ui.cockpit.Palette
 import br.painellivre.ui.cockpit.WeatherIconDrawable
+import br.painellivre.ui.home.HomeFormat
+import br.painellivre.ui.home.HomeVehicleBinder
+import br.painellivre.ui.home.SocRingView
+import br.painellivre.ui.home.VehicleUiSources
+import br.painellivre.ui.home.VehicleUiState
 import br.painellivre.util.Prefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.sin
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -93,6 +97,11 @@ class LauncherActivity : AppCompatActivity() {
     private var navMapLibre: MapLibreMap? = null
     private var navCar: ImageView? = null
 
+    // A tela não lê o carro: observa esta fonte. A real entra em VehicleUiSources.forHome.
+    private val vehicleSource = VehicleUiSources.forHome()
+    private var latestVehicle: VehicleUiState = vehicleSource.state.value
+    private var carDrawable: CarArtDrawable? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_launcher)
@@ -102,10 +111,10 @@ class LauncherActivity : AppCompatActivity() {
         setupCards()
         setupNavPage()
         setupApps()
-        findViewById<View>(R.id.hero).addOnLayoutChangeListener { v, l, _, r, _, ol, _, or_, _ ->
+        findViewById<View>(R.id.hero).addOnLayoutChangeListener { _, l, _, r, _, ol, _, or_, _ ->
             if (r - l != or_ - ol) {
-                val side = ((r - l) * 0.2f).toInt()
-                findViewById<View>(R.id.carArt).setPadding(side, (24 * density).toInt(), side, (8 * density).toInt())
+                val side = ((r - l) * 0.04f).toInt()
+                findViewById<View>(R.id.carArt).setPadding(side, (8 * density).toInt(), side, (8 * density).toInt())
             }
         }
 
@@ -126,6 +135,7 @@ class LauncherActivity : AppCompatActivity() {
                 launch { ClusterService.status.collect { renderCluster(it) } }
                 launch { MediaRepository.now.collect { renderMedia(it) } }
                 launch { WeatherRepository.weather.collect { renderWeather(it) } }
+                launch { vehicleSource.state.collect { renderVehicle(it) } }
                 launch {
                     SelfAdb.ready.collect { if (it != null && it != adbOk) { adbOk = it; refreshSetup() } }
                 }
@@ -140,6 +150,26 @@ class LauncherActivity : AppCompatActivity() {
                     while (true) {
                         tick()
                         delay(5_000)
+                    }
+                }
+                // Pulso leve, só com a aba Início visível e o carro carregando.
+                launch {
+                    val startedAt = SystemClock.uptimeMillis()
+                    while (true) {
+                        val charging = latestVehicle.charging == true && page == PAGE_HOME
+                        if (charging) {
+                            val t = ((SystemClock.uptimeMillis() - startedAt) % 1600L) / 1600f
+                            val wave = (sin(t * 2.0 * Math.PI) * 0.5 + 0.5).toFloat()
+                            carDrawable?.pulse = wave
+                            findViewById<SocRingView>(R.id.socRing).pulse = wave
+                            delay(90)
+                        } else {
+                            if ((carDrawable?.pulse ?: 0f) != 0f) {
+                                carDrawable?.pulse = 0f
+                                findViewById<SocRingView>(R.id.socRing).pulse = 0f
+                            }
+                            delay(400)
+                        }
                     }
                 }
             }
@@ -199,13 +229,13 @@ class LauncherActivity : AppCompatActivity() {
         palette = p
         paletteApplied = true
         findViewById<ImageView>(R.id.backdrop).setImageDrawable(BackdropDrawable(p.dark))
-        renderCarArt()
         p.apply(findViewById(R.id.root), density)
         highlightTab()
         renderCluster(ClusterService.status.value)
         renderSegments()
         navMapLibre?.setStyle(Style.Builder().fromUri(mapStyleUri())) { br.painellivre.nav.native.NativeRouteLayer.draw(it) }
         navCar?.setImageDrawable(carArrow())
+        renderVehicle(latestVehicle)
     }
 
     private fun renderCarArt() {
@@ -214,10 +244,18 @@ class LauncherActivity : AppCompatActivity() {
         if (photo != null) {
             try {
                 contentResolver.openInputStream(Uri.parse(photo))?.use { iv.setImageDrawable(Drawable.createFromStream(it, "carro")) }
+                carDrawable = null
                 return
             } catch (t: Throwable) { /* foto removida: volta à ilustração */ }
         }
-        iv.setImageDrawable(CarArtDrawable(palette.dark))
+        val visual = HomeFormat.carVisual(latestVehicle)
+        val existing = carDrawable
+        if (existing != null && existing.dark == palette.dark) {
+            existing.visual = visual
+            if (iv.drawable !== existing) iv.setImageDrawable(existing)
+        } else {
+            carDrawable = CarArtDrawable(palette.dark, visual).also { iv.setImageDrawable(it) }
+        }
     }
 
     private fun mapStyleUri() = "https://tiles.openfreemap.org/styles/" + if (palette.dark) "dark" else "positron"
@@ -238,7 +276,6 @@ class LauncherActivity : AppCompatActivity() {
         )
         applyPalette()
         renderStatusIcons()
-        lifecycleScope.launch { renderCar(withContext(Dispatchers.IO) { VehicleData.read(this@LauncherActivity) }) }
     }
 
     @SuppressLint("MissingPermission")
@@ -253,38 +290,22 @@ class LauncherActivity : AppCompatActivity() {
         findViewById<View>(R.id.statusGps).alpha = if (gps) 1f else 0.3f
     }
 
-    private fun renderCar(s: VehicleData.Snapshot) {
-        val total = listOfNotNull(s.evRangeKm, s.fuelRangeKm).takeIf { it.isNotEmpty() }?.sum()
-        // Sem dados do carro (ou fora de uma BYD): some a autonomia em vez de mostrar traços.
-        findViewById<View>(R.id.rangeBlock).visibility = if (total == null) View.INVISIBLE else View.VISIBLE
-        findViewById<View>(R.id.batteryPct).visibility = if (s.batteryPercent == null) View.GONE else View.VISIBLE
-        findViewById<View>(R.id.batteryBar).visibility = if (s.batteryPercent == null) View.INVISIBLE else View.VISIBLE
-        findViewById<TextView>(R.id.batteryValue).textSize = if (s.batteryPercent == null) 24f else 46f
-        findViewById<TextView>(R.id.rangeValue).text = total?.toString() ?: ""
-        findViewById<TextView>(R.id.rangeSub).text = when {
-            s.evRangeKm != null && s.fuelRangeKm != null -> "Elétrica ${s.evRangeKm} · Combustão ${s.fuelRangeKm}"
-            s.evRangeKm != null -> "Autonomia elétrica"
-            else -> "Autonomia"
-        }
-        val pct = s.batteryPercent
-        findViewById<ProgressBar>(R.id.rangeBar).progress = pct?.toInt() ?: 0
-        findViewById<TextView>(R.id.batteryValue).text = pct?.toInt()?.toString() ?: getString(R.string.battery)
-        findViewById<ProgressBar>(R.id.batteryBar).progress = pct?.toInt() ?: 0
-        findViewById<TextView>(R.id.batterySub).text = when {
-            s.evRangeKm != null -> "Autonomia elétrica ${s.evRangeKm} km"
-            else -> getString(R.string.car_data_unavailable)
-        }
+    private fun renderVehicle(state: VehicleUiState) {
+        latestVehicle = state
+        HomeVehicleBinder.bind(findViewById(R.id.root), HomeFormat.present(state), palette)
+        renderCarArt()
     }
 
     private fun renderWeather(w: WeatherRepository.Weather?) {
         val card = findViewById<View>(R.id.weatherCard)
-        val top = findViewById<TextView>(R.id.topTemp)
-        if (w == null) { card.visibility = View.GONE; top.text = ""; return }
+        if (w == null) {
+            card.visibility = View.GONE
+            return
+        }
         card.visibility = View.VISIBLE
         findViewById<TextView>(R.id.weatherTemp).text = "${w.tempC}°"
         findViewById<TextView>(R.id.weatherDesc).text = w.description
         findViewById<ImageView>(R.id.weatherIcon).setImageDrawable(WeatherIconDrawable(w.kind, w.isDay, palette))
-        top.text = "${w.tempC}°"
     }
 
     private fun renderMedia(m: MediaRepository.NowPlaying?) {

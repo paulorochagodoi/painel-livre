@@ -110,14 +110,51 @@
                     style="@style/CcStatusIcon"
                     android:src="@drawable/ic_place" />
 
-                <TextView
-                    android:id="@+id/topTemp"
+                <LinearLayout
+                    android:id="@+id/weatherCard"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:fontFamily="sans-serif-medium"
-                    android:tag="t1"
-                    android:textSize="18sp" />
+                    android:layout_marginStart="14dp"
+                    android:contentDescription="@string/weather_title"
+                    android:gravity="center_vertical"
+                    android:minHeight="56dp"
+                    android:orientation="horizontal"
+                    android:paddingStart="12dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="14dp"
+                    android:paddingBottom="6dp"
+                    android:tag="card_click"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:id="@+id/weatherIcon"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:importantForAccessibility="no" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/weatherTemp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-medium"
+                            android:includeFontPadding="false"
+                            android:tag="t1"
+                            android:textSize="22sp" />
+
+                        <TextView
+                            android:id="@+id/weatherDesc"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:tag="t2"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
         </FrameLayout>
 

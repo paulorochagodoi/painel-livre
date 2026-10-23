@@ -1,5 +1,30 @@
 # Histórico de versões
 
+## Não publicado
+
+### Tela inicial da central
+
+- A aba Início foi reorganizada: Energia (anel de carga, autonomia, tomada), Clima (cabine, A/C,
+  bancos), Carro (trava, portas, vidros, teto, pressão por roda), Mídia, Mapa no painel e Destino.
+  A hora e o tempo ficam na barra de cima.
+- Silhueta nova, vetorial e própria, de um SUV de perfil. Porta aberta, trava, tampa do carregador
+  e pulso de carga são estados do desenho. O pulso é leve (cerca de 11 quadros por segundo, só no
+  anel e na tampa, só com a aba Início visível).
+- Ícones da central passaram para Material Symbols Rounded (Apache-2.0). Cartões da noite opacos e
+  escuros, texto maior, botões mais altos. Sem azul claro sobre azul.
+- Dado ausente vira traço ou tarja, não a frase "Dados do carro indisponíveis".
+- A tela não lê o carro. `VehicleUiState` (campos anuláveis) chega por `VehicleUiSource`; hoje
+  `VehicleUiSources.forHome()` devolve um exemplo marcado "Exemplo". A telemetria real entra
+  trocando esse método. Nenhum comando novo ao carro, ao CAN ou ao AutoContainer.
+- Testes: `HomeFormatTest` (textos, traço, tom da carga, portas, fonte de exemplo, contraste do
+  tema) e `HomeScreenshotTest` (desenho da tela deitada, noite/dia/sem dados).
+- Validação nesta máquina, JDK 17: `testDebugUnitTest` 166/166 e `lintDebug` com 0 erros
+  (115 avisos). Sem carro. Sem mudança de `versionCode`, assinatura, keystore ou da tela do
+  painel (`ClusterActivity`). Prints em `docs/telas/8-central-inicio-noite.png`,
+  `9-central-inicio-dia.png` e `10-central-inicio-sem-dados.png`.
+
+## Histórico de versões publicadas
+
 Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre, O=Uso pessoal, C=BR`,
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).

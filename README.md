@@ -19,10 +19,8 @@ O que faz:
   OpenStreetMap (OpenFreeMap, sem chave), claro de dia e escuro à noite.
 - **Turn-by-turn do Google Maps e do Waze**: lê a notificação de navegação deles (seta, distância,
   rua, resumo).
-- **Tela central estilo cockpit**: saudação, hora e sinais em cima; o carro (ilustração própria, ou
-  uma foto sua) com a autonomia e o tempo; cartões de Mídia (o que está tocando, com
-  anterior/tocar/próxima), Bateria, Painel e Destino (Casa/Trabalho); barra de baixo com Início,
-  Navegação, Mídia, Telefone, Apps e Ajustes. Temas claro e escuro, tela deitada ou em pé.
+- **Tela inicial da central**: seções de Energia, Clima, Carro, Mídia, Mapa no painel e Destino,
+  com a silhueta de um SUV no centro. Detalhe em [Tela inicial](#tela-inicial).
 - **Telefone e tempo**: discador próprio (liga pelo sistema ou abre o app de telefone do carro) e,
   tocando no tempo, a previsão das próximas horas e dos próximos dias (Open-Meteo).
 - **Aba Navegação**: busca de endereço (Photon/OpenStreetMap), lugares guardados e recentes, mapa
@@ -36,6 +34,34 @@ O que faz:
 - **Diagnóstico**: mostra se a central é dual-OS ou single-OS, versão do MCU do painel, displays,
   serviço AutoContainer, decisão do tamanho do painel, fps do mapa, GPS e dados do carro, com botão
   de copiar.
+
+## Tela inicial
+
+A aba Início da central (a mesma tela do atalho `HomeAlias`) fica assim, deitada:
+
+- **Energia**: anel de carga, porcentagem, autonomia elétrica e a combustão, barra, e — quando
+  estiver na tomada — potência e tempo restante. O anel pulsa devagar só enquanto carrega.
+- **Clima**: temperatura da cabine, ar-condicionado, ventilação e aquecimento dos bancos.
+- **Carro**: trava, portas, vidros, teto solar e a pressão de cada pneu num desenho visto de cima.
+- **Centro**: silhueta própria de um SUV (não é arte da BYD nem do SealNav). Porta aberta ganha
+  contorno âmbar, a tampa do carregador abre, e a carga acende um pulso verde. Uma foto sua, se
+  estiver cadastrada, continua no lugar do desenho.
+- **Mídia, mapa no painel e destino**: o que está tocando, o botão de mostrar ou devolver o painel,
+  e Casa/Trabalho.
+- **Hora e tempo**: relógio no meio da barra de cima; o tempo (toque abre a previsão) no canto.
+
+O que ainda não veio do carro aparece como traço (—) ou uma tarja cinza. Não escrevemos a frase
+"dados indisponíveis" nessa tela. Os cartões da noite são escuros e opacos, o texto é claro e os
+botões são grandes, porque a tela real da central lava o azul claro.
+
+Os números que aparecem hoje são um **exemplo**, marcados com "Exemplo". A tela não lê o carro e
+não manda comando nenhum. A leitura real entra depois, trocando só `VehicleUiSources.forHome()`:
+a Activity só observa um `VehicleUiState` (campos anuláveis). Clima, portas e pneus são mostrados,
+não controlados.
+
+Temas claro e escuro. Em pé, as mesmas seções ficam uma embaixo da outra, com rolagem.
+Prints: [noite](docs/telas/8-central-inicio-noite.png), [dia](docs/telas/9-central-inicio-dia.png)
+e [sem dados](docs/telas/10-central-inicio-sem-dados.png).
 
 O que NÃO faz (ainda):
 

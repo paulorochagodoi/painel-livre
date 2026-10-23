@@ -67,6 +67,11 @@ android {
         abortOnError = false
     }
 
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        unitTests.isReturnDefaultValues = true
+    }
+
     packaging {
         resources.excludes += setOf("META-INF/*.kotlin_module", "META-INF/versions/**")
     }
@@ -98,4 +103,5 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303") // org.json de verdade nos testes da JVM (o do Android é stub)
+    testImplementation("org.robolectric:robolectric:4.14.1")
 }

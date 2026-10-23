@@ -46,6 +46,15 @@
     <string name="media_next">Próxima</string>
     <string name="battery">Bateria</string>
     <string name="car_data_unavailable">Dados do carro indisponíveis</string>
+    <string name="section_energy">Energia</string>
+    <string name="section_climate">Clima</string>
+    <string name="section_car">Carro</string>
+    <string name="section_media">Mídia</string>
+    <string name="home_sample">Exemplo</string>
+    <string name="home_dash">—</string>
+    <string name="seat_driver">Motorista</string>
+    <string name="seat_passenger">Passageiro</string>
+    <string name="car_tires">Pressão dos pneus</string>
     <string name="tab_home">Início</string>
     <string name="tab_media">Mídia</string>
     <string name="tab_phone">Telefone</string>

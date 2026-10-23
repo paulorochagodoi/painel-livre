@@ -16,7 +16,8 @@ import java.util.Calendar
  *  - "card" / "card_click" / "chip" / "chip_on" / "capsule" / "dockbar": fundos;
  *  - "t1" (texto principal), "t2" (secundário), "t3" (rótulo fraco), "accent" (destaque);
  *  - "icon" / "icon2" / "icon_accent" / "icon_on" / "icon_ok": ícones (tint); "progress": barra;
- *  - "round" / "round_on": botão redondo (fundo neutro / azul).
+ *  - "round" / "round_on": botão redondo (fundo neutro / azul);
+ *  - "skeleton": tarja de dado ainda desconhecido (não é zero).
  */
 data class Palette(
     val dark: Boolean,
@@ -32,8 +33,8 @@ data class Palette(
     val warn: Int,
     val danger: Int,
 ) {
-    fun cardBg(radius: Float) = GradientDrawable().apply {
-        setColor(card); cornerRadius = radius; setStroke(1, cardStroke)
+    fun cardBg(radius: Float, strokePx: Float = 1f) = GradientDrawable().apply {
+        setColor(card); cornerRadius = radius; setStroke(strokePx.coerceAtLeast(1f).toInt(), cardStroke)
     }
 
     fun chipBg(radius: Float, on: Boolean = false) = GradientDrawable().apply {
@@ -45,14 +46,20 @@ data class Palette(
 
     /** Pinta [root] e todos os filhos conforme a tag de cada um. [density] converte dp. */
     fun apply(root: View, density: Float) {
-        val r = 26f * density
+        val r = 22f * density
+        val stroke = 1.25f * density
         when (root.tag) {
-            "card" -> root.background = cardBg(r)
-            "card_click" -> root.background = ripple(cardBg(r))
+            "card" -> root.background = cardBg(r, stroke)
+            "card_click" -> root.background = ripple(cardBg(r, stroke))
+            "skeleton" -> root.background = GradientDrawable().apply {
+                setColor(text3); cornerRadius = 8f * density
+            }
             "chip" -> root.background = ripple(chipBg(18f * density))
             "chip_on" -> root.background = ripple(chipBg(18f * density, on = true))
             "capsule" -> root.background = chipBg(40f * density)
-            "dockbar" -> root.background = GradientDrawable().apply { setColor(card); setStroke(1, cardStroke) }
+            "dockbar" -> root.background = GradientDrawable().apply {
+                setColor(card); setStroke(stroke.coerceAtLeast(1f).toInt(), cardStroke)
+            }
             "icon_ok" -> (root as? ImageView)?.imageTintList = ColorStateList.valueOf(ok)
             "round" -> (root as? ImageView)?.apply {
                 background = ripple(GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(chip) })
@@ -86,31 +93,33 @@ data class Palette(
 
         val DAY = Palette(
             dark = false,
-            text1 = rgb(24, 28, 34),
-            text2 = rgb(84, 92, 104),
-            text3 = argb(70, 24, 28, 34),
-            accent = rgb(22, 119, 255),
+            text1 = rgb(16, 20, 28),
+            text2 = rgb(55, 64, 76),
+            text3 = argb(120, 16, 20, 28),
+            // Azul fundo, não o azul claro que some no fundo da central.
+            accent = rgb(0, 98, 196),
             onAccent = 0xFFFFFFFF.toInt(),
-            card = argb(200, 255, 255, 255),
-            cardStroke = argb(40, 255, 255, 255),
-            chip = argb(150, 236, 239, 243),
-            ok = rgb(46, 182, 104),
-            warn = rgb(230, 160, 20),
-            danger = rgb(222, 64, 64),
+            card = rgb(255, 255, 255),
+            cardStroke = argb(48, 16, 24, 36),
+            chip = rgb(226, 232, 240),
+            ok = rgb(16, 140, 72),
+            warn = rgb(168, 96, 0),
+            danger = rgb(186, 36, 42),
         )
         val NIGHT = Palette(
             dark = true,
-            text1 = rgb(240, 244, 248),
-            text2 = rgb(160, 170, 184),
-            text3 = argb(70, 240, 244, 248),
-            accent = rgb(64, 150, 255),
+            text1 = rgb(248, 250, 252),
+            text2 = rgb(206, 214, 224),
+            text3 = argb(160, 186, 196, 210),
+            accent = rgb(37, 112, 214),
             onAccent = 0xFFFFFFFF.toInt(),
-            card = argb(190, 26, 32, 42),
-            cardStroke = argb(28, 255, 255, 255),
-            chip = argb(160, 44, 52, 64),
+            // Cartão opaco e escuro: o fundo azul da tela não vaza e o texto não lava.
+            card = rgb(12, 16, 24),
+            cardStroke = argb(90, 255, 255, 255),
+            chip = rgb(36, 44, 56),
             ok = rgb(61, 220, 132),
-            warn = rgb(255, 200, 80),
-            danger = rgb(255, 90, 95),
+            warn = rgb(255, 186, 64),
+            danger = rgb(255, 96, 96),
         )
 
         /** "auto" = dia das 6h às 18h30; "day"/"night" fixos (Configurações → Tema). */

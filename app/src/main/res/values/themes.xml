@@ -60,7 +60,7 @@
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:fontFamily">sans-serif-medium</item>
-        <item name="android:textSize">19sp</item>
+        <item name="android:textSize">20sp</item>
         <item name="android:maxLines">1</item>
         <item name="android:ellipsize">end</item>
         <item name="android:tag">t1</item>
@@ -69,7 +69,7 @@
     <style name="CcSub">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:textSize">14sp</item>
+        <item name="android:textSize">15sp</item>
         <item name="android:maxLines">2</item>
         <item name="android:ellipsize">end</item>
         <item name="android:tag">t2</item>
@@ -107,12 +107,21 @@
         <item name="android:tag">t2</item>
     </style>
 
+    <style name="CcSection">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">8dp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:tag">t1</item>
+    </style>
+
     <style name="CcChipButton">
-        <item name="android:layout_height">52dp</item>
+        <item name="android:layout_height">56dp</item>
         <item name="android:layout_marginTop">8dp</item>
         <item name="android:gravity">center</item>
         <item name="android:fontFamily">sans-serif-medium</item>
-        <item name="android:textSize">16sp</item>
+        <item name="android:textSize">17sp</item>
         <item name="android:textColor">#FFFFFFFF</item>
         <item name="android:maxLines">1</item>
         <item name="android:ellipsize">end</item>
@@ -122,7 +131,7 @@
 
     <style name="CcChipRow">
         <item name="android:layout_width">0dp</item>
-        <item name="android:layout_height">52dp</item>
+        <item name="android:layout_height">56dp</item>
         <item name="android:layout_weight">1</item>
         <item name="android:gravity">center</item>
         <item name="android:orientation">horizontal</item>
@@ -167,8 +176,8 @@
     </style>
 
     <style name="CcRoundButton">
-        <item name="android:layout_width">48dp</item>
-        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_width">52dp</item>
+        <item name="android:layout_height">52dp</item>
         <item name="android:layout_marginStart">10dp</item>
         <item name="android:layout_marginEnd">10dp</item>
         <item name="android:padding">12dp</item>
@@ -176,8 +185,8 @@
     </style>
 
     <style name="CcRoundButton.Big">
-        <item name="android:layout_width">60dp</item>
-        <item name="android:layout_height">60dp</item>
+        <item name="android:layout_width">64dp</item>
+        <item name="android:layout_height">64dp</item>
         <item name="android:padding">16dp</item>
         <item name="android:tag">round_on</item>
     </style>
@@ -206,8 +215,8 @@
     </style>
 
     <style name="CcStatusIcon">
-        <item name="android:layout_width">22dp</item>
-        <item name="android:layout_height">22dp</item>
+        <item name="android:layout_width">26dp</item>
+        <item name="android:layout_height">26dp</item>
         <item name="android:layout_marginStart">12dp</item>
         <item name="android:importantForAccessibility">no</item>
         <item name="android:tag">icon2</item>

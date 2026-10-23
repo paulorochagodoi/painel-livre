@@ -26,20 +26,21 @@ class BackdropDrawable(private val dark: Boolean) : Drawable() {
         val w = b.width().toFloat()
         val h = b.height().toFloat()
         val horizon = h * 0.56f
-        val sky = if (dark) intArrayOf(0xFF070B14.toInt(), 0xFF111A2B.toInt(), 0xFF1B2638.toInt())
-        else intArrayOf(0xFFD5DCE4.toInt(), 0xFFE7EAEE.toInt(), 0xFFF2EFEA.toInt())
-        val floor = if (dark) intArrayOf(0xFF18202D.toInt(), 0xFF0C111A.toInt(), 0xFF06090F.toInt())
-        else intArrayOf(0xFFE9E4DD.toInt(), 0xFFD9D2C8.toInt(), 0xFFC4BCB1.toInt())
+        // Noite bem mais escura: na central real o azul claro lava o carro e os cartões.
+        val sky = if (dark) intArrayOf(0xFF05070C.toInt(), 0xFF0A1018.toInt(), 0xFF101820.toInt())
+        else intArrayOf(0xFFC5CED8.toInt(), 0xFFDDE2E8.toInt(), 0xFFE8E4DE.toInt())
+        val floor = if (dark) intArrayOf(0xFF121820.toInt(), 0xFF080C12.toInt(), 0xFF05070B.toInt())
+        else intArrayOf(0xFFD9D3CB.toInt(), 0xFFC9C2B8.toInt(), 0xFFB4ADA3.toInt())
         paint.shader = LinearGradient(0f, 0f, 0f, horizon, sky, null, Shader.TileMode.CLAMP)
         canvas.drawRect(0f, 0f, w, horizon, paint)
         paint.shader = LinearGradient(0f, horizon, 0f, h, floor, null, Shader.TileMode.CLAMP)
         canvas.drawRect(0f, horizon, w, h, paint)
-        // Foco de luz no chão, onde o carro fica.
-        val glow = if (dark) 0x553C7BD9 else 0x66FFFFFF
-        paint.shader = RadialGradient(w * 0.5f, horizon + h * 0.06f, w * 0.42f, intArrayOf(glow, 0x00000000), null, Shader.TileMode.CLAMP)
+        // Foco curto e frio, sem o azul claro que some com a carroceria na tela do carro.
+        val glow = if (dark) 0x22304458 else 0x55FFFFFF
+        paint.shader = RadialGradient(w * 0.5f, horizon + h * 0.06f, w * 0.38f, intArrayOf(glow, 0x00000000), null, Shader.TileMode.CLAMP)
         canvas.save()
-        canvas.scale(1f, 0.32f, w * 0.5f, horizon + h * 0.06f)
-        canvas.drawCircle(w * 0.5f, horizon + h * 0.06f, w * 0.42f, paint)
+        canvas.scale(1f, 0.28f, w * 0.5f, horizon + h * 0.06f)
+        canvas.drawCircle(w * 0.5f, horizon + h * 0.06f, w * 0.38f, paint)
         canvas.restore()
         paint.shader = null
     }
@@ -51,162 +52,292 @@ class BackdropDrawable(private val dark: Boolean) : Drawable() {
 }
 
 /**
- * Ilustração de um SUV de perfil (desenho vetorial próprio), usada no lugar do carro 3D do
- * SealNav. O motorista pode trocar por uma foto do próprio carro nas Configurações.
+ * Silhueta própria de um SUV médio de perfil (frente à direita, lado do motorista).
+ * Não é o Song Plus: é um desenho novo, com a proporção de um crossover (teto alto,
+ * cintura alta, rodas grandes, rack). Cada estado em [CarVisual] é um traço à parte,
+ * para um dia animar a abertura sem redesenhar o resto.
+ *
+ * O pulso de carga só muda a opacidade de um círculo. Sem desfoque e sem camada extra,
+ * para não pesar na Adreno 610.
  */
-class CarArtDrawable(private val dark: Boolean) : Drawable() {
+class CarArtDrawable(
+    val dark: Boolean,
+    visual: CarVisual = CarVisual(),
+) : Drawable() {
+    var visual: CarVisual = visual
+        set(value) {
+            field = value
+            invalidateSelf()
+        }
+
+    /** 0..1, só usado com [CarVisual.charging]. Quem chama limita a taxa. */
+    var pulse: Float = 0f
+        set(value) {
+            field = value.coerceIn(0f, 1f)
+            if (visual.charging == true) invalidateSelf()
+        }
+
     private val p = Paint(Paint.ANTI_ALIAS_FLAG)
 
-    // Espaço de desenho: 1000 × 420, chão em y = 384. SUV médio de perfil (frente à direita).
+    // Espaço 1000 × 460. Chão em y = 420. Rodas grandes em (248, 368) e (770, 368):
+    // crossover, cintura alta, vidro curto, traseira inclinada. Não é uma perua.
+    private val rearWheel = RectF(178f, 298f, 318f, 438f)
+    private val frontWheel = RectF(700f, 298f, 840f, 438f)
     private val body = Path().apply {
-        moveTo(64f, 320f)
-        cubicTo(54f, 300f, 50f, 256f, 54f, 220f)
-        cubicTo(56f, 196f, 60f, 176f, 70f, 160f)
-        cubicTo(84f, 130f, 110f, 112f, 150f, 104f)
-        lineTo(540f, 86f)
-        cubicTo(590f, 84f, 626f, 94f, 652f, 110f)
-        lineTo(754f, 172f)
-        cubicTo(822f, 178f, 882f, 186f, 922f, 198f)
-        cubicTo(950f, 206f, 964f, 224f, 968f, 248f)
-        lineTo(970f, 292f)
-        cubicTo(970f, 310f, 960f, 318f, 942f, 320f)
-        lineTo(844f, 320f)
-        arcTo(RectF(696f, 250f, 844f, 398f), 0f, -180f)
-        lineTo(314f, 320f)
-        arcTo(RectF(166f, 250f, 314f, 398f), 0f, -180f)
+        moveTo(118f, 318f)
+        cubicTo(100f, 286f, 96f, 236f, 120f, 196f)
+        cubicTo(140f, 160f, 184f, 132f, 236f, 120f)
+        lineTo(498f, 104f)
+        cubicTo(548f, 100f, 592f, 120f, 642f, 168f)
+        lineTo(830f, 186f)
+        cubicTo(888f, 194f, 936f, 214f, 962f, 252f)
+        lineTo(972f, 296f)
+        cubicTo(976f, 316f, 958f, 328f, 934f, 330f)
+        lineTo(840f, 330f)
+        arcTo(frontWheel, 0f, -180f)
+        lineTo(318f, 330f)
+        arcTo(rearWheel, 0f, -180f)
         close()
     }
     private val glass = Path().apply {
-        moveTo(162f, 124f)
-        cubicTo(176f, 116f, 190f, 112f, 212f, 110f)
-        lineTo(540f, 100f)
-        cubicTo(580f, 100f, 608f, 108f, 632f, 124f)
-        lineTo(716f, 174f)
-        lineTo(170f, 180f)
-        cubicTo(158f, 162f, 156f, 138f, 162f, 124f)
+        moveTo(246f, 134f)
+        lineTo(486f, 118f)
+        cubicTo(528f, 116f, 566f, 134f, 606f, 174f)
+        lineTo(258f, 186f)
+        cubicTo(238f, 166f, 236f, 146f, 246f, 134f)
+        close()
+    }
+    private val hatch = Path().apply {
+        moveTo(126f, 200f)
+        cubicTo(146f, 162f, 184f, 136f, 236f, 124f)
+        lineTo(244f, 184f)
+        lineTo(142f, 210f)
+        close()
+    }
+    private val doorFront = Path().apply {
+        moveTo(452f, 180f)
+        lineTo(618f, 170f)
+        lineTo(626f, 304f)
+        lineTo(456f, 312f)
+        close()
+    }
+    private val doorRear = Path().apply {
+        moveTo(256f, 188f)
+        lineTo(438f, 176f)
+        lineTo(442f, 308f)
+        lineTo(258f, 316f)
         close()
     }
     private val cladding = Path().apply {
-        moveTo(314f, 294f); lineTo(696f, 294f); lineTo(696f, 320f); lineTo(314f, 320f); close()
-        moveTo(56f, 280f); cubicTo(58f, 302f, 60f, 314f, 64f, 320f); lineTo(166f, 320f); lineTo(168f, 286f); close()
-        moveTo(844f, 296f); lineTo(970f, 292f); cubicTo(970f, 310f, 960f, 318f, 942f, 320f); lineTo(844f, 320f); close()
-    }
-    private val headlight = Path().apply {
-        moveTo(904f, 200f); lineTo(964f, 220f); lineTo(962f, 230f); lineTo(900f, 212f); close()
-    }
-    private val taillight = Path().apply {
-        moveTo(54f, 178f); lineTo(104f, 160f); lineTo(106f, 172f); lineTo(56f, 192f); close()
-    }
-    private val mirror = Path().apply {
-        moveTo(690f, 168f); cubicTo(702f, 156f, 724f, 156f, 730f, 166f); lineTo(726f, 184f); lineTo(694f, 184f); close()
+        moveTo(318f, 300f); lineTo(700f, 300f); lineTo(700f, 330f); lineTo(318f, 330f); close()
+        moveTo(108f, 286f); cubicTo(110f, 308f, 114f, 322f, 122f, 330f); lineTo(178f, 330f); lineTo(184f, 294f); close()
+        moveTo(840f, 304f); lineTo(972f, 296f); cubicTo(976f, 316f, 958f, 328f, 934f, 330f); lineTo(840f, 330f); close()
     }
 
     override fun draw(canvas: Canvas) {
         val b = bounds
         if (b.isEmpty) return
-        val s = min(b.width() / 1000f, b.height() / 420f)
+        val s = min(b.width() / 1000f, b.height() / 460f)
         canvas.save()
-        canvas.translate(b.left + (b.width() - 1000f * s) / 2f, b.top + (b.height() - 420f * s) / 2f)
+        canvas.translate(b.left + (b.width() - 1000f * s) / 2f, b.top + (b.height() - 460f * s) / 2f)
         canvas.scale(s, s)
 
-        // Sombra no chão.
+        // Sombra no chão, mais fechada que o halo azul antigo.
         p.style = Paint.Style.FILL
-        p.shader = RadialGradient(515f, 384f, 480f, intArrayOf(if (dark) 0xAA000000.toInt() else 0x66000000, 0x00000000), null, Shader.TileMode.CLAMP)
-        canvas.save(); canvas.scale(1f, 0.06f, 515f, 384f); canvas.drawCircle(515f, 384f, 480f, p); canvas.restore()
+        p.shader = RadialGradient(520f, 408f, 420f, intArrayOf(if (dark) 0xCC000000.toInt() else 0x66000000, 0x00000000), null, Shader.TileMode.CLAMP)
+        canvas.save()
+        canvas.scale(1f, 0.07f, 520f, 408f)
+        canvas.drawCircle(520f, 408f, 420f, p)
+        canvas.restore()
         p.shader = null
 
-        // Carroceria prata com luz de cima.
-        val paint = if (dark) intArrayOf(0xFFA3ACB8.toInt(), 0xFF6F7884.toInt(), 0xFF3B414A.toInt())
-        else intArrayOf(0xFFE2E6EB.toInt(), 0xFFAAB2BD.toInt(), 0xFF6C7480.toInt())
-        p.shader = LinearGradient(0f, 86f, 0f, 320f, paint, floatArrayOf(0f, 0.42f, 1f), Shader.TileMode.CLAMP)
+        if (visual.charging == true) {
+            val glow = 0xFF3DDC84.toInt()
+            p.shader = RadialGradient(150f, 268f, 78f + 18f * pulse, intArrayOf(withAlpha(glow, 0.20f + 0.45f * pulse), 0x00000000), null, Shader.TileMode.CLAMP)
+            canvas.drawCircle(150f, 268f, 78f + 18f * pulse, p)
+            p.shader = null
+        }
+
+        val paint = if (dark) intArrayOf(0xFFF2F5F8.toInt(), 0xFFB4BEC8.toInt(), 0xFF5A636E.toInt())
+        else intArrayOf(0xFFF7F8FA.toInt(), 0xFFC5CCD4.toInt(), 0xFF7A838E.toInt())
+        p.shader = LinearGradient(0f, 110f, 0f, 338f, paint, floatArrayOf(0f, 0.45f, 1f), Shader.TileMode.CLAMP)
         canvas.drawPath(body, p)
         p.shader = null
+        p.style = Paint.Style.STROKE
+        p.strokeWidth = 8f
+        p.color = if (dark) 0xFF14181E.toInt() else 0xFF2A3038.toInt()
+        canvas.drawPath(body, p)
+        p.style = Paint.Style.FILL
 
-        // Fundo das caixas de roda (só a metade de cima, dentro da carroceria).
         canvas.save()
-        canvas.clipRect(0f, 0f, 1000f, 324f)
+        canvas.clipRect(0f, 0f, 1000f, 334f)
         p.color = 0xFF101317.toInt()
-        canvas.drawCircle(240f, 324f, 76f, p)
-        canvas.drawCircle(770f, 324f, 76f, p)
+        canvas.drawCircle(248f, 368f, 74f, p)
+        canvas.drawCircle(770f, 368f, 74f, p)
         canvas.restore()
 
-        // Plásticos escuros: soleira, para-choques e moldura dos para-lamas.
-        p.color = if (dark) 0xFF1E2228.toInt() else 0xFF33383F.toInt()
+        p.color = if (dark) 0xFF1A1E24.toInt() else 0xFF2E343C.toInt()
         canvas.drawPath(cladding, p)
         p.style = Paint.Style.STROKE
-        p.strokeWidth = 14f
-        canvas.drawArc(RectF(162f, 246f, 318f, 402f), 180f, 180f, false, p)
-        canvas.drawArc(RectF(692f, 246f, 848f, 402f), 180f, 180f, false, p)
+        p.strokeWidth = 16f
+        canvas.drawArc(RectF(174f, 294f, 322f, 442f), 200f, 140f, false, p)
+        canvas.drawArc(RectF(696f, 294f, 844f, 442f), 200f, 140f, false, p)
         p.style = Paint.Style.FILL
 
-        // Vidros escuros com reflexo.
-        p.shader = LinearGradient(0f, 102f, 0f, 180f, intArrayOf(0xFF3A4452.toInt(), 0xFF12161C.toInt()), null, Shader.TileMode.CLAMP)
-        canvas.drawPath(glass, p)
-        p.shader = LinearGradient(330f, 102f, 470f, 180f, intArrayOf(0x44FFFFFF, 0x00FFFFFF), null, Shader.TileMode.CLAMP)
+        p.shader = LinearGradient(0f, 126f, 0f, 198f, intArrayOf(0xFF3C4654.toInt(), 0xFF10141A.toInt()), null, Shader.TileMode.CLAMP)
         canvas.drawPath(glass, p)
         p.shader = null
+        drawHatch(canvas, paint[1])
 
-        // Colunas na cor da carroceria (C e B) e rack de teto.
-        p.color = paint[1]
+        // Colunas escuras (teto flutuante) e rack.
         p.style = Paint.Style.STROKE
-        p.strokeWidth = 16f
-        canvas.drawLine(318f, 106f, 306f, 180f, p)
-        p.strokeWidth = 12f
-        canvas.drawLine(490f, 102f, 492f, 178f, p)
-        p.color = if (dark) 0xFF2A2F36.toInt() else 0xFF3A3F46.toInt()
-        p.strokeWidth = 7f
         p.strokeCap = Paint.Cap.ROUND
-        canvas.drawLine(176f, 92f, 530f, 76f, p)
+        p.color = if (dark) 0xFF161A20.toInt() else 0xFF2A3038.toInt()
+        p.strokeWidth = 16f
+        canvas.drawLine(420f, 116f, 416f, 186f, p)
+        p.strokeWidth = 12f
+        canvas.drawLine(268f, 128f, 264f, 186f, p)
+        p.strokeWidth = 7f
+        canvas.drawLine(250f, 108f, 470f, 94f, p)
         p.strokeWidth = 5f
-        canvas.drawLine(196f, 92f, 198f, 104f, p)
-        canvas.drawLine(510f, 77f, 512f, 90f, p)
+        canvas.drawLine(268f, 108f, 270f, 122f, p)
+        canvas.drawLine(452f, 96f, 454f, 110f, p)
         p.strokeCap = Paint.Cap.BUTT
 
-        // Linha de cintura (reflexo) e cortes das portas.
-        p.strokeWidth = 3f
-        p.color = 0x66FFFFFF
-        canvas.drawLine(80f, 214f, 940f, 222f, p)
-        p.color = 0x55000000
+        // Linha de cintura e cortes das portas (estado fechado ou desconhecido).
+        p.strokeWidth = 3.5f
+        p.color = 0x88FFFFFF.toInt()
+        canvas.drawLine(130f, 214f, 940f, 222f, p)
+        p.color = 0x66000000
         p.strokeWidth = 2.5f
-        canvas.drawLine(306f, 184f, 310f, 292f, p)
-        canvas.drawLine(492f, 182f, 496f, 292f, p)
-        canvas.drawLine(690f, 178f, 694f, 290f, p)
+        if (visual.frontDoorOpen != true) canvas.drawLine(452f, 180f, 456f, 308f, p)
+        if (visual.rearDoorOpen != true) canvas.drawLine(256f, 188f, 258f, 312f, p)
         p.style = Paint.Style.FILL
 
-        canvas.drawPath(mirror, p.apply { color = paint[2] })
-        canvas.drawPath(headlight, p.apply { color = 0xFFEAF4FF.toInt() })
-        canvas.drawPath(taillight, p.apply { color = 0xFFD8323A.toInt() })
+        drawDoor(canvas, doorRear, visual.rearDoorOpen)
+        drawDoor(canvas, doorFront, visual.frontDoorOpen)
 
-        wheel(canvas, 240f, 324f)
-        wheel(canvas, 770f, 324f)
+        // Retrovisor, farol em barra e lanterna.
+        p.color = paint[2]
+        canvas.drawRoundRect(RectF(630f, 156f, 678f, 182f), 8f, 8f, p)
+        p.color = 0xFFEAF4FF.toInt()
+        canvas.drawRoundRect(RectF(888f, 198f, 960f, 216f), 6f, 6f, p)
+        p.color = 0xFFD8323A.toInt()
+        canvas.drawRoundRect(RectF(108f, 176f, 132f, 224f), 6f, 6f, p)
+
+        drawChargePort(canvas)
+        drawLock(canvas)
+        if (visual.farDoorOpen == true) {
+            p.color = 0xFFFFBA40.toInt()
+            canvas.drawCircle(360f, 96f, 11f, p)
+            p.color = 0xFF1A1208.toInt()
+            canvas.drawCircle(360f, 96f, 4f, p)
+        }
+
+        wheel(canvas, 248f, 368f)
+        wheel(canvas, 770f, 368f)
         canvas.restore()
+    }
+
+    private fun drawHatch(canvas: Canvas, bodyMid: Int) {
+        val open = visual.trunkOpen == true
+        canvas.save()
+        if (open) canvas.translate(-8f, -22f)
+        p.style = Paint.Style.FILL
+        p.color = if (open) 0xFF8E98A4.toInt() else bodyMid
+        canvas.drawPath(hatch, p)
+        if (open) {
+            p.style = Paint.Style.STROKE
+            p.strokeWidth = 4f
+            p.color = 0xFFFFBA40.toInt()
+            canvas.drawPath(hatch, p)
+            p.style = Paint.Style.FILL
+        }
+        canvas.restore()
+    }
+
+    /**
+     * Porta aberta: só o contorno âmbar, deslocado poucos pixels.
+     * Sem preencher um painel claro por cima da carroceria (isso virava um retângulo branco).
+     * O [Path] separado existe para um animator interpolar o deslocamento depois.
+     */
+    private fun drawDoor(canvas: Canvas, door: Path, open: Boolean?) {
+        if (open != true) return
+        canvas.save()
+        canvas.translate(-4f, -8f)
+        p.style = Paint.Style.STROKE
+        p.strokeWidth = 6f
+        p.color = 0xFFFFBA40.toInt()
+        canvas.drawPath(door, p)
+        p.style = Paint.Style.FILL
+        canvas.restore()
+    }
+
+    private fun drawChargePort(canvas: Canvas) {
+        val open = visual.chargePortOpen == true
+        if (visual.chargePortOpen == null && visual.charging != true) return
+        if (open) {
+            p.color = if (dark) 0xFF2A313C.toInt() else 0xFF3A424C.toInt()
+            canvas.drawRoundRect(RectF(128f, 248f, 176f, 292f), 8f, 8f, p)
+            p.color = 0xFF10141A.toInt()
+            canvas.drawCircle(152f, 270f, 10f, p)
+            p.color = if (visual.charging == true) 0xFF3DDC84.toInt() else 0xFFD7DEE6.toInt()
+            canvas.drawRoundRect(RectF(126f, 214f, 178f, 246f), 6f, 6f, p)
+        } else {
+            p.color = if (dark) 0xFF8E98A4.toInt() else 0xFF9AA3AE.toInt()
+            canvas.drawRoundRect(RectF(128f, 246f, 176f, 292f), 8f, 8f, p)
+            p.style = Paint.Style.STROKE
+            p.strokeWidth = 2f
+            p.color = 0xFF1A1E24.toInt()
+            canvas.drawRoundRect(RectF(128f, 246f, 176f, 292f), 8f, 8f, p)
+            p.style = Paint.Style.FILL
+        }
+    }
+
+    private fun drawLock(canvas: Canvas) {
+        val locked = visual.locked ?: return
+        val color = if (locked) 0xFF3DDC84.toInt() else 0xFFFFBA40.toInt()
+        p.style = Paint.Style.STROKE
+        p.strokeWidth = 4.5f
+        p.strokeCap = Paint.Cap.ROUND
+        p.color = color
+        val top = if (locked) 232f else 218f
+        canvas.drawArc(RectF(592f, top, 618f, top + 28f), 200f, 140f, false, p)
+        p.style = Paint.Style.FILL
+        canvas.drawRoundRect(RectF(586f, 252f, 624f, 278f), 4f, 4f, p)
+        p.strokeCap = Paint.Cap.BUTT
     }
 
     private fun wheel(c: Canvas, cx: Float, cy: Float) {
         p.shader = null
         p.style = Paint.Style.FILL
-        p.color = 0xFF15181D.toInt()
-        c.drawCircle(cx, cy, 60f, p)
-        p.shader = RadialGradient(cx - 10f, cy - 12f, 46f, intArrayOf(0xFFDDE2E8.toInt(), 0xFF7E8692.toInt()), null, Shader.TileMode.CLAMP)
-        c.drawCircle(cx, cy, 40f, p)
+        p.color = 0xFF12151A.toInt()
+        c.drawCircle(cx, cy, 64f, p)
+        p.shader = RadialGradient(cx - 12f, cy - 14f, 48f, intArrayOf(0xFFF0F3F6.toInt(), 0xFF7A828C.toInt()), null, Shader.TileMode.CLAMP)
+        c.drawCircle(cx, cy, 42f, p)
         p.shader = null
-        p.color = 0xFF2A2F37.toInt()
+        p.color = 0xFF2A3038.toInt()
         for (i in 0 until 5) {
             val a = Math.toRadians(-90.0 + i * 72.0)
-            val path = Path().apply {
-                moveTo(cx + 9f * cos(a + 0.9).toFloat(), cy + 9f * sin(a + 0.9).toFloat())
-                lineTo(cx + 36f * cos(a + 0.24).toFloat(), cy + 36f * sin(a + 0.24).toFloat())
-                lineTo(cx + 36f * cos(a + 1.0).toFloat(), cy + 36f * sin(a + 1.0).toFloat())
+            val spoke = Path().apply {
+                moveTo(cx + 10f * cos(a + 0.85).toFloat(), cy + 10f * sin(a + 0.85).toFloat())
+                lineTo(cx + 38f * cos(a + 0.22).toFloat(), cy + 38f * sin(a + 0.22).toFloat())
+                lineTo(cx + 38f * cos(a + 0.95).toFloat(), cy + 38f * sin(a + 0.95).toFloat())
                 close()
             }
-            c.drawPath(path, p)
+            c.drawPath(spoke, p)
         }
-        p.color = 0xFF555C66.toInt()
-        c.drawCircle(cx, cy, 8f, p)
+        p.color = 0xFF4E565F.toInt()
+        c.drawCircle(cx, cy, 9f, p)
+    }
+
+    private fun withAlpha(color: Int, alpha: Float): Int {
+        val a = (alpha.coerceIn(0f, 1f) * 255).toInt()
+        return (color and 0x00FFFFFF) or (a shl 24)
     }
 
     override fun getIntrinsicWidth() = 1000
-    override fun getIntrinsicHeight() = 420
+    override fun getIntrinsicHeight() = 460
     override fun setAlpha(alpha: Int) {}
     override fun setColorFilter(colorFilter: ColorFilter?) {}
     @Deprecated("Deprecated in Java")

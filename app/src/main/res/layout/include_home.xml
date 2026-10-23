@@ -1,33 +1,92 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Início (tela deitada): carro em cima, quatro cartões em linha embaixo. -->
+<!-- Início deitado: clima e carro à esquerda, silhueta no centro, mídia e rota à direita. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/viewHome"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
-
-    <include layout="@layout/include_hero" />
+    android:baselineAligned="false"
+    android:orientation="horizontal"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingBottom="8dp">
 
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:orientation="horizontal"
-        android:paddingStart="24dp"
-        android:paddingEnd="24dp"
-        android:paddingBottom="16dp">
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1.08"
+        android:orientation="vertical">
 
-        <include layout="@layout/card_media" />
+        <include
+            layout="@layout/card_energy"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1.2" />
 
-        <Space android:layout_width="14dp" android:layout_height="0dp" />
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="10dp" />
 
-        <include layout="@layout/card_battery" />
+        <include
+            layout="@layout/card_climate"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.95" />
 
-        <Space android:layout_width="14dp" android:layout_height="0dp" />
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="10dp" />
 
-        <include layout="@layout/card_panel" />
+        <include
+            layout="@layout/card_car"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1.15" />
+    </LinearLayout>
 
-        <Space android:layout_width="14dp" android:layout_height="0dp" />
+    <Space
+        android:layout_width="12dp"
+        android:layout_height="0dp" />
 
-        <include layout="@layout/card_dest" />
+    <include
+        layout="@layout/include_hero"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1.2" />
+
+    <Space
+        android:layout_width="12dp"
+        android:layout_height="0dp" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1.12"
+        android:orientation="vertical">
+
+        <include
+            layout="@layout/card_media"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="10dp" />
+
+        <include
+            layout="@layout/card_panel"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.92" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="10dp" />
+
+        <include
+            layout="@layout/card_dest"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1.15" />
     </LinearLayout>
 </LinearLayout>

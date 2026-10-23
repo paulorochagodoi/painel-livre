@@ -1,40 +1,83 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Início (tela em pé): carro em cima, cartões 2 × 2 embaixo. -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Início em pé: as mesmas seções, uma embaixo da outra, com rolagem. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/viewHome"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
-
-    <include layout="@layout/include_hero" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:orientation="horizontal"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp"
-        android:paddingBottom="14dp">
-
-        <include layout="@layout/card_media" />
-
-        <Space android:layout_width="14dp" android:layout_height="0dp" />
-
-        <include layout="@layout/card_battery" />
-    </LinearLayout>
+    android:fillViewport="true"
+    android:scrollbars="none">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:orientation="horizontal"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp"
-        android:paddingBottom="16dp">
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="12dp">
 
-        <include layout="@layout/card_panel" />
+        <include
+            layout="@layout/include_hero"
+            android:layout_width="match_parent"
+            android:layout_height="240dp" />
 
-        <Space android:layout_width="14dp" android:layout_height="0dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="210dp"
+            android:layout_marginTop="10dp"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
 
-        <include layout="@layout/card_dest" />
+            <include
+                layout="@layout/card_energy"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
+
+            <Space
+                android:layout_width="10dp"
+                android:layout_height="0dp" />
+
+            <include
+                layout="@layout/card_climate"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+        <include
+            layout="@layout/card_car"
+            android:layout_width="match_parent"
+            android:layout_height="168dp"
+            android:layout_marginTop="10dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="188dp"
+            android:layout_marginTop="10dp"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+
+            <include
+                layout="@layout/card_media"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
+
+            <Space
+                android:layout_width="10dp"
+                android:layout_height="0dp" />
+
+            <include
+                layout="@layout/card_panel"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+        <include
+            layout="@layout/card_dest"
+            android:layout_width="match_parent"
+            android:layout_height="188dp"
+            android:layout_marginTop="10dp" />
     </LinearLayout>
-</LinearLayout>
+</ScrollView>

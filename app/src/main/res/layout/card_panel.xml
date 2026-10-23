@@ -2,11 +2,13 @@
 <!-- Cartão do painel de instrumentos: estado da projeção e o botão de mostrar/voltar. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/cardPanel"
-    android:layout_width="0dp"
+    android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:layout_weight="1"
     android:orientation="vertical"
-    android:padding="18dp"
+    android:paddingStart="14dp"
+    android:paddingTop="12dp"
+    android:paddingEnd="14dp"
+    android:paddingBottom="12dp"
     android:tag="card_click">
 
     <LinearLayout
@@ -16,8 +18,8 @@
         android:orientation="horizontal">
 
         <ImageView
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_speed"
             android:tag="icon_accent" />
@@ -47,20 +49,10 @@
         android:layout_weight="1" />
 
     <TextView
-        android:id="@+id/panelToggle"
-        style="@style/CcChipButton"
-        android:layout_width="match_parent"
-        android:tag="chip_on"
-        android:text="@string/cluster_show" />
-
-    <LinearLayout style="@style/CcFooter">
-
-        <ImageView
-            style="@style/CcFooterIcon"
-            android:src="@drawable/ic_speed" />
-
-        <TextView
-            style="@style/CcFooterText"
-            android:text="@string/cluster_title" />
-    </LinearLayout>
+            android:id="@+id/panelToggle"
+            style="@style/CcChipButton"
+            android:layout_width="match_parent"
+            android:minHeight="56dp"
+            android:tag="chip_on"
+            android:text="@string/cluster_show" />
 </LinearLayout>

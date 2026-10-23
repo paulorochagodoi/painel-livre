@@ -2,11 +2,13 @@
 <!-- Cartão de destino: casa/trabalho, ou a próxima manobra quando há rota no Maps/Waze. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/cardDest"
-    android:layout_width="0dp"
+    android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:layout_weight="1"
     android:orientation="vertical"
-    android:padding="18dp"
+    android:paddingStart="14dp"
+    android:paddingTop="12dp"
+    android:paddingEnd="14dp"
+    android:paddingBottom="12dp"
     android:tag="card_click">
 
     <LinearLayout

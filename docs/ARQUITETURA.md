@@ -62,11 +62,17 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | | `Probe.kt` | **Kotlin puro.** `ProbeParse` (seções do comando de coleta, `settings list`, `getprop`, histórico de broadcasts, candidatos ★, esconder números/MAC) e `ProbeTracker` (linha de base e só as novidades) |
 | | `DebugProbe.kt` | Coleta a cada 3 s (SDK + ADB só leitura + receptores), fotografia completa, liga/desliga pela preferência |
 | `location` | `LocationRepository.kt` | GPS da central (`LocationManager`), mantém o rumo quando parado, injeção só em debug |
-| `ui` | `LauncherActivity.kt` | Cockpit: barra de cima, carro, cartões, abas (Início, Navegação, Apps; Mídia/Telefone/Ajustes abrem outra tela), lista de lugares, mapa da aba Navegação, aviso de configuração; toque no tempo abre a previsão; `onNewIntent` com `HOME` volta à aba Início |
+| `ui` | `LauncherActivity.kt` | Cockpit: barra de cima, silhueta, seções da aba Início, abas (Início, Navegação, Apps; Mídia/Telefone/Ajustes abrem outra tela), lista de lugares, mapa da aba Navegação, aviso de configuração; toque no tempo abre a previsão; `onNewIntent` com `HOME` volta à aba Início. A aba Início observa `VehicleUiSource` e não lê o carro |
+| | `home/VehicleUiState.kt` | **Kotlin puro.** Estado anulável da tela inicial (carga, clima, portas, vidros, teto, pneus). `null` = desconhecido |
+| | `home/VehicleUiSource.kt` | Fonte do estado (`StateFlow`). `SampleVehicleUiSource` é o exemplo. `VehicleUiSources.forHome()` é o único ponto para plugar a leitura real |
+| | `home/HomeFormat.kt` | **Kotlin puro.** Textos, traço, tom (ok/aviso/perigo) e `CarVisual` |
+| | `home/HomeVehicleBinder.kt` | Aplica o texto nas Views, depois do `Palette.apply` |
+| | `home/SocRingView.kt`, `TireDiagramView.kt` | Anel de carga (pulso só se estiver carregando) e diagrama dos pneus |
 | | `DialerActivity.kt` | Discador interno (aba Telefone): teclado, Rediscar, App do carro; liga pela ordem de `CallPlan` e passa ao próximo caminho se a central recusar |
 | | `WeatherActivity.kt` | Previsão do tempo: agora, 24 horas (rolagem lateral) e 7 dias com faixa mín–máx |
 | | `cockpit/Palette.kt` | Temas dia/noite e pintura da árvore de Views por `android:tag` (ver abaixo) |
-| | `cockpit/CockpitArt.kt` | Fundo "estúdio" e ilustração do SUV, desenhados em código |
+| | `cockpit/CarVisual.kt` | **Kotlin puro.** O que a silhueta desenha (portas do lado visível, o outro lado, tampa, trava, tomada) |
+| | `cockpit/CockpitArt.kt` | Fundo "estúdio" (noite mais escura) e silhueta própria de SUV, com estados de porta, trava, tampa e pulso |
 | | `cockpit/WeatherIconDrawable.kt` | Ícone do tempo desenhado em código |
 | | `SettingsActivity.kt` | `PreferenceFragmentCompat` (`res/xml/preferences.xml`) + ações (foto do carro, simular, conceder, diagnóstico, tela inicial) |
 | | `DebugActivity.kt` | Tela do modo de debug: marcar a opção do painel, testar desenho, fotografia, escutar ação, copiar/compartilhar/salvar |
@@ -152,10 +158,38 @@ As cores não ficam no XML. Cada View marca o papel em `android:tag` (direto ou 
 | `icon`, `icon2`, `icon_accent`, `icon_on`, `icon_ok` | tint de ícone |
 | `round`, `round_on` | botão redondo neutro / azul |
 | `progress` | barra de progresso |
+| `skeleton` | tarja de dado ainda desconhecido (não é zero) |
 
 Para mudar o estado de um botão em tempo de execução: trocar a tag e chamar `palette.apply(view, density)`.
 Layouts: `activity_launcher.xml` inclui `include_home`, `include_nav`, `include_dock` (variantes em
 `layout-port/` para a tela em pé; a Activity é recriada ao girar) e os cartões `card_*.xml`.
+
+Na aba Início deitada, a coluna da esquerda é Energia, Clima e Carro; o centro é a silhueta
+(`include_hero`); a direita é Mídia, Mapa no painel e Destino. Em pé, as mesmas peças ficam numa
+rolagem. O tempo saiu de cima do carro e foi para a barra de cima. Ícones novos e os da barra usam
+Material Symbols Rounded (Apache-2.0), em vetor 24 dp com a cor vinda do tema.
+
+## Tela inicial: estado, sem leitura do carro
+
+`VehicleUiState` guarda só o que a aba Início mostra. Tudo é anulável: `null` significa "ainda não
+sei" e o formatador escreve "—". Zero só aparece se a fonte mandou zero (bateria em 0% é perigo,
+não é o mesmo que ausência).
+
+`HomeFormat.present` produz os textos e o `CarVisual`. A lateral desenhada é a do motorista; porta
+do passageiro acende o aviso do outro lado, para não sumir. `HomeVehicleBinder` pinta as Views.
+`LauncherActivity` observa `VehicleUiSources.forHome().state`.
+
+Hoje `forHome()` devolve `SampleVehicleUiSource`, um exemplo fixo com `sample = true` (a tela mostra
+"Exemplo"). Não há chamada a `VehicleData.read` na aba Início, nem comando de clima, porta, vidro
+ou tomada. Quando a telemetria real existir, troque o corpo de `forHome()` por uma fonte com
+`sample = false`. O diagnóstico continua com a leitura antiga de `VehicleData`, separada desta tela.
+
+O pulso de carga não usa desfoque nem uma camada da janela. Um laço em `STARTED`, ~11 vezes por
+segundo, só atualiza a opacidade do anel e da tampa, e só com a aba Início na frente e
+`charging = true`.
+
+O tema da noite usa cartão opaco (`Palette.NIGHT.card` sem transparência) e um azul de acento mais
+fundo. O fundo do estúdio perdeu o halo azul claro, que na central real lavava o carro.
 
 ## Painel: posições
 
@@ -213,6 +247,8 @@ rede ou espera de tempo real. Execute com JDK 17:
 | `PanelMenuTest` | valores do menu, constante do SDK x molde, desenho de cada modo, opcional/teste do debug, `Follower` (sem piscar, volta ao normal), só getters, nenhum código novo em `SAFE_COMMANDS` |
 | `DebugProbeTest` | registro desligado por padrão e limite, comando de coleta só leitura, seções, `settings`/`getprop`, diff, histórico de broadcasts, candidatos, linha de base e novidades, seções ausentes, esconder número/MAC |
 | `ForecastTest` | agora/horas/dias do Open-Meteo, buracos `null`, respostas ruins, rótulos em português, textos, URL com posição arredondada e limite de pedidos |
+| `HomeFormatTest` | tela inicial: exemplo, traço no lugar de nulo/inválido, autonomia, carga, bancos, portas, vidros, teto, pneu, lado oculto da silhueta, fonte de exemplo e contraste do tema (cartão opaco, acento não lavado) |
+| `HomeScreenshotTest` | Robolectric desenha a aba Início deitada (noite com exemplo, dia, noite sem dados) e confere que o rodapé da noite é escuro e o do dia é claro |
 
 `PanelAutomation` contém a decisão usada pelo `ClusterService`; as chamadas Android/ADB continuam
 no serviço. `kotlinx-coroutines-test` controla o tempo dos testes. Um teste reproduz a restauração
@@ -271,7 +307,8 @@ reavaliada na próxima leitura. O log só registra mudanças de erro, sem repeti
 
 `Snapshot.diagnosticText` mostra cada campo ausente como indisponível. Diagnóstico → Dados do carro
 usa esse texto; Info da central também o inclui e informa a permissão `BYDAUTO_STATISTIC_GET` real.
-A tela inicial existente já avisa Dados do carro indisponíveis; não foi alterada nesta tarefa.
+Na época desta tarefa a tela inicial ainda dizia "Dados do carro indisponíveis". Isso saiu depois:
+a aba Início usa `VehicleUiState` e traço (ver "Tela inicial: estado, sem leitura do carro").
 Portas/travas não eram consultadas e continuam explicitamente indisponíveis. `getDoorState(int)`
 exige constantes confirmadas; trava não é sinônimo de porta fechada. Não foram adicionados nomes
 alternativos de getters nem propriedades `getprop` sem evidência. AutoContainer controla projeção,

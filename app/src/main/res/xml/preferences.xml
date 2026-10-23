@@ -93,9 +93,23 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        app:title="Margens no painel (pixels do painel)"
-        app:summary="Use se os instrumentos da BYD cobrirem parte do mapa."
+        app:title="Área segura do mapa no painel"
+        app:summary="Onde o mapa, o carro e os cartões ficam, longe dos desenhos da BYD por cima do painel."
         app:iconSpaceReserved="false">
+        <ListPreference
+            app:key="safe_area"
+            app:title="Padrão"
+            app:defaultValue="songplus"
+            app:entries="@array/safe_area_entries"
+            app:entryValues="@array/safe_area_values"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <Preference
+            app:key="safe_area_help"
+            app:title="Ajuste fino (pixels do painel)"
+            app:summary="Some ou tire pixels de cada lado do padrão: positivo afasta da borda, negativo aproxima. Com o modo de debug ligado, o painel mostra o contorno da área."
+            app:selectable="false"
+            app:iconSpaceReserved="false" />
         <EditTextPreference app:key="inset_left" app:title="Esquerda" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
         <EditTextPreference app:key="inset_top" app:title="Topo" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
         <EditTextPreference app:key="inset_right" app:title="Direita" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />

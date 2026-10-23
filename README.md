@@ -75,8 +75,9 @@ Primeiro uso, na central:
    (É o app conectando no ADB da própria central, como o DashCast faz.)
 2. Se aparecer o aviso "Falta permitir…" em cima do carro, toque em **Configurar** (localização,
    dados do carro, notificações do Maps/Waze e segundo plano, tudo pelo ADB).
-3. Em **Ajustes → Simular rota**, veja o painel funcionando parado. Ajuste as **margens** nos Ajustes
-   se os instrumentos da BYD cobrirem parte dos cartões.
+3. Em **Ajustes → Simular rota**, veja o painel funcionando parado. Se os instrumentos da BYD
+   cobrirem parte dos cartões, use **Ajustes → Área segura do mapa no painel → Ajuste fino** (com o
+   modo de debug ligado, o painel mostra o contorno da área).
 4. Inicie uma rota no Google Maps ou no Waze — o painel liga sozinho.
 5. Para subir junto com o carro: deixe **Iniciar junto com o carro** ligado e, se a BYD tiver uma
    lista de "autoiniciar" nas configurações, inclua o Painel Livre. O caminho mais garantido é

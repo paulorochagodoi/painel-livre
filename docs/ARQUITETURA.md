@@ -43,6 +43,7 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | | `PanelMenuReader.kt` | **Kotlin puro.** Lê `INSTRUMENT_NAVI_TYPE`: SDK primeiro; se recusar por permissão, ADB local com o comando fixo de leitura |
 | | `PanelMenuWatcher.kt` | Lê o modo enquanto a tela do painel está aberta (se "Seguir o menu" estiver ligado) e `PanelMenuFrame`, a moldura que reposiciona/cobre o conteúdo da `ClusterActivity` |
 | | `PoseSmoother.kt` | **Kotlin puro.** Posição/rumo do carro entre fixes do GPS (segue em frente ≤1,5 s, corrige em 0,6 s, salto >150 m, parado ignora <8 m) |
+| | `SafeArea.kt` | **Kotlin puro.** Área segura do mapa no painel (padrão Song Plus + ajuste fino), posição dos cartões, do carro e foco da câmera |
 | | `FreezeWatch.kt` | **Kotlin puro.** Escada do vigia (`FreezeWatch`), limite por janela (`Budget`) e `YieldPolicy` |
 | | `ManeuverView.kt` | Desenha a seta (bitmap do Maps/Waze recolorido, ou vetor por `Maneuver`) |
 | | `CarArrowDrawable.kt` | Seta azul do carro (painel e mapa da central) |
@@ -160,14 +161,35 @@ Layouts: `activity_launcher.xml` inclui `include_home`, `include_nav`, `include_
 
 ## Painel: posições
 
-Frações da altura `h` e largura `w` do display (1920×720 no Song Plus), dentro das margens do usuário:
+Tudo fica dentro da **área segura** (`cluster/SafeArea.kt`, Kotlin puro, `SafeAreaTest`): o retângulo
+que os desenhos da BYD não cobrem. Medidas na foto do painel do Song Plus (1920×720):
 
-- coluna de cartões em `x = 0,06w`, `y = 0,16h`; cartão da manobra com `0,30w` de largura e ícone de `0,19h`;
-- cartão de chegada logo abaixo (Chegada / Tempo / Distância);
-- câmera com padding de cima `0,30h` e de baixo `0,12h` → carro a `~0,59h`, centralizado;
-- crédito "© OpenStreetMap" em `y = 0,66h`; aviso "SIMULAÇÃO" em cima no centro;
-- nada de relógio: a faixa de cima é da BYD (hora, P, ECO, temperatura) e a de baixo também (kW,
-  bateria, autonomia, velocidade).
+| Desenho da BYD por cima | Onde |
+|---|---|
+| Faixa de cima (hora, HEV, P, NORMAL, ASE, temperatura, luzes) | y 0–75 no centro |
+| Moldura curva | recorta os cantos de cima; o cartão perdia 40–60 px à esquerda |
+| Avisos à esquerda / à direita | x < 200, y 380–460 / x > 1720, y 60–300 |
+| Assistente de faixa | x 1290–1450, y 420–520 |
+| Faixa de baixo (kW, bateria %, autonomia, OK, velocidade, odômetro) | y > 500, toda a largura |
+
+- Padrão Song Plus: margens **esquerda 230, topo 90, direita 230, base 230** → área x 230–1690,
+  y 90–490. As medidas são do painel de referência 1920×720 e escalam com o display real.
+  `safe_area=none` usa a tela inteira.
+- Ajuste fino (`inset_*`, ±400 px por lado) somado ao padrão; a área nunca fica menor que 30% × 30%
+  do display.
+- Com o menu do painel em "Pequeno" (#9) o conteúdo encolhe: a área segura é do display e é recortada
+  pelo conteúdo (`SafeArea.plan`).
+- Cartão da manobra colado no canto de cima à esquerda da área (x 230, y 90), largura `0,30w` sem
+  passar do carro; cartão de chegada logo abaixo. Tamanhos em função de `unit` = altura do display,
+  menor só se a área for baixa demais para os cartões (`CARDS_HEIGHT_UNITS`).
+- Carro no meio da largura da área, a **67,5% da altura** dela (x 960, y 360 no Song Plus). A câmera
+  usa o padding mínimo que põe o ponto focal no carro (`SafeArea.focusPadding`; no Song Plus é zero,
+  porque y 360 é o meio do display).
+- Crédito "© OpenStreetMap" no canto de baixo à direita da área (longe dos cartões e acima do
+  assistente de faixa); aviso "SIMULAÇÃO" no topo, no meio da área.
+- Modo de debug ligado: contorno rosa da área segura com as margens finais embaixo à esquerda (para
+  ajustar olhando o painel; captura em `docs/telas/8-painel-area-segura.png`).
+- Nada de relógio: a faixa de cima é da BYD.
 
 ## Preferências (`Prefs`)
 
@@ -181,7 +203,8 @@ Frações da altura `h` e largura `w` do display (1920×720 no Song Plus), dentr
 | `map_tilt` | `45` | inclinação do mapa do painel |
 | `max_fps` | `60` | limite andando (parado fica em 5) |
 | `auto_heal` | `true` | recriar a superfície do mapa se travar |
-| `inset_left/top/right/bottom` | `0` | margens extras no painel (px) |
+| `safe_area` | `songplus` | área segura do mapa no painel: `songplus` (230/90/230/230) ou `none` |
+| `inset_left/top/right/bottom` | `0` | ajuste fino da área segura (px, −400 a 400, somado ao padrão) |
 | `start_on_boot` | `true` | sobe o serviço no boot |
 | `nav_app` | `maps` | `maps` ou `waze` (busca, Casa/Trabalho) |
 | `car_photo` | — | URI da foto do carro (no lugar da ilustração) |
@@ -192,7 +215,7 @@ Frações da altura `h` e largura `w` do display (1920×720 no Song Plus), dentr
 
 ## Testes
 
-`app/src/test` tem **143 testes JVM** (117 até a v0.4.1 + 21 da issue #9 + 5 da issue #15), sem carro, emulador,
+`app/src/test` tem **179 testes JVM** (117 até a v0.4.1 + 21 da issue #9 + 5 da issue #15 + os da rota nativa, da leitura do menu e da área segura), sem carro, emulador,
 rede ou espera de tempo real. Execute com JDK 17:
 
 ```bash
@@ -204,8 +227,9 @@ rede ou espera de tempo real. Execute com JDK 17:
 |---|---|
 | `NavParserTest` e `NavRegressionTest` | Maps/Waze: manobra (seta de reserva), distância, rua, instrução, resumo, chegada, texto expandido/repetido, prioridade do título, espaços Unicode, inglês/unidades imperiais e ruído |
 | `PanelAutomationTest` | modos `nav`/`always`/`manual`, painel já ativo, prazo exato, atraso zero/600 s, nova rota cancelando a devolução, novo prazo e cancelamento explícito |
-| `PrefsTest` | padrões, modos, Maps/Waze, valores ausentes/inválidos e limites de atraso, inclinação, fps e quatro margens; opções de boot e recuperação |
+| `PrefsTest` | padrões, modos, Maps/Waze, valores ausentes/inválidos e limites de atraso, inclinação, fps, padrão da área segura e ajuste fino (negativo, ±400); opções de boot e recuperação |
 | `PanelSizeTest` | escolha segura do código de tamanho e geometria |
+| `SafeAreaTest` | área segura do Song Plus (230/90/230/230 → x 230–1690, y 90–490), carro em 960×360, cartões e carro fora de todos os desenhos da BYD medidos, foco da câmera no carro, ajuste fino (negativo, limite), margens exageradas, outra resolução, `none`, conteúdo encolhido pelo menu "Pequeno" |
 | `PoseSmootherTest` | posição, rumo, limites de previsão e ruído de GPS |
 | `FreezeWatchTest` | vigia, orçamento de recuperação e convivência (`YieldPolicy`) |
 | `CockpitTest` | Photon, tema e códigos do tempo |

@@ -22,6 +22,16 @@ versionCode 7. Não lançada; sem APK assinado. Falta conferir no carro.
   (`[menu] ADB: bruto=2 (0x00000002) → Simples`). A tela do debug e a fotografia usam a mesma leitura.
 - Testes: `PanelMenuReaderTest` (parser do `Parcel`, comando, SDK → ADB, pausa após falha) —
   167 no total, 0 falhas; `lintRelease` com 0 erros.
+- **Área segura do mapa no painel** (foto do painel do Song Plus): os cartões, o carro, o foco do mapa e
+  o crédito do OpenStreetMap ficam dentro do retângulo que os desenhos da BYD não cobrem (faixas de
+  cima e de baixo, cantos curvos, avisos dos lados, assistente de faixa). Padrão Song Plus: esquerda
+  230, topo 90, direita 230, base 230 (pixels de 1920×720, escalam com o painel). Manobra colada no
+  topo da área, chegada logo abaixo, carro em x 960, y 360, crédito no canto de baixo à direita da área.
+- Ajustes → **Área segura do mapa no painel**: padrão (Song Plus ou tela inteira) e ajuste fino por
+  lado (as antigas "Margens", agora somadas ao padrão e aceitando negativo, ±400). Com o modo de debug
+  ligado, o painel mostra o contorno da área segura e as margens finais.
+- Testes: `SafeAreaTest` (11) e `PrefsTest` atualizado — 179 no total, 0 falhas; `lintRelease` com 0 erros.
+  Conferido no emulador (pré-visualização 1920×720 com rota simulada, `docs/telas/1` e `8`); falta o carro.
 
 ## 0.5.0 — 2026-10-23 — rota nativa, menu do painel, modo de debug e discador (pré-release de teste)
 

@@ -160,8 +160,9 @@ porque o GitHub recusou a execução por cobrança da conta; depois que o dono r
 - Uid 2000 vem do ADB local (`127.0.0.1:5555`); a Activity do painel precisa ser `exported` e
   `allowEmbedded`; abrir com `am start --display N --windowingMode 1`.
 - No painel, os instrumentos da BYD são desenhados **por cima** da projeção: faixa de cima (hora, P,
-  ECO, temperatura), faixa de baixo (kW, bateria, autonomia, velocidade) e alertas à direita. Os cartões
-  ficam entre ~16% e ~62% da altura, à esquerda; o carro no centro a ~59%.
+  ECO, temperatura), faixa de baixo (kW, bateria, autonomia, velocidade), cantos curvos, avisos dos lados
+  e assistente de faixa. Tudo do app fica na área segura (`SafeArea`, padrão Song Plus 230/90/230/230 →
+  x 230–1690, y 90–490): cartões no canto de cima à esquerda dela, carro em x 960, y 360.
 - SDK BYD (`android.hardware.bydauto.*`): leitura de bateria/autonomia por `BYDAutoStatisticDevice`;
   assinaturas de conforto e registradores do HUD em `docs/ENGENHARIA_REVERSA.md`.
 - O SealNav identifica o modelo por `ro.product.name` + `Build.MODEL/PRODUCT/DEVICE/FINGERPRINT`.

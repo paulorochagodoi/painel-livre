@@ -3,6 +3,7 @@ package br.painellivre.util
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.preference.PreferenceManager
+import br.painellivre.cluster.SafeArea
 
 /** Acesso tipado às preferências (as chaves batem com res/xml/preferences.xml). */
 class Prefs internal constructor(private val sp: SharedPreferences) {
@@ -14,10 +15,13 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
     val restoreDelaySec: Int get() = sp.getString(KEY_RESTORE_DELAY, "20")?.toIntOrNull()?.coerceIn(0, 600) ?: 20
     val mapStyle: String get() = sp.getString(KEY_MAP_STYLE, "auto") ?: "auto"
     val mapTilt: Double get() = sp.getString(KEY_MAP_TILT, "45")?.toDoubleOrNull()?.coerceIn(0.0, 60.0) ?: 45.0
-    val insetLeft: Int get() = intPref(KEY_INSET_LEFT, 0)
-    val insetTop: Int get() = intPref(KEY_INSET_TOP, 0)
-    val insetRight: Int get() = intPref(KEY_INSET_RIGHT, 0)
-    val insetBottom: Int get() = intPref(KEY_INSET_BOTTOM, 0)
+    /** Área segura do mapa no painel: "songplus" (padrão) ou "none" ([br.painellivre.cluster.SafeArea]). */
+    val safeArea: String get() = sp.getString(KEY_SAFE_AREA, "songplus") ?: "songplus"
+    /** Ajuste fino da área segura, somado ao padrão (pode ser negativo). */
+    val insetAdjust: SafeArea.Insets
+        get() = SafeArea.Insets(
+            adjustPref(KEY_INSET_LEFT), adjustPref(KEY_INSET_TOP), adjustPref(KEY_INSET_RIGHT), adjustPref(KEY_INSET_BOTTOM),
+        )
     val startOnBoot: Boolean get() = sp.getBoolean(KEY_START_ON_BOOT, true)
     var navApp: String
         get() = sp.getString(KEY_NAV_APP, "maps") ?: "maps"
@@ -71,8 +75,8 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
         get() = sp.getString(KEY_AC_NAME, null)
         set(v) = sp.edit().putString(KEY_AC_NAME, v).apply()
 
-    private fun intPref(key: String, def: Int) =
-        sp.getString(key, def.toString())?.toIntOrNull()?.coerceIn(0, 1500) ?: def
+    private fun adjustPref(key: String) =
+        sp.getString(key, "0")?.trim()?.toIntOrNull()?.coerceIn(-SafeArea.ADJUST_LIMIT, SafeArea.ADJUST_LIMIT) ?: 0
 
     companion object {
         const val KEY_PANEL_CONTENT = "panel_content"
@@ -80,6 +84,7 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
         const val KEY_RESTORE_DELAY = "restore_delay"
         const val KEY_MAP_STYLE = "map_style"
         const val KEY_MAP_TILT = "map_tilt"
+        const val KEY_SAFE_AREA = "safe_area"
         const val KEY_INSET_LEFT = "inset_left"
         const val KEY_INSET_TOP = "inset_top"
         const val KEY_INSET_RIGHT = "inset_right"

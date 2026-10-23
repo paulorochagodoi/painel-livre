@@ -82,4 +82,12 @@
         <item>maps</item>
         <item>waze</item>
     </string-array>
+    <string-array name="safe_area_entries">
+        <item>Song Plus (230, 90, 230, 230)</item>
+        <item>Tela inteira (sem margens)</item>
+    </string-array>
+    <string-array name="safe_area_values">
+        <item>songplus</item>
+        <item>none</item>
+    </string-array>
 </resources>

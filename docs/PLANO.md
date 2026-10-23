@@ -176,8 +176,10 @@ Checklist no carro (carro parado, celular pareado, número conhecido que não se
    como Song Plus e o painel medir 1920×720, manda o 30 antes do 16/35, como o SealNav. Comparar as
    duas. Se o modelo não for reconhecido, escolher 12,3" (código 30) nas Configurações e repetir.
    Se algo parecer errado: **Painel original** e Configurações → Tamanho → "Não enviar".
-4. Conferir se os cartões do painel ficam livres dos instrumentos da BYD (faixas de cima e de baixo);
-   se não, ajustar as margens nos Ajustes. Conferir a tela central deitada e em pé, de dia e de noite.
+4. Conferir se os cartões do painel ficam livres dos instrumentos da BYD (faixas de cima e de baixo,
+   cantos curvos, avisos dos lados, assistente de faixa). Com o modo de debug ligado aparece o contorno
+   rosa da área segura (padrão Song Plus 230/90/230/230); se algo da BYD entrar nele, Ajustes → Área
+   segura → ajuste fino do lado (positivo afasta da borda) e mandar foto com os valores. Conferir a tela central deitada e em pé, de dia e de noite.
 5. Rota real no Google Maps: conferir seta/distância/rua (o parser foi testado com textos imitados).
 6. Conferir o mapa na GPU do carro (no emulador apareceram traços amarelos que parecem artefato do
    SwiftShader). Diagnóstico mostra os quadros/s do mapa: andando deve ficar perto do limite (60 ou 30);
@@ -302,8 +304,8 @@ sealnav.com (só olhadas; nada copiado — ver `SEALNAV_RE.md`, "Interface").
 Feito: central com barra de cima (saudação, hora, sinais, temperatura), carro (ilustração própria ou
 foto do motorista) com autonomia e tempo, cartões Mídia/Bateria/Painel/Destino, barra de baixo com
 abas e atalhos; aba Navegação com busca (Photon), Casa/Trabalho/recentes e mapa; temas dia/noite;
-tela em pé. Painel com cartão de manobra e de chegada em cima à esquerda, carro no centro a ~59% da
-altura, mapa claro/escuro, sem relógio (a BYD já mostra).
+tela em pé. Painel com cartão de manobra e de chegada em cima à esquerda da área segura (`SafeArea`,
+v0.5.1), carro no centro dela a y 360, mapa claro/escuro, sem relógio (a BYD já mostra).
 
 Diferenças que restam em relação ao SealNav:
 1. **Controles de conforto na barra de baixo** (clima de cada lado, bancos, vidros, porta-malas): aprovado

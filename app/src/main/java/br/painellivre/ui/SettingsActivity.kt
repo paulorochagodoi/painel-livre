@@ -47,12 +47,15 @@ class SettingsActivity : AppCompatActivity() {
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.preferences, rootKey)
-            listOf(
-                Prefs.KEY_RESTORE_DELAY, Prefs.KEY_MAP_TILT, Prefs.KEY_INSET_LEFT, Prefs.KEY_INSET_TOP,
-                Prefs.KEY_INSET_RIGHT, Prefs.KEY_INSET_BOTTOM,
-            ).forEach { key ->
+            listOf(Prefs.KEY_RESTORE_DELAY, Prefs.KEY_MAP_TILT).forEach { key ->
                 findPreference<EditTextPreference>(key)?.setOnBindEditTextListener {
                     it.inputType = InputType.TYPE_CLASS_NUMBER
+                }
+            }
+            // Ajuste fino da área segura: aceita negativo (aproxima da borda).
+            listOf(Prefs.KEY_INSET_LEFT, Prefs.KEY_INSET_TOP, Prefs.KEY_INSET_RIGHT, Prefs.KEY_INSET_BOTTOM).forEach { key ->
+                findPreference<EditTextPreference>(key)?.setOnBindEditTextListener {
+                    it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
                 }
             }
             onClick("car_photo_pick") { pickPhoto.launch(arrayOf("image/*")) }

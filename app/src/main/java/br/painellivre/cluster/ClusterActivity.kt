@@ -81,10 +81,11 @@ open class ClusterActivity : ComponentActivity() {
 
     // Preferências lidas a cada quadro ficam em campos (recarregadas quando mudam).
     private var tilt = 45.0
-    private var insetL = 0
-    private var insetT = 0
-    private var insetR = 0
-    private var insetB = 0
+    private var safeBase = SafeArea.SONG_PLUS
+    private var safeAdjust = SafeArea.NONE
+    private var showSafeOutline = false
+    /** Posições calculadas da área segura ([SafeArea.plan]); refeitas em [applySizes]. */
+    private var plan: SafeArea.Plan? = null
     private var maxFps = 60
     private var autoHeal = true
 
@@ -145,7 +146,7 @@ open class ClusterActivity : ComponentActivity() {
         loadPrefs()
         pal = Palette.forSetting(prefs.theme)
         styleLoaded = styleUri()
-        val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
+        root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         mapView = MapView(this)
         root.addView(mapView, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         overlay = FrameLayout(this)
@@ -153,6 +154,7 @@ open class ClusterActivity : ComponentActivity() {
         buildOverlay()
         // Moldura do menu de navegação do painel (issue #9): área e o que aparece em cada opção.
         val menuFrame = PanelMenuFrame(this, root)
+        displayFrame = menuFrame.frame
         setContentView(menuFrame.frame)
         if (preview) overlay.setOnClickListener { finish() } // por cima do mapa, que consome o toque
 
@@ -235,7 +237,9 @@ open class ClusterActivity : ComponentActivity() {
 
     private fun loadPrefs() {
         tilt = prefs.mapTilt
-        insetL = prefs.insetLeft; insetT = prefs.insetTop; insetR = prefs.insetRight; insetB = prefs.insetBottom
+        safeBase = SafeArea.preset(prefs.safeArea)
+        safeAdjust = prefs.insetAdjust
+        showSafeOutline = prefs.debugMode
         maxFps = prefs.maxFps
         autoHeal = prefs.autoHeal
     }
@@ -247,12 +251,13 @@ open class ClusterActivity : ComponentActivity() {
         postFrame()
     }
 
-    // ── Overlay: layout do SealNav, dentro da faixa visível do painel ──────
+    // ── Overlay: layout do SealNav, dentro da área segura do painel ────────
     //
-    // No painel real os instrumentos da BYD ficam por cima da projeção: faixa de cima (hora, P,
-    // ECO, temperatura), faixa de baixo (kW, bateria, autonomia, velocidade) e alertas à direita
-    // (foto pública do SealNav no Seal U). Por isso os cartões ficam em cima à esquerda, entre
-    // ~16% e ~62% da altura, e o carro no centro a ~59% da altura. Nada de relógio: a BYD já mostra.
+    // No painel real os instrumentos da BYD ficam por cima da projeção (faixa de cima, cantos
+    // curvos, avisos dos lados, faixa de baixo e assistente de faixa; medidas em [SafeArea]). Tudo
+    // que o Painel Livre desenha fica dentro da área segura: manobra colada no topo dela, chegada
+    // logo abaixo, carro no centro a 67,5% da altura (y 360 no Song Plus) e a atribuição no canto
+    // de baixo à direita. Nada de relógio: a BYD já mostra.
 
     private var pal: Palette = Palette.NIGHT
 
@@ -269,7 +274,11 @@ open class ClusterActivity : ComponentActivity() {
         ellipsize = TextUtils.TruncateAt.END
     }
 
+    private lateinit var root: FrameLayout
+    private lateinit var displayFrame: FrameLayout
     private lateinit var leftColumn: LinearLayout
+    /** Contorno da área segura, só no modo de debug (para ajustar as margens olhando o painel). */
+    private lateinit var safeOutline: TextView
     private lateinit var tbtIconBox: FrameLayout
     private lateinit var instructionText: TextView
     private val etaValues = arrayOfNulls<TextView>(3)
@@ -323,6 +332,14 @@ open class ClusterActivity : ComponentActivity() {
         overlay.addView(statusText)
         osmText = label().apply { text = "© OpenStreetMap" }
         overlay.addView(osmText)
+        safeOutline = label().apply {
+            // Rótulo embaixo à esquerda: em cima fica o cartão da manobra.
+            gravity = Gravity.BOTTOM or Gravity.START
+            setTextColor(Color.rgb(255, 64, 160))
+            background = GradientDrawable().apply { setStroke(3, Color.rgb(255, 64, 160)) }
+            visibility = View.GONE
+        }
+        overlay.addView(safeOutline)
         applyColors()
     }
 
@@ -344,16 +361,23 @@ open class ClusterActivity : ComponentActivity() {
         osmText.setTextColor(if (pal.dark) Color.argb(150, 255, 255, 255) else Color.argb(150, 0, 0, 0))
     }
 
-    private fun px(fractionOfHeight: Float) = (h * fractionOfHeight)
-
     private fun applySizes() {
-        overlay.setPadding(insetL, insetT, insetR, insetB)
+        // A área segura é do display do painel; o conteúdo pode estar encolhido pelo menu (#9).
+        val dw = displayFrame.width.takeIf { it > 0 } ?: w
+        val dh = displayFrame.height.takeIf { it > 0 } ?: h
+        val insets = SafeArea.resolve(dw, dh, safeBase, safeAdjust)
+        val p = SafeArea.plan(dw, dh, insets, SafeArea.Rect(root.left, root.top, root.left + w, root.top + h))
+        if (p != plan) AppLog.i("Área segura do painel ${dw}x$dh: margens $insets, carro em ${p.carX},${p.carY}")
+        plan = p
+        val safe = p.safe
+        val u = p.unit
+        fun px(f: Float) = u * f
         val pad = px(0.025f).toInt()
         leftColumn.layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.START or Gravity.TOP).apply {
-            leftMargin = (w * 0.06f).toInt(); topMargin = px(0.16f).toInt()
+            // Manobra colada na faixa de cima da BYD, na borda da área segura.
+            leftMargin = safe.left; topMargin = safe.top
         }
-        val cardW = (w * 0.30f).toInt()
-        tbtCard.layoutParams = LinearLayout.LayoutParams(cardW, -2)
+        tbtCard.layoutParams = LinearLayout.LayoutParams(p.cardWidth, -2)
         tbtCard.setPadding(pad, pad, (pad * 1.4f).toInt(), pad)
         val icon = px(0.19f).toInt()
         tbtIconBox.layoutParams = LinearLayout.LayoutParams(icon, icon).apply { marginEnd = (pad * 1.2f).toInt() }
@@ -370,19 +394,39 @@ open class ClusterActivity : ComponentActivity() {
         etaLabels.forEach { it?.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.026f)) }
         etaValues.forEach { it?.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.058f)) }
 
-        statusText.layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.CENTER_HORIZONTAL or Gravity.TOP).apply { topMargin = px(0.16f).toInt() }
+        // Aviso centralizado na área segura (as margens laterais entram no centro do FrameLayout).
+        statusText.layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.CENTER_HORIZONTAL or Gravity.TOP).apply {
+            leftMargin = safe.left; rightMargin = w - safe.right; topMargin = safe.top + pad
+        }
         statusText.setPadding(pad, pad / 3, pad, pad / 3)
         statusText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.03f))
-        osmText.layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.START or Gravity.TOP).apply {
-            leftMargin = (w * 0.06f).toInt(); topMargin = px(0.66f).toInt()
+        // Atribuição no canto de baixo à direita da área segura: longe dos cartões, dos avisos e
+        // do assistente de faixa (que fica abaixo dela no Song Plus).
+        osmText.layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.BOTTOM).apply {
+            rightMargin = w - safe.right + pad / 2; bottomMargin = h - safe.bottom + pad / 2
         }
         osmText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.02f))
 
-        val car = (h * 0.095f).toInt().coerceAtLeast(40)
-        // O carro fica sempre na posição da tela; a overlay já tem o padding das margens.
+        safeOutline.layoutParams = FrameLayout.LayoutParams(safe.width, safe.height, Gravity.TOP or Gravity.START).apply {
+            leftMargin = safe.left; topMargin = safe.top
+        }
+        safeOutline.setPadding(pad / 2, pad / 3, pad / 2, pad / 3)
+        safeOutline.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.022f))
+        safeOutline.text = "Área segura $insets"
+        safeOutline.visibility = if (showSafeOutline) View.VISIBLE else View.GONE
+
+        val car = (u * SafeArea.CAR_SIZE).toInt().coerceAtLeast(40)
         carView.layoutParams = FrameLayout.LayoutParams(car, car, Gravity.TOP or Gravity.START)
         carView.rotationX = (tilt * 0.8).toFloat() // deitado como o mapa inclinado
+        placeCar(car, car)
         applyColors()
+    }
+
+    /** O carro fica sempre no ponto focal da câmera (centro da área segura, a 67,5% da altura). */
+    private fun placeCar(carW: Int = carView.width, carH: Int = carView.height) {
+        val p = plan ?: return
+        carView.translationX = (p.carX - carW / 2.0).toFloat()
+        carView.translationY = (p.carY - carH / 2.0).toFloat()
     }
 
     private fun ViewGroup.children() = (0 until childCount).map { getChildAt(it) }
@@ -499,9 +543,8 @@ open class ClusterActivity : ComponentActivity() {
         lastEaseAt = now
         val tz = targetZoom(pose.speed)
         zoom = if (zoom.isNaN()) tz else zoom + (tz - zoom) * min(1.0, dt / ZOOM_EASE_S)
-        // Carro no centro, a ~59% da altura: acima da faixa de baixo dos instrumentos da BYD.
-        val top = (insetT + px(0.30f)).toDouble()
-        val bottom = (insetB + px(0.12f)).toDouble()
+        // Ponto focal no carro (centro da área segura, acima da faixa de baixo da BYD).
+        val pad = plan?.cameraPadding ?: SafeArea.NONE
 
         m.moveCamera(CameraUpdateFactory.newCameraPosition(
             CameraPosition.Builder()
@@ -509,16 +552,11 @@ open class ClusterActivity : ComponentActivity() {
                 .zoom(zoom)
                 .bearing(pose.bearing)
                 .tilt(tilt)
-                .padding(insetL.toDouble(), top, insetR.toDouble(), bottom)
+                .padding(pad.left.toDouble(), pad.top.toDouble(), pad.right.toDouble(), pad.bottom.toDouble())
                 .build(),
         ))
         cameraMovedAt = now
-
-        // Ponto focal = centro da área livre da câmera (a overlay já desconta as margens).
-        val cx = (w - insetL - insetR) / 2.0
-        val cy = top + (h - top - bottom) / 2.0 - insetT
-        carView.translationX = (cx - carView.width / 2.0).toFloat()
-        carView.translationY = (cy - carView.height / 2.0).toFloat()
+        placeCar()
     }
 
     private fun setFpsCap(fps: Int) {

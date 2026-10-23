@@ -4,6 +4,21 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 Nenhuma versão foi testada no carro ainda: todos os testes foram no emulador (`docs/AMBIENTE.md`).
 
+## Não lançado — 2026-10-22 — regressão JVM (issue #1)
+
+- 32 testes novos (73 no total): notificações Maps/Waze, manobras, distância, rua, resumo e chegada;
+  modos sempre/navegação/manual, atraso e cancelamento da restauração; padrões e limites das preferências.
+- Decisão automática do painel extraída para `PanelAutomation`, sem dependência de Android; acesso
+  às preferências permite armazenamento falso nos testes. Sem mudança das regras de ativação.
+- Bug reproduzido por teste e corrigido: a restauração automática cancelava o próprio temporizador
+  ao entrar em `restore()`, podendo parar antes do comando 0 (depois do 18). O prazo vencido agora
+  limpa sua referência antes da restauração. A lista de comandos seguros permanece igual.
+- CI com etapa explícita de testes JVM; continua desativado por cobrança da conta.
+- Validação: 73 testes passando em `testDebugUnitTest`, `lintRelease` com 0 erros (105 avisos)
+  e `assembleDebug` concluído; sem teste de emulador ou carro nesta etapa.
+  Exemplos de notificação reutilizados do simulador/testes, sem alegar capturas reais do carro.
+- Sem novo APK de release ou alteração da versão 0.3.0.
+
 ## 0.3.0 — 2026-10-22 — interface no estilo do SealNav
 
 APK `PainelLivre-v0.3.0-release.apk`, SHA-256 `2d6221c0ef8715bcbf90ee140c9fb2ea1cdd37beae5a1b499cbfd6a80c71b236`.

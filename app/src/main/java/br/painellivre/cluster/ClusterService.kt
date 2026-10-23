@@ -17,7 +17,6 @@ import br.painellivre.nav.NavSimulator
 import br.painellivre.ui.LauncherActivity
 import br.painellivre.util.AppLog
 import br.painellivre.util.Prefs
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,7 +48,7 @@ class ClusterService : LifecycleService() {
     private lateinit var prefs: Prefs
     private lateinit var controller: ClusterController
     private val op = Mutex()
-    private var restoreJob: Job? = null
+    private lateinit var automation: PanelAutomation
     private var lastAutoAttempt = 0L
     private val yieldPolicy = YieldPolicy()
 
@@ -67,25 +66,24 @@ class ClusterService : LifecycleService() {
             AppLog.i("ADB local: ${if (r is SelfAdb.Result.Ok) "pronto" else (r as SelfAdb.Result.Error).message}")
         }
 
+        automation = PanelAutomation(
+            scope = lifecycleScope,
+            mode = { prefs.clusterMode },
+            restoreDelaySec = { prefs.restoreDelaySec },
+            isActive = { _status.value is ClusterStatus.Active },
+            prepareNavigation = { yieldPolicy.reset(); adbReady.join() },
+            show = { adbReady.join(); autoShow() },
+            restore = {
+                AppLog.i("Rota terminou há ${prefs.restoreDelaySec}s — devolvendo o painel original")
+                restore()
+            },
+        )
         lifecycleScope.launch {
             NavRepository.state.distinctUntilChangedBy { it.active }.collect { s ->
-                if (prefs.clusterMode != "nav") return@collect
-                if (s.active) {
-                    restoreJob?.cancel()
-                    yieldPolicy.reset() // rota nova: o motorista quer o mapa
-                    adbReady.join()
-                    if (_status.value !is ClusterStatus.Active) autoShow()
-                } else if (_status.value is ClusterStatus.Active) {
-                    restoreJob?.cancel()
-                    restoreJob = launch {
-                        delay(prefs.restoreDelaySec * 1000L)
-                        AppLog.i("Rota terminou há ${prefs.restoreDelaySec}s — devolvendo o painel original")
-                        restore()
-                    }
-                }
+                automation.onNavigation(s.active)
             }
         }
-        if (prefs.clusterMode == "always") lifecycleScope.launch { adbReady.join(); autoShow() }
+        if (prefs.clusterMode == "always") lifecycleScope.launch { automation.onStart() }
 
         lifecycleScope.launch {
             coverEvents.collect {
@@ -167,7 +165,7 @@ class ClusterService : LifecycleService() {
     }
 
     private suspend fun restore() = op.withLock {
-        restoreJob?.cancel()
+        automation.cancelRestore()
         _status.value = ClusterStatus.Working
         controller.restore()
         _status.value = ClusterStatus.Idle

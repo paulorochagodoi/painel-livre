@@ -95,6 +95,7 @@ dependencies {
     // comandos como uid 2000 (shell) — mesmo caminho usado pelo DashCast e pelo SealNav.
     implementation("dev.mobile:dadb:2.0.0")
 
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303") // org.json de verdade nos testes da JVM (o do Android é stub)
 }

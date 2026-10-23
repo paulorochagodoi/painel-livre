@@ -39,6 +39,8 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | | `ClusterService.kt` | Serviço em primeiro plano: GPS, liga o painel quando a rota começa (modo `nav`), devolve o original depois de `restore_delay` s, vigia de 15 s que reabre a tela, convivência com outros apps, ações `SHOW/RESTORE/LAUNCH_ONLY/RELAUNCH/SIMULATE`, `status: StateFlow<ClusterStatus>` |
 | | `ClusterActivity.kt` | Tela do painel: MapLibre (OpenFreeMap), carro como View fixa no ponto focal, câmera por quadro (Choreographer + `PoseSmoother`), limite de fps (`setMaximumFps`), vigia (`FreezeWatch`), cartões da manobra e da chegada, tema dia/noite, sai se cair no display 0, avisa o serviço quando é coberta |
 | | `ClusterPreviewActivity.kt` | Mesma tela na central (toque fecha), para testar sem o painel |
+| | `PanelMenu.kt` | **Kotlin puro.** Menu de navegação do painel (issue #9): valor → modo (1 OFF, 2 Simples, 3 Pequeno, 4 Cheio), desenho de cada modo, `Follower` (2 leituras iguais, volta ao normal após falhas), só getters no debug |
+| | `PanelMenuWatcher.kt` | Lê o modo enquanto a tela do painel está aberta (se "Seguir o menu" estiver ligado) e `PanelMenuFrame`, a moldura que reposiciona/cobre o conteúdo da `ClusterActivity` |
 | | `PoseSmoother.kt` | **Kotlin puro.** Posição/rumo do carro entre fixes do GPS (segue em frente ≤1,5 s, corrige em 0,6 s, salto >150 m, parado ignora <8 m) |
 | | `FreezeWatch.kt` | **Kotlin puro.** Escada do vigia (`FreezeWatch`), limite por janela (`Budget`) e `YieldPolicy` |
 | | `ManeuverView.kt` | Desenha a seta (bitmap do Maps/Waze recolorido, ou vetor por `Maneuver`) |
@@ -54,6 +56,10 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | | `MediaRepository.kt` | Sessão de mídia ativa (`MediaSessionManager`, usa o acesso às notificações) e controles |
 | `phone` | `DialNumber.kt` | **Kotlin puro.** `DialNumber` (teclas aceitas, limpeza, formato brasileiro, `tel:` com `#` escapado), `CallPlan` (ordem de tentativas para ligar e quando pedir `CALL_PHONE`), `PhoneApps` (acha o app de telefone/Bluetooth do carro) |
 | `car` | `VehicleData.kt` | Leitura por reflexão de `BYDAutoStatisticDevice` (bateria, autonomias, hodômetro). Só leitura |
+| | `InstrumentSdk.kt` | Leitura por reflexão de `BYDAutoInstrumentDevice`: `INSTRUMENT_NAVI_TYPE` pelo `get(device, feature)` e getters candidatos do debug. Só leitura |
+| `debug` | `DebugLog.kt` | **Kotlin puro.** `DebugBuffer`: registro do modo de debug (3000 linhas, horário, origem), só grava ligado |
+| | `Probe.kt` | **Kotlin puro.** `ProbeParse` (seções do comando de coleta, `settings list`, `getprop`, histórico de broadcasts, candidatos ★, esconder números/MAC) e `ProbeTracker` (linha de base e só as novidades) |
+| | `DebugProbe.kt` | Coleta a cada 3 s (SDK + ADB só leitura + receptores), fotografia completa, liga/desliga pela preferência |
 | `location` | `LocationRepository.kt` | GPS da central (`LocationManager`), mantém o rumo quando parado, injeção só em debug |
 | `ui` | `LauncherActivity.kt` | Cockpit: barra de cima, carro, cartões, abas (Início, Navegação, Apps; Mídia/Telefone/Ajustes abrem outra tela), lista de lugares, mapa da aba Navegação, aviso de configuração; toque no tempo abre a previsão; `onNewIntent` com `HOME` volta à aba Início |
 | | `DialerActivity.kt` | Discador interno (aba Telefone): teclado, Rediscar, App do carro; liga pela ordem de `CallPlan` e passa ao próximo caminho se a central recusar |
@@ -62,6 +68,7 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | | `cockpit/CockpitArt.kt` | Fundo "estúdio" e ilustração do SUV, desenhados em código |
 | | `cockpit/WeatherIconDrawable.kt` | Ícone do tempo desenhado em código |
 | | `SettingsActivity.kt` | `PreferenceFragmentCompat` (`res/xml/preferences.xml`) + ações (foto do carro, simular, conceder, diagnóstico, tela inicial) |
+| | `DebugActivity.kt` | Tela do modo de debug: marcar a opção do painel, testar desenho, fotografia, escutar ação, copiar/compartilhar/salvar |
 | | `DiagnosticsActivity.kt` | Info da central (getprop, displays, AutoContainer), tamanho do painel, fps, log, copiar |
 | | `AppsAdapter.kt` | Grade de apps |
 | `util` | `Prefs.kt` | Preferências tipadas (chaves abaixo) |
@@ -158,11 +165,14 @@ Frações da altura `h` e largura `w` do display (1920×720 no Song Plus), dentr
 | `start_on_boot` | `true` | sobe o serviço no boot |
 | `nav_app` | `maps` | `maps` ou `waze` (busca, Casa/Trabalho) |
 | `car_photo` | — | URI da foto do carro (no lugar da ilustração) |
+| `panel_menu_follow` | `false` | seguir o menu de navegação do painel (issue #9, experimental) |
+| `debug_mode` | `false` | modo de debug (issue #9) |
+| `debug_actions` | — | ações de broadcast extras que o debug escuta |
 | internas | — | `projection_powered`, `panel_geometry`, `last_boot_at`, `autocontainer_service_name`, `original_home_component`, `place_home`, `place_work`, `place_recents` |
 
 ## Testes
 
-`app/src/test` tem **99 testes JVM** (41 da v0.3.0 + 32 da issue #1 + 26 das issues #7/#3/#4), sem carro, emulador,
+`app/src/test` tem **138 testes JVM** (117 até a v0.4.1 + 21 da issue #9), sem carro, emulador,
 rede ou espera de tempo real. Execute com JDK 17:
 
 ```bash
@@ -181,6 +191,8 @@ rede ou espera de tempo real. Execute com JDK 17:
 | `CockpitTest` | Photon, tema e códigos do tempo |
 | `HomeChoiceTest` | saída do `resolve-activity` (nosso, BYD, seletor, erro), launcher original, resultado do `set-home-activity`, próximo passo, restauração, estado do alias e quando ligá-lo, alias HOME **desligado** no manifesto e nenhum outro componente com `HOME` |
 | `DialerTest` | teclado, limite, limpeza de número colado, mínimo de 3 dígitos, `tel:` com `#`, formato brasileiro, ordem dos caminhos de chamada (inclusive "nenhum app"), pedido de permissão e escolha do app do carro |
+| `PanelMenuTest` | valores do menu, constante do SDK x molde, desenho de cada modo, opcional/teste do debug, `Follower` (sem piscar, volta ao normal), só getters, nenhum código novo em `SAFE_COMMANDS` |
+| `DebugProbeTest` | registro desligado por padrão e limite, comando de coleta só leitura, seções, `settings`/`getprop`, diff, histórico de broadcasts, candidatos, linha de base e novidades, seções ausentes, esconder número/MAC |
 | `ForecastTest` | agora/horas/dias do Open-Meteo, buracos `null`, respostas ruins, rótulos em português, textos, URL com posição arredondada e limite de pedidos |
 
 `PanelAutomation` contém a decisão usada pelo `ClusterService`; as chamadas Android/ADB continuam
@@ -257,3 +269,36 @@ e `app/build/reports/lint-results-debug.html`. Ambiente JDK/SDK indicado pelo do
 cache/chave debug fora da área gravável, `GRADLE_USER_HOME=/tmp/painel-gradle` e
 `ANDROID_USER_HOME=/tmp/painel-cluster-android`, com `--no-daemon` no build/lint. APK debug usa chave
 temporária; nenhuma alteração em keystore/local.properties/configuração de assinatura release.
+
+## Menu do painel e modo de debug — issue #9 (não lançado, 2026-10-23)
+
+**Seguir o menu** (`panel_menu_follow`, desligado). Enquanto a `ClusterActivity` está visível,
+`PanelMenuWatcher` lê a cada 1,5 s `InstrumentSdk.naviType`: `BYDAutoInstrumentDevice.getInstance`,
+`getDevicetype()` (padrão 1007), a constante `BYDAutoFeatureIds$Instrument.INSTRUMENT_NAVI_TYPE` do
+próprio carro (se não for 0; senão 0x40C03032, medido pelo DiPlay na DiLink 5.0) e o getter genérico
+`get(int, int)`. O `Follower` só troca de modo depois de 2 leituras iguais e volta ao normal depois
+de 3 falhas seguidas. `PanelMenuFrame` envolve o conteúdo da tela (o `FrameLayout` com mapa e cartões):
+
+| Modo | Desenho |
+|---|---|
+| Cheio, desconhecido, erro, opção desligada | como sempre |
+| Pequeno | conteúdo com margens de 28% dos lados e 12% em cima/embaixo (hipótese: o painel mostra o meio) |
+| Simples | preto no lugar do mapa, cartões da manobra e da chegada, sem o carro |
+| OFF | tudo preto |
+
+O conteúdo muda de tamanho, então a própria tela recalcula cartões e câmera como numa mudança de
+display. O mapa continua desenhando por baixo do preto (o vigia não confunde com travamento). Nenhum
+comando vai ao AutoContainer: os códigos 17 (meia tela) e 39 (navegação simples) seguem fora de
+`SAFE_COMMANDS`. Não usamos `service call autoservice 5 …` porque o número da transação depende da
+firmware.
+
+**Modo de debug** (`debug_mode`, desligado). `App.onCreate` e a chave em Ajustes chamam
+`DebugProbe.sync`. Ligado, a cada 3 s: getters candidatos do SDK do painel (`PanelMenu.DEBUG_GETTERS`,
+só `get…` sem parâmetro) e `INSTRUMENT_NAVI_TYPE`; pelo ADB local um comando só de leitura
+(`ProbeParse.COLLECT_COMMAND`: `settings list` ×3, `getprop`, resumo de `dumpsys activity broadcasts
+history`, `logcat -d` filtrado) cujo resultado passa pelo `ProbeTracker` (a primeira coleta vira linha
+de base; depois só o que mudou, com ★ nos candidatos). Receptores para as ações já documentadas
+(`AUTONAVI_STANDARD_BROADCAST_*`, `byd.intent.action.*`, `com.telenav.action.nav.status`) e as
+digitadas pelo motorista mostram os extras. Sem ADB, só o SDK continua e o ADB é tentado a cada 30 s;
+a coleta pelo ADB para em 30 min (Retomar na tela). Registro separado do `AppLog` (`DebugLog`), também
+usado pelo telefone (issue #15). A fotografia completa esconde números de telefone e MACs.

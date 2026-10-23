@@ -89,34 +89,41 @@ Pendências: primeiro teste real, capturas das novas preferências no emulador, 
 apps externos, SDK real e ajudante uid 2000. Não houve acesso ao carro, escrita CAN/SDK, mudança de
 manifesto, launcher, telefone/clima, assinatura, versão ou publicação nesta etapa.
 
-## Issue #9 — estudo do menu nativo, sem implementação (2026-10-23)
+## Issue #9 — menu de navegação do painel e modo de debug (2026-10-23, não lançado)
 
-Relato e hipóteses em `ENGENHARIA_REVERSA.md`, §6. Não há vínculo confirmado do menu
-Simples/Pequeno/Cheio/OFF com property, setting, broadcast ou comando AutoContainer.
-Nenhuma mudança de código ou execução no carro nesta etapa; testes/build/lint não repetidos
-porque a alteração é apenas documental.
+Estudo em `ENGENHARIA_REVERSA.md`, §6; implementação em `ARQUITETURA.md`, "Menu do painel e modo de
+debug". Feito: **modo de debug** (desligado por padrão) e **seguir o menu** (experimental, desligado),
+que lê `INSTRUMENT_NAVI_TYPE` só pelo SDK (getter, por nome) e muda apenas o desenho da nossa tela.
+Validação: 138 testes JVM, `lintRelease` 0 erros, `assembleDebug`. **Nada testado no carro.**
 
-Roteiro futuro, pelo dono, com carro parado e acesso ao carro previamente combinado:
+Hipóteses que o carro decide: (a) a DiLink 3 tem o registrador e o app consegue lê-lo pelo uid
+dele; (b) 1 = OFF, 2 = Simples, 3 = Pequeno, 4 = Cheio; (c) no Pequeno o painel mostra o meio da
+imagem; (d) existe algum aviso (setting, propriedade, broadcast, log) quando a opção muda.
 
-1. Registrar a opção inicial, app/versão, `panel_content`, modo automático/manual e outros apps de
-   projeção ativos. Comparar as quatro opções primeiro sem projeção de terceiros ativa; ausência
-   de Amap compatível impede concluir se o menu funciona na integração OEM.
-2. Repetir separadamente com mapa integrado e navegador experimental, mantendo as demais condições.
-   Comparar mudar o menu antes de ativar e durante a projeção. Registrar imagem, horário e Log do app:
-   a ativação pode sobrepor uma escolha que funcionava antes. Ao fim, restaurar a opção inicial.
-3. Com coleta somente leitura autorizada, comparar `getprop sys.screen.current.mode`,
-   `settings list system`, `settings list secure`, `settings list global`, `dumpsys display`,
-   `dumpsys activity activities` e logcat nos mesmos instantes. Comparar localmente os settings e
-   compartilhar só diferenças relevantes, sem identificadores pessoais. Ausência de diferença não
-   descarta estado interno do Qt/MCU; correlacionar mudanças não prova sua função.
-4. Conferir qual pacote/Activity está retomado em cada display. Para investigar espelhamento, mudar
-   apenas a tela visível na central enquanto o painel está ativo e observar se o painel acompanha.
-   Separar cópia da tela, mapa próprio e tarefa do navegador movida; não assumir pelo visual parecido.
-   Registrar também o efeito de Painel original (18 → 0), sem inventar comandos de teste.
+Checklist no carro (carro parado, dono fazendo; só leitura):
 
-Não usar `setprop`, `settings put`, broadcasts adivinhados, escrita SDK/CAN ou novos códigos de
-AutoContainer. O objetivo é identificar o mecanismo e eventual interferência em #2/#5, não controlar
-o menu pela aplicação.
+1. Ajustes → Testes e ajuda → ligar **Modo de debug**; Conceder permissões pelo ADB (para o SDK do
+   painel e o ADB local). Abrir **Abrir o registro do debug**: deve aparecer "linha de base gravada".
+   Se aparecer "sem ADB", aceitar "Permitir depuração USB" e esperar 30 s.
+2. Tocar em **Fotografia completa** e conferir se aparecem `com.example.amapservice` ou outro pacote
+   Amap/AutoNavi, os serviços `autoservice`/instrument e quem escuta broadcasts de navegação.
+3. Sem projeção ativa: no painel (botões do volante), trocar a opção para **Simples**; na central,
+   tocar em **Simples** (marca no registro). Esperar ~6 s. Repetir para Pequeno, Cheio e OFF, e
+   voltar à opção inicial. Repetir tudo com o mapa do Painel Livre no painel (Simular rota).
+4. Ver o que apareceu entre as marcas: linha `[sdk] INSTRUMENT_NAVI_TYPE = …` (e se muda), `[sdk]`
+   de outros getters, `★` em settings/propriedades/broadcasts/logcat. Se o SDK der "permissão BYD
+   recusada", anotar (vai para o ajudante uid 2000). **Copiar** ou **Salvar arquivo** e mandar.
+5. Se um broadcast novo aparecer só com o nome, tocar em **Escutar ação…**, colar o nome e repetir o
+   passo 3 para ver os extras.
+6. Só se o passo 4 mostrar o `INSTRUMENT_NAVI_TYPE` mudando com 1/2/3/4: ligar **Seguir o menu de
+   navegação do painel**, ativar o painel e trocar as opções. Cheio = como sempre; Pequeno = mapa no
+   meio (conferir se fica visível ou se o painel corta outro pedaço — anotar qual); Simples = só os
+   cartões; OFF = preto. Os botões **Testar desenho** fazem o mesmo sem depender da leitura.
+7. Desligar o modo de debug no fim (ele para o ADB sozinho em 30 min, mas o SDK segue lendo).
+
+Não fazer: `service call autoservice …` à mão sem antes confirmar o número da transação na DiLink 3
+(pode ser um setter nesta firmware), `setprop`, `settings put`, broadcasts adivinhados, códigos 17/39
+no AutoContainer. Se o carro confirmar outro mapeamento, ajustar `PanelMenu.modeOf` e o teste.
 
 ## Fase 1 — Primeiro teste no carro
 

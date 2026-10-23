@@ -193,3 +193,17 @@ experimental tenta-se mover a tarefa Maps/Waze. O menu não fornece a geometria 
 A ativação ao pedir destino (#2) e a escolha de conteúdo (#5) continuam separadas desse menu.
 Não implementar sincronização, interpretar OFF como veto global ou experimentar códigos/registradores
 com base só nos rótulos. Teste observacional proposto em `PLANO.md`, seção da issue #9.
+
+**Atualização (2026-10-23, implementação da issue #9).** Referências públicas na issue #9: DiPlay
+(`BYD_NAVIGATION.md`) mediu `INSTRUMENT_NAVI_TYPE` no `autoservice` (device 1007, feature
+0x40C03032; 1 Off, 2 "Turn on by navi", 3 Small, 4 Full; escrita `INSTRUMENT_NAVI_TYPE_SET` 0x4C10A018)
+num Tang DiLink 5.0, e diz que a DiLink 3 não informa o modo; no Small o painel corta a imagem sem o
+Android saber; na DiLink 3 o adaptador do Amap é `com.example.amapservice`. O byd-dolphin-hacking lista
+`sendInfo` 17 = meia tela e 39 = navegação simples. Nos moldes do SDK do BYD Navigator
+(`BYDAutoInstrumentDevice`) há getters sem parâmetro que podem ter relação com o menu, todos sem
+significado confirmado: `getInstrumentView`, `getViewStatus`, `getFirstMenu`, `getSecondMenu`,
+`get2in1MenuState`, `getCurrentDriveInterFace`, `getInstrumentScreenType`, `getNaviDestinationCommand`,
+além do genérico `AbsBYDAutoDevice.get(int, int)`. Os moldes não trazem os números de transação do
+Binder (`IBYDAutoDevice`/`autoservice`): por isso o app lê pelo nome do método, nunca por
+`service call`. O modo de debug registra esses getters e qualquer mudança em settings, propriedades,
+broadcasts e logcat enquanto o motorista troca a opção — é a coleta que falta para fechar o §6.

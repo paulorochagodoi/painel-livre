@@ -8,8 +8,8 @@ package br.painellivre.cluster
  * (device 1007, feature 0x40C03032), medido primeiro pelo DiPlay num Tang com DiLink 5.0.
  * **Confirmado no carro (Song Plus, DiLink 3.0, Android 10, 2026-10-23)**: trocando o menu do painel,
  * `service call autoservice 5 i32 1007 i32 1086337074` respondeu 1 = OFF, 2 = Simples, 3 = Pequeno,
- * 4 = Cheio; erro/indisponível veio como 0xffffd8e5. Seguir o menu continua opcional (desligado por
- * padrão) e qualquer leitura estranha cai no comportamento de sempre (mapa em tela cheia).
+ * 4 = Cheio; erro/indisponível veio como 0xffffd8e5. Seguir o menu vem ligado por
+ * padrão e qualquer leitura estranha cai no comportamento de sempre (mapa em tela cheia).
  *
  * Só leitura: o app nunca escreve `INSTRUMENT_NAVI_TYPE_SET` (nem a transação 6, o set do
  * `autoservice`) e não manda códigos novos ao AutoContainer (17 = meia tela e 39 = navegação simples
@@ -114,7 +114,7 @@ object PanelMenu {
      * Pequeno: o DiPlay viu o painel cortar a imagem sem o Android saber. Hipótese até o carro
      * confirmar: sobra o meio, entre os mostradores. Então o mapa e os cartões vão para o centro.
      */
-    val SMALL_LAYOUT = Layout(left = 0.28f, top = 0.12f, right = 0.28f, bottom = 0.12f)
+    val SMALL_LAYOUT = Layout(left = 0.28f, top = 0.257f, right = 0.28f, bottom = 0.264f)
 
     fun layoutFor(mode: Mode): Layout = when (mode) {
         Mode.FULL, Mode.UNKNOWN -> NORMAL
@@ -125,9 +125,23 @@ object PanelMenu {
         Mode.OFF -> Layout(showMap = false, showCards = false, showCar = false)
     }
 
-    /** Teste do debug (override) > leitura estável (se seguir o menu) > de sempre. */
-    fun effective(follow: Boolean, override: Mode?, stable: Mode): Mode =
-        override ?: if (follow) stable else Mode.UNKNOWN
+    /** Teste do debug > escolha manual > leitura estável (se seguir o menu) > de sempre. */
+    fun effective(follow: Boolean, override: Mode?, stable: Mode, manual: Mode? = null): Mode =
+        override ?: manual?.takeUnless { it == Mode.UNKNOWN } ?: if (follow) stable else Mode.UNKNOWN
+
+    fun manualMode(value: String?): Mode? = when (value) {
+        "full" -> Mode.FULL
+        "small" -> Mode.SMALL
+        "simple" -> Mode.SIMPLE
+        "off" -> Mode.OFF
+        else -> null
+    }
+
+    /** Cálculo compartilhado com a moldura; dimensão zero aguarda o primeiro layout. */
+    fun bounds(w: Int, h: Int, layout: Layout): SafeArea.Rect? =
+        if (w <= 0 || h <= 0) null else SafeArea.Rect(
+            (w * layout.left).toInt(), (h * layout.top).toInt(),
+            w - (w * layout.right).toInt(), h - (h * layout.bottom).toInt())
 
     /**
      * Getters do painel lidos no debug, por nome (nunca por número de transação). Candidatos do SDK

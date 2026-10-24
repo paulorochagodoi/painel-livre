@@ -549,3 +549,10 @@ simuladas nos temas claro e escuro, inspecionadas visualmente:
 `docs/telas/aura-r4-painel-claro-cheio.png` e `aura-r4-painel-escuro-cheio.png`.
 Preferências originais restauradas. Telemetria posicionada nos dois layouts coberta na JVM;
 não houve teste no carro nesta rodada.
+
+### Conferência pendente — 0.5.4
+
+- No carro: conferir cartões compactos (Área segura desligada), os quatro modos do menu e o
+  seletor manual em Ajustes; obter AppLog com bruto/origem/erro e desenhos aplicados.
+- Comandos enviam ao tocar; chaves com evidência ligadas por migração única. Conferir uma função
+  por vez no carro parado; hipóteses continuam bloqueadas. Não houve acesso ao carro nesta etapa.

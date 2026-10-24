@@ -229,3 +229,67 @@ simuladas nos temas claro e escuro, inspecionadas visualmente:
 `docs/telas/aura-r4-painel-claro-cheio.png` e `aura-r4-painel-escuro-cheio.png`.
 Preferências originais restauradas. Telemetria posicionada nos dois layouts coberta na JVM;
 não houve teste no carro nesta rodada.
+
+## Correções 0.5.4 — foto do Song Plus e menu do painel
+
+A foto `foto-painel-0.5.3.jpg` mostrou a manobra sobre o relógio/HEV/D/NORMAL/RDS e a chegada
+cortada à esquerda. Geometria estimada em 1920×720: topo nativo até y 170, borda curva x < 120,
+ícones esquerdos x 100–180/y 520–580, base nativa desde y 540 e ícones direitos x 1800–1900/y 180–340.
+Com Área segura desligada (continua opt-in), `SafeArea.defaultPlan` posiciona a coluna em x 170/y 185,
+largura 590, manobra 110, espaço ~9 e chegada ~95. Telemetria abaixo dos cartões até y 493;
+aviso logo abaixo, antes de y 520. O foco fica em x 960/y 380, no centro visível.
+Tudo escala pelo display real. Área segura ligada preserva o cálculo e ajustes anteriores.
+Texto de rua compacto usa uma linha para caber; o mapa Cheio continua ocupando todo o display.
+
+### Causa do seletor e correção
+
+O histórico `4fa8f47` introduziu a leitura opcional em `feat/comandos-painel-debug`;
+`bac5aa0` acrescentou SDK → ADB (0.5.1), mas manteve o padrão false. O histórico da branch
+`feat/rota-nativa-painel` não continha os arquivos do menu naquela base; a rota nativa não era
+um leitor alternativo. No código 0.5.3, `PanelMenuWatcher.layouts` nem chamava o leitor com
+`panel_menu_follow=false`; `effective` devolvia UNKNOWN e `layoutFor` mantinha Cheio.
+Essa é a causa comprovada no código, sem afirmar qual evento chega hoje no carro.
+
+Agora a chave ausente vale true (XML também). Como o XML antigo gravava false mesmo sem escolha
+do usuário, a migração única `panel_menu_migration=1` liga também esse false. Depois da migração,
+desligamentos explícitos são respeitados.
+O observador roda enquanto ClusterActivity está STARTED, independentemente do debug e da rota.
+SDK negado usa o único comando ADB fixo conferido, somente API 29; a estabilização requer duas
+leituras iguais. Erros preservam temporariamente o último modo e depois voltam a Cheio.
+Cada leitura boa registra bruto, modo e origem no AppLog; falhas são registradas uma vez por
+mudança e incluem o motivo SDK/ADB. Toda troca de desenho é registrada, incluindo o primeiro.
+
+Ajustes → Tamanho do mapa no painel salva Seguir o painel (padrão), Cheio, Pequeno, Simples ou OFF.
+Prioridade: teste temporário do debug > escolha manual > leitura estável do painel.
+OFF cobre mapa e cartões; Simples cobre mapa e esconde carro; Pequeno reduz o conteúdo ao centro
+entre os mostradores; Cheio ocupa todo o display com as margens fixas dos cartões.
+`PanelMenu.bounds` extrai a geometria pura da moldura. Dimensões zero aguardam o primeiro layout;
+o listener já existente reaplica após medir. Mudança de tamanho do conteúdo recalcula cartões,
+carro e padding da câmera pelo listener de ClusterActivity. Nenhum código novo de AutoContainer.
+
+No carro, confirmar as quatro opções e a origem/bruto no Log do app, incluindo atualização de
+2 leituras (~2 s), ADB indisponível, escolha manual e retorno a Seguir; conferir cortes com nomes
+de rua longos, ETA com três campos, avisos/telemetria e Área segura ligada/desligada.
+As medidas vêm de foto, não de calibração física; prints do emulador não incluem a sobreposição BYD.
+
+### Validação e capturas da 0.5.4
+
+`JAVA_HOME=$HOME/.jdks/jdk-17.0.21+9 ANDROID_HOME=$HOME/Android/Sdk ./gradlew test lintDebug assembleDebug`:
+258 testes por variante (debug e release), zero falhas; lint com zero erros e 81 avisos.
+Regressões novas: `Panel054Test` (geometria/moldura/modos/prioridade), `PrefsTest` (migrações,
+padrões e desligamentos posteriores), `CarCommandsTest` (toque direto e todas as hipóteses
+bloqueadas). Testes existentes de leitor SDK negado → ADB, estabilização, P, limites, frequência,
+log e releitura também executados. Nenhum teste no carro.
+
+Capturas em `emulator-5580`, display 0 com `wm size 1920x720`, `ClusterPreviewActivity` e
+simulação de navegação; escolha manual persistente exercita o mesmo layout de cada modo:
+
+- `docs/telas/aura-054-painel-cheio.png`
+- `docs/telas/aura-054-painel-pequeno.png`
+- `docs/telas/aura-054-painel-simples.png`
+- `docs/telas/aura-054-painel-off.png`
+- `docs/telas/aura-054-comandos.png` (climatização sem telemetria inventada)
+
+Cópias em `/tmp/aura-054-prints/`. O sandbox não permite escrever em
+`/home/paulo/Documentos/REA-BYD/prints/aura/`; por isso a cópia nesse destino ficou pendente.
+Preferências do emulador usadas para os quatro modos foram restauradas após as capturas.

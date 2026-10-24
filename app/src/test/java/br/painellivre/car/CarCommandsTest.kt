@@ -103,6 +103,24 @@ class CarCommandsTest {
         assertEquals("Android relido",c.execute("media_play",1.0))
         assertTrue(p.sends.isEmpty())
     }
+    @Test fun toqueDiretoPassaPeloRuntimeSemConfirmacaoExtra() {
+        val root = listOf(File("src/main/java"), File("app/src/main/java")).first { it.exists() }
+        val ui = File(root, "br/painellivre/ui/LauncherActivity.kt").readText()
+        assertFalse(ui.contains("Enviar ao carro?"))
+        assertTrue(ui.contains("command(key, values[index])"))
+        assertTrue(ui.contains("CarCommandRuntime.execute"))
+        val runtime = File(root, "br/painellivre/car/CarCommandRuntime.kt").readText()
+        assertTrue(runtime.contains("commands.execute(key, value)"))
+        assertTrue(runtime.contains("AppLog.i(\"Comando"))
+    }
+    @Test fun todasAsHipotesesContinuamBloqueadasMesmoComChavesLigadas() = runBlocking {
+        val p = Fake(); val c = CarCommands(p)
+        for (spec in CarCommands.CATALOG.filter { !it.confirmed }) {
+            assertTrue(c.execute(spec.key, spec.min).contains("ainda não confirmado"))
+        }
+        assertTrue(p.sends.isEmpty())
+        assertEquals(CarCommands.CATALOG.count { !it.confirmed }, p.logs.size)
+    }
     @Test fun transactionSixExistsOnlyAtCommandBoundaryAndReadBatchStillRejectsIt() {
         val root = listOf(File("src/main/java"),File("app/src/main/java")).first { it.exists() }
         val sources = root.walkTopDown().filter { it.extension == "kt" && it.readText().contains("service call autoservice 6 ") }.toList()

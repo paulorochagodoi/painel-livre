@@ -7,7 +7,7 @@ import br.painellivre.cluster.SafeArea
 
 /** Acesso tipado às preferências (as chaves batem com res/xml/preferences.xml). */
 class Prefs internal constructor(private val sp: SharedPreferences) {
-    constructor(context: Context) : this(PreferenceManager.getDefaultSharedPreferences(context.applicationContext))
+    constructor(context: Context) : this(PreferenceManager.getDefaultSharedPreferences(context.applicationContext)) { migratePanelMenu(); migrateCommands() }
 
     /** "nav" = só durante a navegação, "always" = sempre, "manual" = só pelos botões. */
     val panelContent: String get() = sp.getString(KEY_PANEL_CONTENT, "integrated") ?: "integrated"
@@ -49,8 +49,30 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
 
     /** Modo de debug (issue #9): registra settings, propriedades e broadcasts. Desligado por padrão. */
     val debugMode: Boolean get() = sp.getBoolean(KEY_DEBUG_MODE, false)
-    /** Seguir o menu de navegação do painel (Simples/Pequeno/Cheio/OFF). Experimental, desligado. */
-    val panelMenuFollow: Boolean get() = sp.getBoolean(KEY_PANEL_MENU_FOLLOW, false)
+    /** Ausência da chave segue o painel; após a migração, desligamentos são respeitados. */
+    val panelMenuFollow: Boolean get() = sp.getBoolean(KEY_PANEL_MENU_FOLLOW, true)
+    val panelMenuManual: br.painellivre.cluster.PanelMenu.Mode?
+        get() = br.painellivre.cluster.PanelMenu.manualMode(sp.getString("panel_map_mode", "follow"))
+
+    /** O XML antigo gravava false também sem escolha do usuário; não é distinguível. */
+    internal fun migratePanelMenu() {
+        if (sp.getInt("panel_menu_migration", 0) >= 1) return
+        sp.edit().putBoolean(KEY_PANEL_MENU_FOLLOW, true).putInt("panel_menu_migration", 1).commit()
+    }
+
+    /** Migração única autorizada na 0.5.4. Desligamentos posteriores são preservados. */
+    internal fun migrateCommands() {
+        if (sp.getInt("car_commands_migration", 0) >= 1) return
+        val e = sp.edit().putBoolean("car_commands_enabled", true)
+        br.painellivre.car.CarCommands.CATALOG.forEach {
+            e.putBoolean("car_command_${it.key}", it.confirmed)
+        }
+        e.putInt("car_commands_migration", 1).commit()
+    }
+    val carCommandsEnabled: Boolean get() = sp.getBoolean("car_commands_enabled", true)
+    fun carCommandAllowed(key: String): Boolean =
+        br.painellivre.car.CarCommands.CATALOG.any { it.key == key && it.confirmed } &&
+            sp.getBoolean("car_command_$key", true)
     /** Ler dados do carro pelo `autoservice` via ADB local (issue #16). Experimental, desligado. */
     val telemetryEnabled: Boolean get() = sp.getBoolean(KEY_TELEMETRY, false)
     /** Aviso compacto no painel (porta aberta, carregando). Desligado por padrão. */

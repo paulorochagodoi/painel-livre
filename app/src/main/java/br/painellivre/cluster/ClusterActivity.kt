@@ -209,6 +209,10 @@ open class ClusterActivity : ComponentActivity() {
                     PanelMenuWatcher.layouts(this@ClusterActivity).collect {
                         menuFrame.apply(it)
                         carView.alpha = if (it.showCar) 1f else 0f
+                        // Simples mostra somente manobra/chegada, mesmo se os dados mudarem depois.
+                        telemetryCard.alpha = if (it.showMap) 1f else 0f
+                        statusText.alpha = if (it.showMap) 1f else 0f
+                        osmText.alpha = if (it.showMap) 1f else 0f
                     }
                 }
                 launch {
@@ -436,7 +440,9 @@ open class ClusterActivity : ComponentActivity() {
         val dw = displayFrame.width.takeIf { it > 0 } ?: w
         val dh = displayFrame.height.takeIf { it > 0 } ?: h
         val insets = SafeArea.effectiveInsets(prefs.safeAreaEnabled, dw, dh, safeBase, safeAdjust)
-        val p = SafeArea.plan(dw, dh, insets, SafeArea.Rect(root.left, root.top, root.left + w, root.top + h))
+        val content = SafeArea.Rect(root.left, root.top, root.left + w, root.top + h)
+        val p = if (prefs.safeAreaEnabled) SafeArea.plan(dw, dh, insets, content)
+            else SafeArea.defaultPlan(dw, dh, content)
         if (p != plan) AppLog.i("Área segura do painel ${dw}x$dh: margens $insets, carro em ${p.carX},${p.carY}")
         plan = p
         val safe = p.safe
@@ -447,19 +453,24 @@ open class ClusterActivity : ComponentActivity() {
             // Manobra colada na faixa de cima da BYD, na borda da área segura.
             leftMargin = safe.left; topMargin = safe.top
         }
-        tbtCard.layoutParams = LinearLayout.LayoutParams(ClusterLook.maneuverWidth(p), -2)
+        tbtCard.layoutParams = LinearLayout.LayoutParams(
+            if (p.compact) p.cardWidth else ClusterLook.maneuverWidth(p),
+            if (p.compact) (u * 0.25f).toInt() else -2)
         tbtCard.setPadding(pad, pad, (pad * 1.4f).toInt(), pad)
         val icon = px(ClusterLook.ICON_BOX).toInt()
         tbtIconBox.layoutParams = LinearLayout.LayoutParams(icon, icon).apply { marginEnd = (pad * 1.2f).toInt() }
         tbtIconBox.setPadding(pad, pad, pad, pad)
-        distanceText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(ClusterLook.DISTANCE))
-        instructionText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(ClusterLook.INSTRUCTION))
-        streetText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(ClusterLook.STREET))
+        distanceText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(if (p.compact) 0.073f else ClusterLook.DISTANCE))
+        instructionText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(if (p.compact) 0.030f else ClusterLook.INSTRUCTION))
+        streetText.maxLines = if (p.compact) 1 else 2
+        streetText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(if (p.compact) 0.042f else ClusterLook.STREET))
 
-        etaCard.layoutParams = LinearLayout.LayoutParams(-2, -2).apply { topMargin = px(0.025f).toInt() }
+        etaCard.layoutParams = LinearLayout.LayoutParams(if (p.compact) p.cardWidth else -2,
+            if (p.compact) px(0.215f).toInt() else -2).apply { topMargin = px(if (p.compact) 0.02f else 0.025f).toInt() }
         etaCard.setPadding((pad * 1.2f).toInt(), (pad * 0.8f).toInt(), (pad * 1.2f).toInt(), (pad * 0.8f).toInt())
         etaCard.children().forEachIndexed { i, col ->
-            col.layoutParams = LinearLayout.LayoutParams(-2, -2).apply { if (i > 0) marginStart = (pad * 1.6f).toInt() }
+            col.layoutParams = LinearLayout.LayoutParams(if (p.compact) 0 else -2, -2,
+                if (p.compact) 1f else 0f).apply { if (i > 0) marginStart = (pad * 1.6f).toInt() }
         }
         etaLabels.forEach { it?.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(ClusterLook.ETA_LABEL)) }
         etaValues.forEach { it?.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(ClusterLook.ETA_VALUE)) }
@@ -475,8 +486,11 @@ open class ClusterActivity : ComponentActivity() {
         telemetryText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(ClusterLook.TELEMETRY))
 
         // Aviso centralizado na área segura (as margens laterais entram no centro do FrameLayout).
-        statusText.layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.CENTER_HORIZONTAL or Gravity.TOP).apply {
-            leftMargin = safe.left; rightMargin = w - safe.right; topMargin = safe.top + pad
+        statusText.layoutParams = FrameLayout.LayoutParams(if (p.compact) p.statusBounds.width else -2,
+            if (p.compact) p.statusBounds.height else -2,
+            (if (p.compact) Gravity.START else Gravity.CENTER_HORIZONTAL) or Gravity.TOP).apply {
+            leftMargin = safe.left; rightMargin = if (p.compact) w - safe.left - p.cardWidth else w - safe.right
+            topMargin = if (p.compact) p.statusBounds.top else safe.top + pad
         }
         statusText.setPadding(pad, pad / 2, pad, pad / 2)
         statusText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(ClusterLook.STATUS))

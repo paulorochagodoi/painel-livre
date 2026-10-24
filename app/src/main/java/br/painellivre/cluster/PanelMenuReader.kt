@@ -23,6 +23,7 @@ class PanelMenuReader(
     private val retryMs: Long = 5_000,
 ) {
     private var sdkDenied = false
+    private var sdkFailure = ""
     private var adbPauseUntil = 0L
     private var lastAdbFailure: InstrumentSdk.Reading? = null
 
@@ -32,10 +33,11 @@ class PanelMenuReader(
             if (!r.denied) return r
             if (!adbAllowed) return r
             sdkDenied = true
+            sdkFailure = r.error ?: "permissão SDK recusada"
         }
         // ADB fora do ar (chave recusada, porta fechada): não insiste a cada segundo.
         lastAdbFailure?.let { if (clock() < adbPauseUntil) return it }
-        val r = when (val out = adb(PanelMenu.ADB_READ_COMMAND)) {
+        val adbReading = when (val out = adb(PanelMenu.ADB_READ_COMMAND)) {
             is SelfAdb.Result.Error -> InstrumentSdk.Reading(null, "ADB: ${out.message}", "", source = "ADB")
 
             is SelfAdb.Result.Ok -> {
@@ -44,6 +46,8 @@ class PanelMenuReader(
                 InstrumentSdk.Reading(p.raw, p.error, "ADB uid 2000, transação ${PanelMenu.GET_TRANSACTION}", source = "ADB")
             }
         }
+        val r = adbReading.copy(detail = "SDK: $sdkFailure; ${adbReading.detail}",
+            error = adbReading.error?.let { "SDK: $sdkFailure; $it" })
         // Falha do shell, serviço ausente e Parcel inválido também precisam de pausa.
         lastAdbFailure = r.takeIf { it.error != null }
         if (lastAdbFailure != null) adbPauseUntil = clock() + retryMs

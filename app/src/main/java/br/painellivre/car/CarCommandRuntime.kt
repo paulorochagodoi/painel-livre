@@ -4,7 +4,6 @@ import android.content.Context
 import android.media.AudioManager
 import android.os.Build
 import android.os.SystemClock
-import androidx.preference.PreferenceManager
 import br.painellivre.adb.SelfAdb
 import br.painellivre.info.MediaRepository
 import br.painellivre.util.AppLog
@@ -19,10 +18,10 @@ object CarCommandRuntime {
     private var engine: CarCommands? = null
     suspend fun execute(ctx: Context, key: String, value: Double): String = mutex.withLock {
         val app = ctx.applicationContext
+        val settings = br.painellivre.util.Prefs(app)
         val commands = engine ?: CarCommands(object : CarCommands.Port {
-            private val prefs get() = PreferenceManager.getDefaultSharedPreferences(app)
-            override fun enabled() = prefs.getBoolean(ENABLED, false)
-            override fun allowed(key: String) = prefs.getBoolean("car_command_$key", false)
+            override fun enabled() = settings.carCommandsEnabled
+            override fun allowed(key: String) = settings.carCommandAllowed(key)
             override fun now() = SystemClock.elapsedRealtime()
             override suspend fun gear(): CarCommands.Gear {
                 if (VehicleTelemetry.simulated != null) return CarCommands.Gear(null, false, false)

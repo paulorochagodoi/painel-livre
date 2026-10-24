@@ -1,7 +1,7 @@
 # Comandos ao carro — interface Aura
 
-2026-10-23. A decisão do Paulo nesta rodada autoriza implementar escrita com controles fechados e
-interruptores desligados por padrão. **Nenhuma escrita foi executada no carro nesta rodada.**
+2026-10-24, v0.5.4. A decisão do Paulo autoriza enviar diretamente ao tocar no valor, sem
+diálogo adicional de confirmação. Chave geral e funções com evidência vêm ligadas por padrão. **Nenhuma escrita foi executada no carro nesta rodada.**
 Confirmação no código de referência não significa confirmação na firmware do Song Plus do dono.
 
 ## Transporte e fronteira de segurança
@@ -96,3 +96,20 @@ Não igualar automaticamente valor SET ao GET, principalmente AUTO (1/2 no SET).
 Antes de considerar comprovado no Song Plus, Paulo deve validar um comando por vez com carro parado,
 comparar no controle original e capturar GET antes/depois. O roteiro completo fica em PLANO.md.
 Nenhuma verificação foi feita no IP do carro nesta rodada.
+
+## Preferências na 0.5.4
+
+`Prefs.migrateCommands` grava `car_commands_migration=1` em uma única edição junto das chaves:
+`car_commands_enabled=true` e `car_command_<chave>=confirmed` do catálogo fechado. Isso também
+liga os antigos padrões desligados na atualização, conforme pedido do dono. A migração roda antes
+de carregar Ajustes e antes de executar comandos/abrir a lista de funções no Diagnóstico.
+Depois dela, desligar uma chave é respeitado nas próximas aberturas. Hipóteses recebem false e
+não podem ser habilitadas pelo runtime, mesmo que alguém altere a preferência externamente.
+
+A escolha do valor na climatização permanece; o diálogo “Enviar ao carro?” foi removido.
+O toque passa por `CarCommandRuntime` (fila única) e `CarCommands`: whitelist, limites inteiros,
+intervalo mínimo de 1000 ms, ambiente e chaves conferidos antes do envio. Partes móveis exigem P
+real e recente; bancos, vidros, teto, porta-malas e rádio BYD continuam bloqueados.
+Cada tentativa/envio/resultado entra no AppLog e o estado é relido sem repetir um envio inconclusivo.
+Os testes JVM cobrem migração e desligamento posterior, hipóteses, limites, P, frequência, log,
+releitura e o caminho da interface ao runtime. Emulador não comprova comportamento na firmware BYD.

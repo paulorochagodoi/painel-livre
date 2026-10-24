@@ -109,9 +109,16 @@ object SafeArea {
         val unit: Float,
         /** Largura do cartão da manobra: não passa do carro. */
         val cardWidth: Int,
+        val compact: Boolean = false,
     ) {
-        /** Aviso de telemetria no canto superior direito, limitado pela área segura. */
+        /** Aviso curto abaixo da telemetria no layout compacto. */
+        val statusBounds: Rect get() = Rect(safe.left, safe.top + (unit * 0.705f).roundToInt(),
+            safe.left + cardWidth, safe.top + (unit * 0.755f).roundToInt())
+
+        /** Telemetria abaixo dos cartões compactos; canto superior direito com Área segura ligada. */
         val telemetryBounds: Rect get() {
+            if (compact) return Rect(safe.left, safe.top + (unit * 0.50f).roundToInt(),
+                safe.left + cardWidth, safe.top + (unit * 0.70f).roundToInt())
             val width = cardWidth.coerceIn(1, safe.width)
             val height = (unit * 0.20f).roundToInt().coerceIn(1, safe.height)
             return Rect(safe.right - width, safe.top, safe.right, safe.top + height)
@@ -142,6 +149,27 @@ object SafeArea {
             .coerceAtLeast(min(safe.width, (unit * 0.5f).roundToInt()))
         return Plan(safe, carX, carY, focusPadding(cw, ch, carX, carY), unit, cardWidth)
     }
+
+    /** Geometria fixa da foto 0.5.3; independente dos ajustes opcionais da Área segura.
+     * Os cartões ficam em x 170–760, y 185–493; foco no centro visível, y 380.
+     */
+    fun defaultPlan(displayW: Int, displayH: Int, content: Rect): Plan {
+        val insets = resolve(displayW, displayH, Insets(170, 185, 170, 200), NONE)
+        val p = plan(displayW, displayH, insets, content)
+        val u = min(440f * displayH / REF_H, min(p.safe.height / 0.75f, p.safe.width / 1.4f))
+        val width = min((590f * displayW / REF_W).roundToInt(),
+            p.carX - p.safe.left - (u * 0.10f).roundToInt()).coerceIn(1, p.safe.width)
+        val y = (380f * displayH / REF_H).roundToInt() - content.top
+        return p.copy(carY = y.coerceIn(p.safe.top, p.safe.bottom), unit = u, cardWidth = width,
+            compact = true, cameraPadding = focusPadding(content.width, content.height, p.carX, y))
+    }
+
+    /** Retângulos usados pela interface compacta, em coordenadas do conteúdo. */
+    fun cardBounds(p: Plan): List<Rect> = listOf(
+        Rect(p.safe.left, p.safe.top, p.safe.left + p.cardWidth, p.safe.top + (p.unit * 0.25f).roundToInt()),
+        Rect(p.safe.left, p.safe.top + (p.unit * 0.27f).roundToInt(),
+            p.safe.left + p.cardWidth, p.safe.top + (p.unit * 0.485f).roundToInt()),
+        p.telemetryBounds, p.statusBounds)
 
     /** Tamanho do carro em [Plan.unit]. */
     const val CAR_SIZE = 0.12f

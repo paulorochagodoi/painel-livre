@@ -4,6 +4,27 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
+## [0.5.4] — 2026-10-24 (teste)
+
+- Painel: cartões compactos na coluna x 170–760/y 185–520 (referência 1920×720),
+  escalados pela resolução para evitar o topo, a base e as bordas curvas da BYD.
+  Foco do mapa em y 380. Área segura continua opcional, desligada e com cálculo anterior.
+- Seletor do mapa: a causa encontrada era o bloqueio de leitura por `panel_menu_follow=false`
+  no código e no XML, herdado da implementação experimental (#9). Ausência da chave agora
+  segue o painel; migração única também liga o false antigo, indistinguível do padrão XML.
+  Desligamentos posteriores são respeitados. Ajustes oferece Seguir/Cheio/Pequeno/Simples/OFF,
+  com prioridade debug > manual > leitura estável. Moldura recalculada após medir a tela,
+  Pequeno entre os mostradores; leitura bem-sucedida e desenhos no AppLog sem exigir debug,
+  falhas uma vez por mudança. SDK negado continua usando somente o ADB aprovado no Android 10.
+- Comandos: toque no valor envia sem confirmação extra. Migração única liga chave geral e
+  funções com evidência, inclusive em atualização; desligamentos posteriores são respeitados.
+  Hipóteses seguem bloqueadas. Lista fechada, limites, 1 envio/s, P para partes móveis,
+  log e releitura preservados. Nenhum acesso ao carro nesta etapa.
+
+Validação local: `./gradlew test lintDebug assembleDebug`, 258 testes por variante (debug/release),
+zero falhas, lint zero erros e 81 avisos. Capturas `aura-054-*` em `docs/telas/`, emulador 5580;
+modos Cheio/Pequeno/Simples/OFF e climatização. Conferência física ainda pendente.
+
 ## [0.5.3] — 2026-10-23 (teste) — interface Aura na central e no painel
 
 - Rodada 4: “Área segura no painel” agora é opcional e desligada por padrão, inclusive com

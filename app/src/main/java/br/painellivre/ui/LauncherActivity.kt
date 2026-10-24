@@ -855,10 +855,7 @@ class LauncherActivity : AppCompatActivity() {
         }
         androidx.appcompat.app.AlertDialog.Builder(this).setTitle(spec.label)
             .setItems(values.map(::label).toTypedArray()) { _, index ->
-                androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Enviar ao carro?")
-                    .setMessage("${spec.label}: ${label(values[index])}. Ainda não testado neste carro. Confira o resultado nos controles originais.")
-                    .setPositiveButton("Enviar") { _, _ -> command(key, values[index]) }
-                    .setNegativeButton("Cancelar", null).show()
+                command(key, values[index])
             }.setNegativeButton("Cancelar", null).show()
     }
 

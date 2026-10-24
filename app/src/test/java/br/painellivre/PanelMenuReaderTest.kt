@@ -120,7 +120,8 @@ class PanelMenuReaderTest {
         val reader = PanelMenuReader({ denied }, adb::run, adbAllowed = true, clock = { now }, retryMs = 5_000)
         val first = reader.read()
         assertEquals(Mode.UNKNOWN, first.mode)
-        assertTrue(first.error!!.startsWith("ADB:"))
+        assertTrue(first.error!!.contains("ADB: porta fechada"))
+        assertTrue(first.error!!.contains("SDK:"))
         now = 1_000
         reader.read()
         assertEquals(1, adb.commands.size) // não insiste a cada segundo

@@ -70,12 +70,13 @@ class DiagnosticsActivity : AppCompatActivity() {
         button("Dados do carro") { runCatchingShow { withContext(Dispatchers.IO) { carText() } } }
         button("Navegação atual") { append(NavRepository.state.value.let { "ativa=${it.active} fonte=${it.sourceLabel}\n${it.nav}" }) }
         button("Liberar comandos individuais") {
+            val settings = br.painellivre.util.Prefs(this)
             val specs = br.painellivre.car.CarCommands.CATALOG
             val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
             androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("Um comando por vez · chave geral em Ajustes")
                 .setMultiChoiceItems(specs.map { it.label + if (it.confirmed) "" else " · não confirmado" }.toTypedArray(),
-                    specs.map { prefs.getBoolean("car_command_${it.key}", false) }.toBooleanArray()) { dialog, index, checked ->
+                    specs.map { settings.carCommandAllowed(it.key) }.toBooleanArray()) { dialog, index, checked ->
                     val spec = specs[index]
                     prefs.edit().putBoolean("car_command_${spec.key}", checked && spec.confirmed).apply()
                     if (checked && !spec.confirmed) {

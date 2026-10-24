@@ -531,3 +531,15 @@ a opção ligada. O aviso de telemetria fica no canto superior direito do conte�
 Regressões JVM: padrão desligado mesmo com margens antigas, opt-in explícito, margens ligadas e
 ignoradas, cartões e aviso dentro do conteúdo inteiro/reduzido. No carro, conferir as duas opções,
 rota, manobras, telemetria e os quatro modos, com atenção às sobreposições originais da BYD.
+
+### Painel 0.5.4
+
+`SafeArea.defaultPlan` é o layout padrão fixo derivado da foto 0.5.3: coluna em 170/185,
+largura 590, manobra/chegada compactas e telemetria abaixo, foco em 960/380 (1920×720).
+Não lê margens opcionais; `SafeArea.plan` continua atendendo Área segura ligada sem mudança.
+`cardBounds` e `PanelMenu.bounds` expõem retângulos puros para regressão em duas resoluções.
+`PanelMenu.effective` usa debug > preferência manual > leitura estável. `Prefs.panelMenuFollow`
+vem true quando ausente; migração única liga o false antigo gravado pelo XML, preservando
+desligamentos posteriores; `panel_map_mode=follow` é o padrão do seletor persistente em Ajustes.
+A moldura espera dimensões não nulas e reaplica no layout; o conteúdo redimensionado recalcula
+posição/foco do mapa. AppLog registra leituras e desenhos sem exigir modo de debug.

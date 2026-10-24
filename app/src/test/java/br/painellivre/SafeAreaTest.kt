@@ -123,8 +123,8 @@ class SafeAreaTest {
         // Em coordenadas do conteúdo: os lados já estão longe dos avisos, só topo e base cortam.
         assertEquals(0, p.safe.left)
         assertEquals(content.width, p.safe.right)
-        assertEquals(90 - content.top, p.safe.top)
-        assertEquals(490 - content.top, p.safe.bottom)
+        assertEquals((90 - content.top).coerceAtLeast(0), p.safe.top)
+        assertEquals((490 - content.top).coerceAtMost(content.height), p.safe.bottom)
         assertTrue(p.cardWidth <= p.safe.width)
     }
 

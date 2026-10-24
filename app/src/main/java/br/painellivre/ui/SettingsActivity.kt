@@ -46,6 +46,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+            Prefs(requireContext()) // Migra antes de o XML gravar os padrões.
             setPreferencesFromResource(R.xml.preferences, rootKey)
             listOf(Prefs.KEY_RESTORE_DELAY, Prefs.KEY_MAP_TILT).forEach { key ->
                 findPreference<EditTextPreference>(key)?.setOnBindEditTextListener {

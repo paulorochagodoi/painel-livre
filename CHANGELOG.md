@@ -4,6 +4,32 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
+## Não lançado — interface Aura na tela central
+
+Branch `feat/interface-aura` (base 0.5.2 teste). Versão não mudou. Detalhes, mapeamento e inventário
+em `docs/INTERFACE-AURA.md`.
+
+- Tela inicial refeita no padrão visual **Aura** da designer (`docs/design/aura-launcher/`), em Views
+  nativas: barra de status (Wi-Fi/Bluetooth/GPS, estado do painel, clima e bateria lidos, botão
+  Claro/Escuro), herói com relógio, saudação, data e tempo, modelo/trava/resumo, **carro 3D atual** no
+  centro com chips de estado (Portas, Vidros, Capô, Porta-malas, Carregamento, Pneus; palavra + ícone,
+  `warn` quando aberto), quatro atalhos (Navegação, Bateria e autonomia, Climatização, Mídia) com
+  janelas ancoradas (uma por vez, 180 ms, sem animação se o Android estiver sem animações) e dock.
+- Painel de instrumentos: o botão Painel do dock abre uma janela com estado, motivo da falha e
+  Mostrar no painel / Voltar ao painel original.
+- Climatização, bancos, vidros, porta-malas e trava **só mostram** o que o carro informa; nenhum
+  controle manda comando ao carro. Sem dado, o chip some ou diz "Sem dado".
+- Nada inventado: mídia real ("Nada tocando" sem sessão), Casa/Trabalho com distância real ou
+  "Definir", categorias da busca fazem busca de verdade no Photon.
+- Busca completa (NavSearch) com a escolha Painel Livre/Maps/Waze, rota ativa, lugares, mapa com a rota
+  nativa e Centralizar. Apps e tela em pé (atalhos 2 × 2) mantidos.
+- Fontes Sora e Albert Sans empacotadas (offline, OFL), ícones de linha Aura em vetor, tokens dos temas
+  claro e escuro; discador e previsão do tempo com as mesmas cores. Densidade própria para o desenho
+  base 1280 × 720 (manifesto sem mudança).
+- Testes: `AuraTest` (14 novos) — 223 testes JVM, 0 falhas; `lintDebug` 0 erros (76 avisos, antes 174
+  nesta branch); `assembleDebug` concluído. Emulador `emulator-5580`: claro, escuro, em pé, cada janela,
+  simulação de telemetria do debug e animações desligadas. **Não testado no carro.**
+
 ## 0.5.2 (teste) — 2026-10-23 — área segura, menu do painel, telemetria e carro 3D
 
 versionCode 8. Não lançada; consolida a 0.5.1, telemetria só leitura (#16) e carro 3D.

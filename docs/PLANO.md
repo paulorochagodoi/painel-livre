@@ -164,6 +164,30 @@ Checklist no carro (carro parado, celular pareado, número conhecido que não se
    telefone da BYD (pacotes com bt/phone). Se a conta não for reconhecida, ajustar `CallAccounts.isBluetooth`.
 5. Se a resposta for `NOT_CONFIRMED` sem ligar, tocar em App do carro (reserva) e mandar o registro.
 
+## Interface Aura na tela central (2026-10-23, não lançado)
+
+Pedido do dono: refazer a tela inicial no padrão visual **Aura** da designer
+(`docs/design/aura-launcher/`), substituindo o cockpit no estilo SealNav **só na central** (o painel de
+instrumentos segue o layout do SealNav). Mantidas todas as funções, o carro 3D e a telemetria só
+leitura. Mapeamento, inventário conferido e decisões pendentes em `docs/INTERFACE-AURA.md`.
+Validação: 223 testes JVM (14 novos em `AuraTest`), `lintDebug` 0 erros, `assembleDebug`, emulador
+(claro, escuro, em pé, cada janela, sem animações). Prints: `docs/telas/aura-*.png`.
+
+Checklist no carro (parado; só olhar e tocar na central):
+
+1. Instalar por cima e abrir: conferir se textos, atalhos e dock têm o tamanho certo na DiLink 3
+   (densidade própria do desenho 1280 × 720) e se a fonte nova aparece com acentos.
+2. Tocar em cada atalho (Navegação, Bateria, Climatização, Mídia) e no botão Painel do dock: a janela
+   abre perto do dedo, a seta aponta para o atalho, fecha no X, tocando fora, no mesmo atalho e em
+   Início. Nunca duas abertas.
+3. Com "Ler dados do carro" ligado: abrir uma porta, o porta-malas e um vidro → chips em laranja com a
+   palavra certa, carro na vista de cima; fechar tudo → "Tudo fechado"; conferir a trava. Conferir que
+   clima e bancos só mostram (nenhum botão muda o carro) e se os modos AUTO/A/C aparecem coerentes.
+4. Janela do painel: Mostrar no painel / Voltar ao painel original funcionam como o cartão antigo.
+5. Busca: Casa/Trabalho, uma categoria e um endereço abrem a rota no app escolhido; rota nativa
+   aparece no mapa da busca. Mídia: tocar/pausar/próxima e volume com o Bluetooth do celular.
+6. Botão Claro/Escuro e Ajustes → Tema (automático) voltam a funcionar como antes.
+
 ## Fase 1 — Primeiro teste no carro
 
 1. Instalar `PainelLivre-v0.3.0-release.apk`, aceitar "Permitir depuração USB" e tocar em **Configurar**

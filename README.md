@@ -134,7 +134,11 @@ comportamento do DashCast. Nada escreve no CAN. Use por sua conta e risco; não 
 - [MapLibre Native](https://github.com/maplibre/maplibre-native) (BSD-2), [OpenFreeMap](https://openfreemap.org)
   e © colaboradores do [OpenStreetMap](https://www.openstreetmap.org/copyright).
 - [dadb](https://github.com/mobile-dev-inc/dadb) (Apache-2.0).
-- Ícones [Material Icons](https://fonts.google.com/icons) (Apache-2.0). Tempo: [Open-Meteo](https://open-meteo.com)
+- Interface Aura (tela central): desenho, ícones de linha e tokens da designer do projeto
+  (`docs/design/aura-launcher/`); fontes [Sora](https://github.com/sora-xor/sora-font) e
+  [Albert Sans](https://github.com/usted/Albert-Sans) (SIL OFL 1.1, licenças em
+  `app/src/main/assets/licencas/`), empacotadas no app — nada é baixado ao usar.
+- Ícones [Material Icons](https://fonts.google.com/icons) (Apache-2.0) no discador e no painel. Tempo: [Open-Meteo](https://open-meteo.com)
   (posição arredondada a ~10 km). Busca de endereços: [Photon](https://photon.komoot.io) (OpenStreetMap).
 - SealNav — estudado só por comportamento e protocolo (sala limpa, ver `docs/SEALNAV_RE.md`); nenhum
   código, imagem, voz, chave ou servidor dele é usado.

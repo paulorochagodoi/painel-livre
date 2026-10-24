@@ -64,10 +64,16 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | | `Probe.kt` | **Kotlin puro.** `ProbeParse` (seções do comando de coleta, `settings list`, `getprop`, histórico de broadcasts, candidatos ★, esconder números/MAC) e `ProbeTracker` (linha de base e só as novidades) |
 | | `DebugProbe.kt` | Coleta a cada 3 s (SDK + ADB só leitura + receptores), fotografia completa, liga/desliga pela preferência |
 | `location` | `LocationRepository.kt` | GPS da central (`LocationManager`), mantém o rumo quando parado, injeção só em debug |
-| `ui` | `LauncherActivity.kt` | Cockpit: barra de cima, carro, cartões, abas (Início, Navegação, Apps; Mídia/Telefone/Ajustes abrem outra tela), lista de lugares, mapa da aba Navegação, aviso de configuração; toque no tempo abre a previsão; `onNewIntent` com `HOME` volta à aba Início |
+| `ui` | `LauncherActivity.kt` | Tela central no padrão **Aura** ([INTERFACE-AURA.md](INTERFACE-AURA.md)): barra de status, herói (relógio, carro 3D com chips, trava/resumo), quatro atalhos com janelas ancoradas (Navegação, Bateria, Climatização, Mídia; Painel pelo dock), busca (NavSearch) com mapa, Apps, aviso de configuração; densidade própria do desenho 1280 × 720; `onNewIntent` com `HOME` fecha a janela e volta ao Início |
+| | `aura/AuraTokens.kt` | **Kotlin puro.** `AuraColors` (tokens claro/escuro da designer), `AuraDims`, `toPalette()` para as telas antigas |
+| | `aura/AuraFormat.kt` | **Kotlin puro.** Números BR (`22,0°`, `6,4 km`, `1h40`, `62%`) |
+| | `aura/CarReadouts.kt` | **Kotlin puro.** Chips do carro, resumo, trava, clima, bateria e linha da carga — só leitura, sem dado nunca vira "fechado" |
+| | `aura/AuraLayout.kt` | **Kotlin puro.** `PopoverState` (uma janela por vez), `PopoverAnchor` (posição e seta), `AuraScale` (densidade) |
+| | `aura/AuraPainter.kt` | Pintura por `android:tag="a_…"` (tabela em INTERFACE-AURA.md) |
+| | `aura/AuraViews.kt` | `PopoverFrame`, `AnchoredLayout` (chips), `RingView`, `LevelBars`, `EqualizerView`, `AuraBackdropDrawable` |
 | | `DialerActivity.kt` | Discador interno (aba Telefone): teclado, Rediscar, App do carro; liga pela ordem de `CallPlan` e passa ao próximo caminho se a central recusar |
 | | `WeatherActivity.kt` | Previsão do tempo: agora, 24 horas (rolagem lateral) e 7 dias com faixa mín–máx |
-| | `cockpit/Palette.kt` | Temas dia/noite e pintura da árvore de Views por `android:tag` (ver abaixo) |
+| | `cockpit/Palette.kt` | Temas dia/noite do painel e pintura por `android:tag` das telas antigas (ver abaixo); na central as cores vêm de `AuraColors.toPalette()` |
 | | `cockpit/CockpitArt.kt` | Fundo "estúdio" e ilustração do SUV, desenhados em código |
 | | `cockpit/WeatherIconDrawable.kt` | Ícone do tempo desenhado em código |
 | | `SettingsActivity.kt` | `PreferenceFragmentCompat` (`res/xml/preferences.xml`) + ações (foto do carro, simular, conceder, diagnóstico, tela inicial) |
@@ -142,6 +148,11 @@ sem o número, com números e MACs escondidos (`ProbeParse.redactPersonal`). O n
 
 ## Tela central: temas por tag
 
+Desde a interface Aura, a tela inicial usa as tags `a_…` do `AuraPainter` (tabela e mapeamento em
+[INTERFACE-AURA.md](INTERFACE-AURA.md)); layouts `aura_*.xml`, `tile_*.xml`, `pop_*.xml`, `dock_*.xml`
+(variantes em `layout-port/`). O que segue vale para as telas que ainda usam o `Palette` (discador,
+previsão, painel).
+
 As cores não ficam no XML. Cada View marca o papel em `android:tag` (direto ou via estilo `Cc*` em
 `res/values/themes.xml`) e `Palette.apply(root, density)` pinta a árvore:
 
@@ -155,9 +166,9 @@ As cores não ficam no XML. Cada View marca o papel em `android:tag` (direto ou 
 | `round`, `round_on` | botão redondo neutro / azul |
 | `progress` | barra de progresso |
 
-Para mudar o estado de um botão em tempo de execução: trocar a tag e chamar `palette.apply(view, density)`.
-Layouts: `activity_launcher.xml` inclui `include_home`, `include_nav`, `include_dock` (variantes em
-`layout-port/` para a tela em pé; a Activity é recriada ao girar) e os cartões `card_*.xml`.
+Para mudar o estado de um botão em tempo de execução: trocar a tag e chamar `palette.apply(view, density)`
+(na central: `painter.set(view, "a_…")`). Os antigos `include_home/include_nav/include_dock/card_*`
+saíram com a interface Aura.
 
 ## Painel: posições
 
@@ -215,7 +226,7 @@ que os desenhos da BYD não cobrem. Medidas na foto do painel do Song Plus (1920
 
 ## Testes
 
-`app/src/test` tem **179 testes JVM** (117 até a v0.4.1 + 21 da issue #9 + 5 da issue #15 + os da rota nativa, da leitura do menu e da área segura), sem carro, emulador,
+`app/src/test` tem **223 testes JVM** (117 até a v0.4.1 + 21 da issue #9 + 5 da issue #15 + os da rota nativa, da leitura do menu, da área segura, da telemetria e do carro 3D + 14 da interface Aura), sem carro, emulador,
 rede ou espera de tempo real. Execute com JDK 17:
 
 ```bash
@@ -233,6 +244,7 @@ rede ou espera de tempo real. Execute com JDK 17:
 | `PoseSmootherTest` | posição, rumo, limites de previsão e ruído de GPS |
 | `FreezeWatchTest` | vigia, orçamento de recuperação e convivência (`YieldPolicy`) |
 | `CockpitTest` | Photon, tema e códigos do tempo |
+| `AuraTest` | interface Aura: cores contra o `tokens.json`, contraste, tema, números BR, chips/resumo/trava/clima/bateria só de leitura, uma janela por vez, âncora da janela, escala |
 | `HomeChoiceTest` | saída do `resolve-activity` (nosso, BYD, seletor, erro), launcher original, resultado do `set-home-activity`, próximo passo, restauração, estado do alias e quando ligá-lo, alias HOME **desligado** no manifesto e nenhum outro componente com `HOME` |
 | `DialerTest` | teclado, limite, limpeza de número colado, mínimo de 3 dígitos, `tel:` com `#`, formato brasileiro, ordem dos caminhos de chamada (inclusive "nenhum app"), conta HFP primeiro e `ACTION_CALL` desviado só de reserva, caminhos diretos, conferência sem nova tentativa, escolha da conta Bluetooth, quem atende o `ACTION_CALL`, pedido de permissão e escolha do app do carro |
 | `PanelMenuReaderTest` | `Parcel` do carro (1–4, várias linhas, prévia ASCII, 0xffffd8e5, exceção, lixo), comando fixo só de leitura, SDK primeiro → ADB só com SecurityException e no Android 10, pausa do ADB após falha, `Follower` com leituras do ADB |
@@ -447,3 +459,12 @@ com largura e altura limitadas pela área segura. Ícone e texto ficam dentro de
 a largura restante do texto respeita ícone e preenchimento. Não aumenta a pilha manobra/chegada.
 O cálculo considera o modo Pequeno e os ajustes finos; regressão em `SafeAreaTest`.
 Mantidos foco/carro, crédito OSM, contorno debug e ajustes aditivos da 0.5.1.
+
+## Interface Aura na tela central (não lançado)
+
+Tela inicial refeita no padrão visual Aura da designer (`docs/design/aura-launcher/`), em Views
+nativas. Mapeamento componente a componente, tags, inventário de funções e decisões pendentes em
+[INTERFACE-AURA.md](INTERFACE-AURA.md). Carro 3D, telemetria só leitura, painel, rota nativa, menu do
+painel e área segura não mudaram de comportamento. Validação: `testDebugUnitTest` (223 testes, 0 falhas),
+`lintDebug` 0 erros, `assembleDebug`, emulador `emulator-5580` (claro, escuro, em pé, cada janela, sem
+animações). Carro: pendente.

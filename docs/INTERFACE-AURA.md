@@ -1,18 +1,19 @@
-# Interface Aura — tela central
+# Interface Aura — central e painel
 
 Atualizado: 2026-10-23. Branch `feat/interface-aura` (não lançada). Desenho da designer em
 `docs/design/aura-launcher/` (HTML/CSS/JS de referência; **não** é usado pelo app). O app implementa o
-mesmo padrão em Android nativo (Views + Kotlin), sem WebView, e só na **tela central** (tela inicial,
-busca, apps, discador e previsão). O painel de instrumentos (`ClusterActivity`) não mudou.
+mesmo padrão em Android nativo (Views + Kotlin), sem WebView, na **tela central** (tela inicial,
+busca, apps, discador e previsão) e, desde a rodada 2, no **painel de instrumentos** (`ClusterActivity`).
 
 ## Regras que esta interface segue
 
-- **Só leitura do carro.** Clima, bancos, vidros, porta-malas, trava e bateria aparecem como o carro
-  informa (telemetria #16 e SDK BYD). Os controles do Aura que mandariam comando ao carro
-  (temperatura −/+, liga/desliga do ar, ventilação, modos, bancos, "Fechar" vidros/porta-malas,
-  trancar, EV/HEV, manter carga, limite, agendamento, V2L) **não existem** aqui: viram indicador ou
-  saem. Nenhum código novo fala com `autoservice`; o `TelemetryTest` que recusa a transação 6 segue
-  passando.
+- **Comandos internos com liberação explícita (rodada 3).** `CarCommands` valida cada ação.
+  A chave geral “Permitir comandos ao carro” e cada função no Diagnóstico começam desligadas.
+  Com elas desligadas, nada muda no carro. Clima e temperaturas do dock abrem escolhas internas;
+  o envio pede confirmação. Bancos/porta-malas ainda não têm contrato seguro e ficam bloqueados.
+  Bateria continua leitura: não há comando confirmado. Rádio BYD sem API confirmada; mídia Android
+  usa MediaSession/AudioManager dentro da interface, também com as duas liberações.
+  Catálogo, fontes, limites e hipóteses em [COMANDOS.md](COMANDOS.md).
 - **Nada inventado.** Sem endereços, rádios ou músicas de exemplo. Sem dado, o chip some ou diz
   "Sem dado"; nunca "Fechado"/"Travado" chutado. Sem mídia: "Nada tocando". Casa/Trabalho sem
   endereço: "Definir". Categorias da busca fazem uma busca de verdade (Photon) pelo termo.
@@ -73,7 +74,7 @@ manifesto não mudou (o tema Aura entra por `setTheme` no código).
 
 Views desenhadas à mão (`PopoverFrame`, `RingView`, `LevelBars`, `EqualizerView`) recebem as cores por
 `AuraThemed`. As telas antigas que usam `Palette` (discador, previsão, itens) ganham as cores Aura por
-`AuraColors.toPalette()`; o painel continua com `Palette.forSetting`.
+`AuraColors.toPalette()`; o painel usa `ClusterLook.of(AuraColors.forSetting(...))`.
 
 ## Inventário de funções (antes → agora) — conferido em 2026-10-23
 
@@ -111,10 +112,10 @@ no `emulator-5580` (prints em `/tmp/pl-aura-prints/`, cópias em `docs/telas/aur
 | 27 | Tema automático/claro/escuro (Ajustes) | igual + botão Claro/Escuro na barra | emulador |
 | 28 | Tela em pé | `layout-port/` (atalhos 2 × 2) | emulador |
 
-Fora da tela central, sem mudança: Ajustes (todas as opções, inclusive área segura e ajuste fino,
+Comportamento preservado fora da tela central: Ajustes (todas as opções, inclusive área segura e ajuste fino,
 menu do painel Simples/Pequeno/Cheio/OFF, telemetria, modo de debug, simular rota, tela inicial),
-registro do debug, Diagnóstico, painel de instrumentos (rota nativa, aviso de telemetria, área
-segura), discador (só as cores) e previsão (só as cores).
+registro do debug, Diagnóstico, comportamento do painel de instrumentos (rota nativa, aviso de telemetria, área
+segura; visual Aura na rodada 2), discador (só as cores) e previsão (só as cores).
 
 **Novos** (todos com dado real): botão Claro/Escuro; categorias Recarga/Combustível/Estacionamento
 (busca Photon); volume da mídia (o mesmo das teclas de volume do Android); Centralizar no mapa;
@@ -138,12 +139,93 @@ trava, clima só com o que foi lido, bateria SDK → telemetria, linha da carga,
 2. **Botão Claro/Escuro** sai do automático; o automático volta em Ajustes → Tema.
 3. **Volume** na janela Mídia usa o volume de mídia do Android (não é comando ao carro). Se preferir
    sem, é só tirar.
-4. **Apps nativos da BYD** (clima, energia): não abri nenhum porque não temos o nome dos pacotes no
-   carro e não quis adivinhar. Com o nome (Diagnóstico ou `pm list packages`), as janelas ganham um
-   botão "Abrir na BYD".
+4. **Resolvido na rodada 2:** clima, energia e estados do carro ficam dentro do Painel Livre.
+   Não adicionar botão para abrir apps da BYD ou apps externos nas novas janelas.
 5. **Casa/Trabalho** mostram distância em linha reta (km), não minutos: sem rota calculada não há
    tempo de verdade.
 6. **Modos do ar** (AUTO, A/C, Recircular, Desembaçador) só aparecem se o carro responder 0/1
    (significado ainda é hipótese, `docs/TELEMETRIA.md`).
 7. **Densidade própria**: conferir no carro se textos e toques ficam do tamanho certo na DiLink 3.
-8. Tela do painel de instrumentos não foi redesenhada (fora do escopo).
+8. **Resolvido na rodada 2:** painel redesenhado no padrão Aura; validação no carro pendente.
+
+
+## Rodada 2 — tudo dentro, painel Aura e mapas
+
+- Nenhum atalho novo abre apps externos. Tocar em reproduzir sem sessão usa o evento de mídia do
+  Android (`resumeLast`), sem abrir outro app. Clima/energia continuam internos e somente leitura.
+- **Exceções antigas preservadas para o Paulo decidir:** “Abrir app” na mídia; Maps/Waze pelo dock,
+  destinos e rota ativa; grade Apps; telas do Android para conceder permissões; opção experimental de
+  mover Maps/Waze ao painel. O discador mantém o caminho HFP/Telecom e a reserva do telefone BYD.
+  A previsão é uma Activity do próprio Painel Livre. Não foram adicionados pacotes da BYD.
+- `ClusterLook` usa os tokens Aura, cartões 95% opacos, borda/raio, Sora nos números e Albert Sans no
+  texto. Ícones de linha na chegada e no aviso; manobras preservadas. Menu Simples/Pequeno/Cheio/OFF,
+  SafeArea, `telemetryBounds`, aviso de telemetria, rota nativa e contorno debug mantidos.
+- `MapLook`/`MapStyler` alargam vias principais em 1,6× e ruas em 1,4×, conservando as paradas de zoom
+  do estilo. Trilhas/ferrovias não mudam. Aplicação tanto na central quanto no painel após carregar
+  cada estilo. Rota em accent com contorno e largura por zoom; seta cheia e larga, contorno branco e
+  sombra leve (60 dp na central, 12% da unidade no painel).
+- Correções da revisão: duração da chegada sem reticências; cartão Pequeno ampliado antes da seta para não cortar a distância; GPS da simulação com relógio monotônico
+  atualizado para a navegação nativa não rejeitar o fix como antigo.
+- Regressão: 238 testes JVM, zero falhas (15 novos: `InsideInterfaceTest` e `MapLookTest`), lintDebug
+  zero erros/76 avisos, assembleDebug concluído. Inclui contraste sobre mapas, tamanho dos textos,
+  seta e área segura, expressões de zoom e as exceções de abertura externa. O bloqueio de setters da
+  telemetria segue passando. Nada testado no carro nesta rodada.
+- Capturas novas: `/tmp/pl-aura-prints/r2-*`. Pré-visualização na central do emulador 1920×720;
+  a linha rosa é o contorno de debug da área segura. Não representa a sobreposição real da BYD.
+
+Capturas finais: oito modos/temas do painel e duas com rota nativa (central e painel),
+com cópias em `docs/telas/aura-r2-*.png`. Preferências de antes da rodada 2 restauradas
+no emulador a partir do backup do Claude (`prefs-orig.xml`, debug desligado).
+
+## Rodada 3 — comandos
+
+Decisão explícita do Paulo substitui a regra de somente leitura das rodadas anteriores. As descrições
+históricas da rodada 2 permanecem como registro, não como restrição atual.
+
+- Temperaturas (janela e dock) escolhem 16–30 °C inteiros: a fonte não comprova escala de meio grau.
+  Ventilação escolhe 0–7; cabeçalho da janela liga/desliga o ar; modos escolhem ligar/desligar.
+- Não há mudança otimista dos números ou cores. “Aguarde…” é imediato; Toast e cabeçalho mostram
+  rejeição, envio e confirmação/ausência dela. A telemetria relida atualiza os indicadores reais.
+- Bancos e porta-malas estão ligados à mesma fronteira, mas o seletor informa bloqueio antes de
+  permitir escolher. IDs/valores ambíguos nunca são enviados. Sem dado não vira desligado.
+- Modos sem dado aparecem apagados e com descrição “Sem dado”. GET cru desses modos não permite
+  declarar confirmação da escrita; AUTO usa 1/2 no fio e isso não redefine o decoder do GET.
+- Mídia sem sessão envia play ao Android; próximo/anterior podem não ser atendidos por rádio BYD.
+  Volume é relido no AudioManager; callbacks continuam mostrando o estado real da sessão.
+- Confirmação humana antes de cada comando de clima. Limite global de um envio por segundo,
+  serialização e transporte sem repetição automática; sair durante envio não o cancela no carro.
+
+Validação da rodada 3: 248 testes JVM, zero falhas; `testDebugUnitTest lintDebug assembleDebug`
+com JDK 17. Lint sem erros (79 avisos). No emulator-5580 foram conferidos a janela de clima,
+seletor, confirmação e rejeição com a chave desligada, registrada no log; lista de liberações
+individuais e recusa de hipótese. Capturas `docs/telas/aura-r3-*.png`. Nenhum teste no carro.
+
+
+## Rodada 4 — área segura opcional
+
+Decisão do Paulo após observar o painel real: **Ajustes → Área segura no painel**
+(`safe_area_enabled`) é opt-in, desligada por padrão, inclusive nas instalações com margens
+antigas salvas. Desligada, ignora o padrão e os quatro ajustes: mapa, carro, cartões e aviso de
+telemetria usam todo o conteúdo disponível do menu, sem recorte da SafeArea. Ligada, conserva
+o cálculo anterior (padrão Song Plus e ajustes salvos). Os ajustes só ficam disponíveis quando ligada.
+Esta decisão substitui as descrições anteriores que tratavam a área segura como obrigatória.
+
+`Prefs.safeAreaEnabled` persiste em SharedPreferences; `SafeArea.effectiveInsets` retorna zero
+quando desligada. `SafeArea.Plan` continua organizando os elementos, agora sobre o conteúdo inteiro.
+O listener de `ClusterActivity` recalcula posições e câmera sem reiniciar. Menu
+Simples/Pequeno/Cheio/OFF, rota nativa e aviso de telemetria conservam seus fluxos; OFF continua
+ocultando o conteúdo. Debug continua disponível, mas o contorno da área segura só aparece com
+a opção ligada. O aviso de telemetria fica no canto superior direito do conteúdo nos dois casos.
+
+Regressões JVM: padrão desligado mesmo com margens antigas, opt-in explícito, margens ligadas e
+ignoradas, cartões e aviso dentro do conteúdo inteiro/reduzido. No carro, conferir as duas opções,
+rota, manobras, telemetria e os quatro modos, com atenção às sobreposições originais da BYD.
+
+Validação da rodada 4: comando solicitado `JAVA_HOME=$HOME/.jdks/jdk-17.0.21+9
+ANDROID_HOME=$HOME/Android/Sdk ./gradlew testDebugUnitTest lintDebug assembleDebug` concluído:
+250 testes JVM, zero falhas; lintDebug zero erros e 79 avisos; assembleDebug concluído.
+Emulador `emulator-5580`: capturas 1920×720, modo Cheio, área segura desligada, manobras
+simuladas nos temas claro e escuro, inspecionadas visualmente:
+`docs/telas/aura-r4-painel-claro-cheio.png` e `aura-r4-painel-escuro-cheio.png`.
+Preferências originais restauradas. Telemetria posicionada nos dois layouts coberta na JVM;
+não houve teste no carro nesta rodada.

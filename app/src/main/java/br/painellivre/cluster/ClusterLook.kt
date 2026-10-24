@@ -42,6 +42,12 @@ data class ClusterLook(
             attribution = (0x99 shl 24) or (c.inkMuted and 0xFFFFFF),
         )
 
+        /** Usa o espaço até a seta: em Pequeno, 30% da moldura cortava até "900 m". */
+        fun maneuverWidth(p: SafeArea.Plan): Int {
+            val beforeCar = p.carX - p.safe.left - p.unit * (SafeArea.CAR_SIZE / 2 + 0.03f)
+            return maxOf(p.cardWidth, minOf(p.unit * 0.68f, beforeCar).toInt()).coerceAtMost(p.safe.width)
+        }
+
         // Tamanhos (fração da unidade). Raio do Aura (24 dp no desenho 720) = 0,033.
         const val RADIUS = 0.033f
         const val PAD = 0.025f

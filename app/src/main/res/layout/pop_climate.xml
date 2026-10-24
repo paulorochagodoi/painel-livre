@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ClimatePanel só de leitura: temperatura de cada lado, ventilação, modos e bancos como o carro
-     informa. Nenhum botão muda o carro (sem −/+, sem liga/desliga): só mostra. -->
+<!-- Controles internos: a camada CarCommands decide se o envio é permitido. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/popClimate"
     android:layout_width="700dp"
@@ -24,7 +23,10 @@
             <TextView
                 android:id="@+id/popClimateState"
                 style="@style/AuLabel"
-                android:layout_height="44dp"
+                android:layout_height="56dp"
+                android:maxWidth="230dp"
+                android:maxLines="1"
+                android:ellipsize="end"
                 android:layout_marginEnd="12dp"
                 android:gravity="center"
                 android:paddingStart="14dp"
@@ -83,7 +85,7 @@
                 <br.painellivre.ui.aura.LevelBars
                     android:id="@+id/popClimateFan"
                     android:layout_width="match_parent"
-                    android:layout_height="40dp" />
+                    android:layout_height="56dp" />
 
                 <TextView
                     android:id="@+id/popClimateAir"

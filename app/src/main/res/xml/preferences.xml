@@ -96,7 +96,14 @@
         app:title="Área segura do mapa no painel"
         app:summary="Onde o mapa, o carro e os cartões ficam, longe dos desenhos da BYD por cima do painel."
         app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat
+            app:key="safe_area_enabled"
+            app:title="Área segura no painel"
+            app:summary="Afasta os cartões e o carro das bordas. Desligado, usa a tela inteira. A mudança é imediata."
+            app:defaultValue="false"
+            app:iconSpaceReserved="false" />
         <ListPreference
+            app:dependency="safe_area_enabled"
             app:key="safe_area"
             app:title="Padrão"
             app:defaultValue="songplus"
@@ -105,17 +112,22 @@
             app:useSimpleSummaryProvider="true"
             app:iconSpaceReserved="false" />
         <Preference
-            app:key="safe_area_help"
+            app:dependency="safe_area_enabled" app:key="safe_area_help"
             app:title="Ajuste fino (pixels do painel)"
             app:summary="Some ou tire pixels de cada lado do padrão: positivo afasta da borda, negativo aproxima. Com o modo de debug ligado, o painel mostra o contorno da área."
             app:selectable="false"
             app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="inset_left" app:title="Esquerda" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="inset_top" app:title="Topo" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="inset_right" app:title="Direita" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="inset_bottom" app:title="Base" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:dependency="safe_area_enabled" app:key="inset_left" app:title="Esquerda" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:dependency="safe_area_enabled" app:key="inset_top" app:title="Topo" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:dependency="safe_area_enabled" app:key="inset_right" app:title="Direita" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:dependency="safe_area_enabled" app:key="inset_bottom" app:title="Base" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="Comandos ao carro" app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat app:key="car_commands_enabled" app:title="Permitir comandos ao carro"
+            app:summary="Desligado: somente leitura. Ative também cada função no Diagnóstico. Comandos sem evidência ficam bloqueados."
+            app:defaultValue="false" app:iconSpaceReserved="false" />
+    </PreferenceCategory>
     <PreferenceCategory app:title="Dados do carro" app:iconSpaceReserved="false">
         <SwitchPreferenceCompat
             app:key="telemetry"

@@ -71,6 +71,9 @@ object SafeArea {
      * escaladas do painel de referência e presas para sobrar pelo menos [MIN_WIDTH_FRACTION] ×
      * [MIN_HEIGHT_FRACTION] do display.
      */
+    fun effectiveInsets(enabled: Boolean, w: Int, h: Int, base: Insets, adjust: Insets): Insets =
+        if (enabled) resolve(w, h, base, adjust) else NONE
+
     fun resolve(w: Int, h: Int, base: Insets, adjust: Insets): Insets {
         if (w <= 0 || h <= 0) return NONE
         fun axis(size: Int, ref: Int, first: Int, second: Int, a: Int, b: Int, fraction: Float): Pair<Int, Int> {

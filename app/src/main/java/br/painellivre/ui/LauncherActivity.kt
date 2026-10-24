@@ -104,7 +104,7 @@ import java.util.Locale
  * dock. A única diferença de propósito em relação ao SealNav continua: a rota é do Google Maps, do
  * Waze ou a nativa — a busca abre a rota no app escolhido.
  *
- * Tudo do carro é **só leitura**: clima, bancos, vidros, porta-malas e trava aparecem como o carro
+ * Comandos passam por CarCommands; sem liberação, só leitura: clima, bancos, vidros, porta-malas e trava aparecem como o carro
  * informa; nenhum controle daqui manda comando ao carro.
  */
 class LauncherActivity : AppCompatActivity() {
@@ -421,6 +421,7 @@ class LauncherActivity : AppCompatActivity() {
                 tag = when (chip.level) { CarReadouts.Level.WARN -> "a_warn"; CarReadouts.Level.ACCENT -> "a_accent"; CarReadouts.Level.UNKNOWN -> "a_muted"; else -> "a_ink" }
             }
             v.contentDescription = "${chip.label}: ${chip.value}"
+            if (chip.id == "trunk") v.setOnClickListener { chooseCommand("trunk") }
             painter.apply(v)
             box.addView(v)
         }
@@ -434,7 +435,7 @@ class LauncherActivity : AppCompatActivity() {
         click(R.id.tileClimate) { togglePopover(PopoverState.Id.CLIMATE) }
         click(R.id.tileMedia) { togglePopover(PopoverState.Id.MEDIA) }
         click(R.id.tileMediaPlay) { playOrResume() }
-        click(R.id.tileMediaNext) { MediaRepository.next() }
+        click(R.id.tileMediaNext) { command("media_next", 1.0) }
         click(R.id.carChips) { startActivity(Intent(this, DiagnosticsActivity::class.java)) }
         click(R.id.lockPill) { startActivity(Intent(this, DiagnosticsActivity::class.java)) }
         click(R.id.weatherRow) { startActivity(Intent(this, WeatherActivity::class.java)) } // issue #4
@@ -452,8 +453,8 @@ class LauncherActivity : AppCompatActivity() {
         }
         click(R.id.dockClimate) { togglePopover(PopoverState.Id.CLIMATE) }
         click(R.id.dockMedia) { togglePopover(PopoverState.Id.MEDIA) }
-        click(R.id.dockTempDriver) { showPopover(PopoverState.Id.CLIMATE) }
-        click(R.id.dockTempPassenger) { showPopover(PopoverState.Id.CLIMATE) }
+        click(R.id.dockTempDriver) { chooseCommand("ac_temp_driver") }
+        click(R.id.dockTempPassenger) { chooseCommand("ac_temp_pass") }
         // Discador próprio: a DiLink nem sempre tem app para ACTION_DIAL (issue #3).
         click(R.id.tabPhone) { closePopover(); startActivity(Intent(this, DialerActivity::class.java)) }
         click(R.id.tabApps) { closePopover(); showPage(if (page == PAGE_APPS) PAGE_HOME else PAGE_APPS) }
@@ -514,11 +515,22 @@ class LauncherActivity : AppCompatActivity() {
         clim.findViewById<View>(R.id.seatPassenger).findViewById<TextView>(R.id.seatLabel).setText(R.string.seat_passenger)
         clim.findViewById<LevelBars>(R.id.popClimateFan).apply { count = 7; rising = true }
 
+        listOf(R.id.popClimateDriver to "ac_temp_driver", R.id.popClimatePassenger to "ac_temp_pass",
+            R.id.popClimateFan to "ac_fan", R.id.modeAuto to "ac_auto", R.id.modeAc to "ac_compressor",
+            R.id.modeRecirc to "ac_recirc", R.id.modeDefrost to "ac_defrost").forEach { (id, key) ->
+            clim.findViewById<View>(id).setOnClickListener { chooseCommand(key) }
+        }
+        clim.findViewById<TextView>(R.id.popClimateState).text = "Ligar / desligar"
+        clim.findViewById<View>(R.id.popClimateState).setOnClickListener { chooseCommand("ac_on") }
+        listOf(R.id.seatDriver to "driver", R.id.seatPassenger to "pass").forEach { (id, side) ->
+            clim.findViewById<View>(id).findViewById<View>(R.id.seatHeat).setOnClickListener { chooseCommand("seat_heat_$side") }
+            clim.findViewById<View>(id).findViewById<View>(R.id.seatVent).setOnClickListener { chooseCommand("seat_vent_$side") }
+        }
         val media = popViews.getValue(PopoverState.Id.MEDIA)
         media.findViewById<View>(R.id.popMediaClose).setOnClickListener { closePopover() }
         media.findViewById<View>(R.id.popMediaOpen).setOnClickListener { closePopover(); openMedia() }
-        media.findViewById<View>(R.id.popMediaPrev).setOnClickListener { MediaRepository.previous() }
-        media.findViewById<View>(R.id.popMediaNext).setOnClickListener { MediaRepository.next() }
+        media.findViewById<View>(R.id.popMediaPrev).setOnClickListener { command("media_prev", 1.0) }
+        media.findViewById<View>(R.id.popMediaNext).setOnClickListener { command("media_next", 1.0) }
         media.findViewById<View>(R.id.popMediaPlay).setOnClickListener { playOrResume() }
         media.findViewById<View>(R.id.popVolDown).setOnClickListener { adjustVolume(AudioManager.ADJUST_LOWER) }
         media.findViewById<View>(R.id.popVolUp).setOnClickListener { adjustVolume(AudioManager.ADJUST_RAISE) }
@@ -741,27 +753,29 @@ class LauncherActivity : AppCompatActivity() {
         val pop = popViews.getValue(PopoverState.Id.CLIMATE)
         pop.findViewById<View>(R.id.popClimateEmpty).visibility = if (c == null) View.VISIBLE else View.GONE
         pop.findViewById<TextView>(R.id.popClimateEmpty).text = carDataHint()
-        pop.findViewById<View>(R.id.popClimateBody).visibility = if (c == null) View.GONE else View.VISIBLE
-        if (c == null) return
-        pop.findViewById<View>(R.id.popClimateDriver).findViewById<TextView>(R.id.tempValue).text = AuraFormat.temp(c.driverC)
-        pop.findViewById<View>(R.id.popClimatePassenger).findViewById<TextView>(R.id.tempValue).text = AuraFormat.temp(c.passengerC)
+        pop.findViewById<View>(R.id.popClimateBody).visibility = View.VISIBLE
+        val shown = c ?: CarReadouts.Climate(null, null, null, null, null, null, null, null, null,
+            CarReadouts.Seat(null, null), CarReadouts.Seat(null, null))
+        pop.findViewById<View>(R.id.popClimateDriver).findViewById<TextView>(R.id.tempValue).text = AuraFormat.temp(shown.driverC)
+        pop.findViewById<View>(R.id.popClimatePassenger).findViewById<TextView>(R.id.tempValue).text = AuraFormat.temp(shown.passengerC)
         pop.findViewById<TextView>(R.id.popClimateFanLabel).text =
-            if (c.fan != null) getString(R.string.fan_level, c.fan) else getString(R.string.fan_unknown)
-        pop.findViewById<LevelBars>(R.id.popClimateFan).level = c.fan ?: 0
+            if (shown.fan != null) getString(R.string.fan_level, shown.fan) else getString(R.string.fan_unknown)
+        pop.findViewById<LevelBars>(R.id.popClimateFan).level = shown.fan ?: 0
         pop.findViewById<TextView>(R.id.popClimateAir).apply {
-            text = listOfNotNull(c.insideC?.let { getString(R.string.temp_inside, AuraFormat.tempWhole(it)) },
-                c.outsideC?.let { getString(R.string.temp_outside, AuraFormat.tempWhole(it)) }).joinToString(" · ")
+            text = listOfNotNull(shown.insideC?.let { getString(R.string.temp_inside, AuraFormat.tempWhole(it)) },
+                shown.outsideC?.let { getString(R.string.temp_outside, AuraFormat.tempWhole(it)) }).joinToString(" · ")
             visibility = if (text.isNullOrEmpty()) View.GONE else View.VISIBLE
         }
         fun mode(id: Int, on: Boolean?) = pop.findViewById<View>(id).apply {
-            visibility = if (on == null) View.GONE else View.VISIBLE
+            visibility = View.VISIBLE
+            alpha = if (on == null) 0.5f else 1f
             tag = if (on == true) "a_mode_on" else "a_mode_off"
             findViewById<View>(R.id.modeIcon).tag = if (on == true) "a_icon_accent" else "a_icon"
-            findViewById<TextView>(R.id.modeLabel).let { it.tag = if (on == true) "a_accent" else "a_muted"; contentDescription = "${it.text}: ${getString(if (on == true) R.string.state_on else R.string.state_off)}" }
+            findViewById<TextView>(R.id.modeLabel).let { it.tag = if (on == true) "a_accent" else "a_muted"; contentDescription = "${it.text}: ${if (on == null) getString(R.string.no_data) else getString(if (on) R.string.state_on else R.string.state_off)}" }
             painter.apply(this)
         }
-        mode(R.id.modeAuto, c.auto); mode(R.id.modeAc, c.ac); mode(R.id.modeRecirc, c.recirc); mode(R.id.modeDefrost, c.defrost)
-        pop.findViewById<View>(R.id.popClimateModes).visibility = if (listOf(c.auto, c.ac, c.recirc, c.defrost).all { it == null }) View.GONE else View.VISIBLE
+        mode(R.id.modeAuto, shown.auto); mode(R.id.modeAc, shown.ac); mode(R.id.modeRecirc, shown.recirc); mode(R.id.modeDefrost, shown.defrost)
+        pop.findViewById<View>(R.id.popClimateModes).visibility = View.VISIBLE
         fun seat(id: Int, s: CarReadouts.Seat) = pop.findViewById<View>(id).apply {
             fun part(box: Int, icon: Int, bars: Int, level: Int?, onTag: String, iconTag: String, color: Int, name: Int) {
                 val b = findViewById<View>(box)
@@ -775,9 +789,9 @@ class LauncherActivity : AppCompatActivity() {
             part(R.id.seatVent, R.id.seatVentIcon, R.id.seatVentLevel, s.vent, "a_cool_on", "a_icon_cool", colors.cool, R.string.seat_vent)
             painter.apply(this)
         }
-        seat(R.id.seatDriver, c.driverSeat); seat(R.id.seatPassenger, c.passengerSeat)
+        seat(R.id.seatDriver, shown.driverSeat); seat(R.id.seatPassenger, shown.passengerSeat)
         pop.findViewById<View>(R.id.popClimateSeats).visibility =
-            if (listOf(c.driverSeat.heat, c.driverSeat.vent, c.passengerSeat.heat, c.passengerSeat.vent).all { it == null }) View.GONE else View.VISIBLE
+            if (listOf(shown.driverSeat.heat, shown.driverSeat.vent, shown.passengerSeat.heat, shown.passengerSeat.vent).all { it == null }) View.GONE else View.VISIBLE
     }
 
     // ── Mídia ───────────────────────────────────────────────────────────────
@@ -808,8 +822,48 @@ class LauncherActivity : AppCompatActivity() {
     }.getOrNull()
 
     /** Tocar/pausar dentro da interface; sem sessão, retoma o último app de mídia sem abri-lo. */
+    private var commandBusy = false
+    private fun command(key: String, value: Double) {
+        if (commandBusy) {
+            br.painellivre.util.AppLog.i("Comando $key = $value: rejeitado, outro comando em andamento")
+            Toast.makeText(this, "Aguarde o comando anterior", Toast.LENGTH_SHORT).show()
+            return
+        }
+        commandBusy = true
+        popViews[PopoverState.Id.CLIMATE]?.findViewById<TextView>(R.id.popClimateState)?.text = "Aguarde…"
+        lifecycleScope.launch {
+            try {
+                val message = br.painellivre.car.CarCommandRuntime.execute(this@LauncherActivity, key, value)
+                Toast.makeText(this@LauncherActivity, message, Toast.LENGTH_LONG).show()
+                popViews[PopoverState.Id.CLIMATE]?.findViewById<TextView>(R.id.popClimateState)?.text = message
+                renderVolume()
+            } finally { commandBusy = false }
+        }
+    }
+
+    private fun chooseCommand(key: String) {
+        val spec = br.painellivre.car.CarCommands.CATALOG.first { it.key == key }
+        if (!spec.confirmed) {
+            Toast.makeText(this, "Comando ainda não confirmado; controle bloqueado", Toast.LENGTH_LONG).show()
+            return
+        }
+        val values = (0..((spec.max - spec.min) / spec.step).toInt()).map { spec.min + it * spec.step }
+        fun label(v: Double) = when {
+            key.startsWith("ac_temp_") -> AuraFormat.temp(v) + "C"
+            spec.max == 1.0 -> if (v == 0.0) "Desligar" else "Ligar"
+            else -> v.toInt().toString()
+        }
+        androidx.appcompat.app.AlertDialog.Builder(this).setTitle(spec.label)
+            .setItems(values.map(::label).toTypedArray()) { _, index ->
+                androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Enviar ao carro?")
+                    .setMessage("${spec.label}: ${label(values[index])}. Ainda não testado neste carro. Confira o resultado nos controles originais.")
+                    .setPositiveButton("Enviar") { _, _ -> command(key, values[index]) }
+                    .setNegativeButton("Cancelar", null).show()
+            }.setNegativeButton("Cancelar", null).show()
+    }
+
     private fun playOrResume() {
-        if (MediaRepository.now.value == null) MediaRepository.resumeLast(this) else MediaRepository.playPause()
+        command("media_play", 1.0)
     }
 
     /** "Abrir app" da janela Mídia: função antiga (cartão Mídia do cockpit), mantida para o Paulo decidir. */
@@ -822,9 +876,7 @@ class LauncherActivity : AppCompatActivity() {
 
     /** Volume da mídia do Android (o mesmo das teclas de volume); não é comando ao carro. */
     private fun adjustVolume(direction: Int) {
-        val am = getSystemService(AudioManager::class.java) ?: return
-        runCatching { am.adjustStreamVolume(AudioManager.STREAM_MUSIC, direction, 0) }
-        renderVolume()
+        command("media_volume", direction.toDouble())
     }
 
     private fun renderVolume() {

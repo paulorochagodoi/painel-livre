@@ -22,6 +22,13 @@ class PrefsTest {
         return Prefs(sp)
     }
 
+    @Test fun safeAreaRequiresExplicitOptInEvenWithSavedMargins() {
+        assertFalse(prefs().safeAreaEnabled)
+        assertFalse(prefs(Prefs.KEY_SAFE_AREA to "songplus", "inset_left" to "300").safeAreaEnabled)
+        assertTrue(prefs(Prefs.KEY_SAFE_AREA_ENABLED to true).safeAreaEnabled)
+        assertFalse(prefs(Prefs.KEY_SAFE_AREA_ENABLED to false).safeAreaEnabled)
+    }
+
     @Test fun defaults() {
         val p = prefs()
         assertEquals("integrated", p.panelContent)
@@ -96,7 +103,7 @@ class PrefsTest {
     }
 
     @Test fun safeAreaAdjustAcceptsNegativeAndClamps() {
-        val keys = listOf(Prefs.KEY_INSET_LEFT, Prefs.KEY_INSET_TOP, Prefs.KEY_INSET_RIGHT, Prefs.KEY_INSET_BOTTOM)
+        val keys = listOf("inset_left", Prefs.KEY_INSET_TOP, Prefs.KEY_INSET_RIGHT, Prefs.KEY_INSET_BOTTOM)
         for ((raw, expected) in listOf(null to 0, "abc" to 0, "-40" to -40, " 25 " to 25,
             "-1501" to -400, "1501" to 400, "42" to 42)) {
             val p = prefs(*keys.map { it to raw }.toTypedArray())
@@ -105,7 +112,7 @@ class PrefsTest {
     }
 
     @Test fun oldMarginsRemainAdditiveAndMalformedAdjustmentsFallBack() {
-        val old = prefs(Prefs.KEY_INSET_LEFT to "1500", Prefs.KEY_INSET_TOP to "90",
+        val old = prefs("inset_left" to "1500", Prefs.KEY_INSET_TOP to "90",
             Prefs.KEY_INSET_RIGHT to "999999999999", Prefs.KEY_INSET_BOTTOM to "")
         assertEquals("songplus", old.safeArea)
         assertEquals(SafeArea.Insets(400, 90, 0, 0), old.insetAdjust)

@@ -81,6 +81,9 @@ object MediaRepository {
         )
     }
 
+    /** Relê o controller real após um pedido; não usa só o último callback em cache. */
+    fun refreshState(): NowPlaying? { publish(); return _now.value }
+
     fun playPause() {
         val c = controller ?: return
         if (c.playbackState?.state == PlaybackState.STATE_PLAYING) c.transportControls.pause() else c.transportControls.play()

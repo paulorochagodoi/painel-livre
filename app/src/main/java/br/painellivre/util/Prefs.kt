@@ -16,6 +16,7 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
     val mapStyle: String get() = sp.getString(KEY_MAP_STYLE, "auto") ?: "auto"
     val mapTilt: Double get() = sp.getString(KEY_MAP_TILT, "45")?.toDoubleOrNull()?.coerceIn(0.0, 60.0) ?: 45.0
     /** Área segura do mapa no painel: "songplus" (padrão) ou "none" ([br.painellivre.cluster.SafeArea]). */
+    val safeAreaEnabled: Boolean get() = sp.getBoolean(KEY_SAFE_AREA_ENABLED, false)
     val safeArea: String get() = sp.getString(KEY_SAFE_AREA, "songplus") ?: "songplus"
     /** Ajuste fino da área segura, somado ao padrão (pode ser negativo). */
     val insetAdjust: SafeArea.Insets
@@ -92,6 +93,7 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
         const val KEY_RESTORE_DELAY = "restore_delay"
         const val KEY_MAP_STYLE = "map_style"
         const val KEY_MAP_TILT = "map_tilt"
+        const val KEY_SAFE_AREA_ENABLED = "safe_area_enabled"
         const val KEY_SAFE_AREA = "safe_area"
         const val KEY_INSET_LEFT = "inset_left"
         const val KEY_INSET_TOP = "inset_top"

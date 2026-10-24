@@ -126,7 +126,7 @@
     <string name="charge_unknown">Sem dado da carga</string>
     <string name="no_data">Sem dado</string>
     <string name="read_only">Só leitura</string>
-    <string name="climate_readonly">Só mostra o que o carro informa. Para mudar, use os controles da BYD.</string>
+    <string name="climate_readonly">Toque para escolher. Libere os comandos em Ajustes e Diagnóstico.</string>
     <string name="fan_level">Ventilação · nível %1$d</string>
     <string name="fan_unknown">Ventilação · sem leitura</string>
     <string name="temp_inside">Interna %1$s</string>

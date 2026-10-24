@@ -226,7 +226,7 @@ que os desenhos da BYD não cobrem. Medidas na foto do painel do Song Plus (1920
 
 ## Testes
 
-`app/src/test` tem **223 testes JVM** (117 até a v0.4.1 + 21 da issue #9 + 5 da issue #15 + os da rota nativa, da leitura do menu, da área segura, da telemetria e do carro 3D + 14 da interface Aura), sem carro, emulador,
+`app/src/test` tem **238 testes JVM** (117 até a v0.4.1 + 21 da issue #9 + 5 da issue #15 + os da rota nativa, da leitura do menu, da área segura, da telemetria e do carro 3D + 14 da interface Aura), sem carro, emulador,
 rede ou espera de tempo real. Execute com JDK 17:
 
 ```bash
@@ -465,6 +465,69 @@ Mantidos foco/carro, crédito OSM, contorno debug e ajustes aditivos da 0.5.1.
 Tela inicial refeita no padrão visual Aura da designer (`docs/design/aura-launcher/`), em Views
 nativas. Mapeamento componente a componente, tags, inventário de funções e decisões pendentes em
 [INTERFACE-AURA.md](INTERFACE-AURA.md). Carro 3D, telemetria só leitura, painel, rota nativa, menu do
-painel e área segura não mudaram de comportamento. Validação: `testDebugUnitTest` (223 testes, 0 falhas),
+painel e área segura não mudaram de comportamento. Validação: `testDebugUnitTest` (238 testes, 0 falhas),
 `lintDebug` 0 erros, `assembleDebug`, emulador `emulator-5580` (claro, escuro, em pé, cada janela, sem
 animações). Carro: pendente.
+
+
+### Aura — rodada 2 (central e painel)
+
+`ClusterActivity` mantém o ciclo de projeção, menu, SafeArea/telemetryBounds, aviso de telemetria e
+modo debug. O visual vem de `ClusterLook` (Kotlin puro), derivado de `AuraColors`: cartões quase
+opacos, Sora nos números e Albert Sans no texto. `Palette` segue como adaptação para `CarStatusView`.
+`MapLook` contém fatores das vias, transformação de expressões de zoom, rota/contorno e geometria
+original da seta; `MapStyler` aplica após cada estilo novo na central e no painel. `NativeRouteLayer`
+usa a mesma paleta e paradas de largura. `CarArrowDrawable` desenha accent, borda branca e sombra.
+
+`InsideInterfaceTest` limita aberturas externas às funções antigas documentadas; `MapLookTest`
+confere zoom, cores, contraste e área segura. São 238 testes JVM (15 novos nesta rodada), zero
+falhas; lintDebug zero erros/76 avisos e assembleDebug concluído. Não há novo comando de carro.
+
+## Comandos internos — rodada 3 Aura
+
+A decisão do dono substitui a proibição anterior de implementar setters. `car/CarCommands.kt`
+(Kotlin puro) é o único construtor da transação 6. Catálogo fechado, limites/escala, confiança na
+fonte, duas liberações, intervalo mínimo de 1 s e P real/recente para movimentos são validados ali.
+Não aceita endereço ou shell da UI. `car/CarCommandRuntime.kt` adapta preferências, relógio
+monotônico, ADB local, telemetria e Android MediaSession/AudioManager; um Mutex serializa os envios.
+Chaves `car_commands_enabled` e `car_command_<chave>` começam falsas. Diagnóstico permite liberar
+apenas itens com evidência suficiente; hipóteses seguem recusadas dentro da camada.
+
+`SelfAdb.shellOnce` usa a conexão existente e descarta a conexão quebrada, mas nunca repete o
+comando. O caminho de leitura continua com sua política anterior. Cada tentativa/rejeição/resultante
+vai ao AppLog com hora, nome e valor. Timeout não significa falha de atuação: registra resultado
+inconclusivo e relê, sem segundo envio. `VehicleTelemetry.refresh` publica o estado real relido.
+Igualdade SET/GET só confirma temperaturas e ventilador; modos de clima não têm decoder GET
+suficientemente comprovado. Nenhum controle altera estado visual como se fosse dado do carro.
+
+A Launcher chama essa fronteira para clima, bancos, chip porta-malas e mídia; temperatura do dock
+abre escolha interna. Comandos de clima pedem confirmação antes de enviar. Bateria permanece leitura
+por falta de contrato confirmado. Rádio BYD não tem intent inventado. Android 10 + descriptor
+conhecido são exigidos para escrita; simulação não habilita o transporte. P é sempre relido para
+movimento (atualmente nenhum movimento está liberado). Evidências: [COMANDOS.md](COMANDOS.md).
+
+Validação da rodada 3: 248 testes JVM, zero falhas; `testDebugUnitTest lintDebug assembleDebug`
+com JDK 17. Lint sem erros (79 avisos). No emulator-5580 foram conferidos a janela de clima,
+seletor, confirmação e rejeição com a chave desligada, registrada no log; lista de liberações
+individuais e recusa de hipótese. Capturas `docs/telas/aura-r3-*.png`. Nenhum teste no carro.
+
+
+## Rodada 4 — área segura opcional
+
+Decisão do Paulo após observar o painel real: **Ajustes → Área segura no painel**
+(`safe_area_enabled`) é opt-in, desligada por padrão, inclusive nas instalações com margens
+antigas salvas. Desligada, ignora o padrão e os quatro ajustes: mapa, carro, cartões e aviso de
+telemetria usam todo o conteúdo disponível do menu, sem recorte da SafeArea. Ligada, conserva
+o cálculo anterior (padrão Song Plus e ajustes salvos). Os ajustes só ficam disponíveis quando ligada.
+Esta decisão substitui as descrições anteriores que tratavam a área segura como obrigatória.
+
+`Prefs.safeAreaEnabled` persiste em SharedPreferences; `SafeArea.effectiveInsets` retorna zero
+quando desligada. `SafeArea.Plan` continua organizando os elementos, agora sobre o conteúdo inteiro.
+O listener de `ClusterActivity` recalcula posições e câmera sem reiniciar. Menu
+Simples/Pequeno/Cheio/OFF, rota nativa e aviso de telemetria conservam seus fluxos; OFF continua
+ocultando o conteúdo. Debug continua disponível, mas o contorno da área segura só aparece com
+a opção ligada. O aviso de telemetria fica no canto superior direito do conteúdo nos dois casos.
+
+Regressões JVM: padrão desligado mesmo com margens antigas, opt-in explícito, margens ligadas e
+ignoradas, cartões e aviso dentro do conteúdo inteiro/reduzido. No carro, conferir as duas opções,
+rota, manobras, telemetria e os quatro modos, com atenção às sobreposições originais da BYD.

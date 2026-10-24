@@ -37,7 +37,7 @@ class InsideInterfaceTest {
     @Test fun mediaPlayStaysInsideTheInterface() {
         val t = launcher
         val play = t.substringAfter("private fun playOrResume()").substringBefore("\n    }")
-        assertTrue(play.contains("MediaRepository.resumeLast"))
+        assertTrue(play.contains("command(\"media_play\""))
         assertFalse(play.contains("startActivity") || play.contains("openMedia") || play.contains("startSafely"))
     }
 

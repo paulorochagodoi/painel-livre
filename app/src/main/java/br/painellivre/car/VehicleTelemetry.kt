@@ -28,7 +28,7 @@ import kotlinx.coroutines.sync.withLock
  *   carro" está ligada: uma varredura a cada `telemetry_interval` s, num único comando de shell.
  * - Antes da primeira leitura confere a interface do serviço ([Autoservice.Environment]); sem
  *   `android.gui.BYDAutoServer`, bloqueia (os números de transação seriam outros).
- * - Só transações 5/7 ([Autoservice.command]); escrita (6) não existe neste app.
+ * - Só transações 5/7 ([Autoservice.command]); escrita fica exclusivamente em CarCommands.
  * - Endereços: o nome no catálogo da central (`BYDAutoFeatureIds`, por reflexão) vence o padrão.
  */
 object VehicleTelemetry {
@@ -127,6 +127,14 @@ object VehicleTelemetry {
             return@withLock TelemetrySnapshot(TelemetrySnapshot.Status.NO_SERVICE)
         }
         TelemetrySnapshot(TelemetrySnapshot.Status.OK, readings = readings, atMillis = System.currentTimeMillis(), protocol = env.protocol)
+    }
+
+    suspend fun refresh(ctx: Context, signals: List<TelemetryCatalog.Signal>): TelemetrySnapshot {
+        val fresh = sweep(ctx, signals)
+        if (fresh.status == TelemetrySnapshot.Status.OK) {
+            publish(fresh.copy(readings = state.value.readings + fresh.readings))
+        }
+        return fresh
     }
 
     /**

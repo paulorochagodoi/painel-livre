@@ -263,7 +263,7 @@ open class ClusterActivity : ComponentActivity() {
         tilt = prefs.mapTilt
         safeBase = SafeArea.preset(prefs.safeArea)
         safeAdjust = prefs.insetAdjust
-        showSafeOutline = prefs.debugMode
+        showSafeOutline = prefs.debugMode && prefs.safeAreaEnabled
         maxFps = prefs.maxFps
         autoHeal = prefs.autoHeal
     }
@@ -353,7 +353,8 @@ open class ClusterActivity : ComponentActivity() {
         for (i in 0 until 3) {
             val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
             val l = label(R.font.albert_sans_semibold).apply { isAllCaps = true; letterSpacing = 0.06f }
-            val v = label(R.font.sora_semibold)
+            // Valor nunca cortado ("16 min", "1 h 05 min"): a coluna cresce até caber.
+            val v = label(R.font.sora_semibold).apply { ellipsize = null }
             col.addView(l); col.addView(v)
             etaLabels[i] = l; etaValues[i] = v
             etaCard.addView(col)
@@ -434,7 +435,7 @@ open class ClusterActivity : ComponentActivity() {
         // A área segura é do display do painel; o conteúdo pode estar encolhido pelo menu (#9).
         val dw = displayFrame.width.takeIf { it > 0 } ?: w
         val dh = displayFrame.height.takeIf { it > 0 } ?: h
-        val insets = SafeArea.resolve(dw, dh, safeBase, safeAdjust)
+        val insets = SafeArea.effectiveInsets(prefs.safeAreaEnabled, dw, dh, safeBase, safeAdjust)
         val p = SafeArea.plan(dw, dh, insets, SafeArea.Rect(root.left, root.top, root.left + w, root.top + h))
         if (p != plan) AppLog.i("Área segura do painel ${dw}x$dh: margens $insets, carro em ${p.carX},${p.carY}")
         plan = p
@@ -446,7 +447,7 @@ open class ClusterActivity : ComponentActivity() {
             // Manobra colada na faixa de cima da BYD, na borda da área segura.
             leftMargin = safe.left; topMargin = safe.top
         }
-        tbtCard.layoutParams = LinearLayout.LayoutParams(p.cardWidth, -2)
+        tbtCard.layoutParams = LinearLayout.LayoutParams(ClusterLook.maneuverWidth(p), -2)
         tbtCard.setPadding(pad, pad, (pad * 1.4f).toInt(), pad)
         val icon = px(ClusterLook.ICON_BOX).toInt()
         tbtIconBox.layoutParams = LinearLayout.LayoutParams(icon, icon).apply { marginEnd = (pad * 1.2f).toInt() }

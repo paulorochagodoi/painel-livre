@@ -86,7 +86,11 @@ object SelfAdb {
     }
 
     suspend fun shell(context: Context, command: String): Result =
-        withContext(Dispatchers.IO) { mutex.withLock { runLocked(context, command) } }
+        withContext(Dispatchers.IO) { mutex.withLock { runLocked(context, command, retry = true) } }
+
+    /** Escritas nunca são repetidas: uma queda pode acontecer depois de o carro executar. */
+    suspend fun shellOnce(context: Context, command: String): Result =
+        withContext(Dispatchers.IO) { mutex.withLock { runLocked(context, command, retry = false) } }
 
     /** Atalho: devolve a saída ou "ERRO: ..." (para telas de diagnóstico). */
     suspend fun shellText(context: Context, command: String): String =
@@ -95,7 +99,7 @@ object SelfAdb {
             is Result.Error -> "ERRO: ${r.message}"
         }
 
-    private fun runLocked(context: Context, command: String): Result {
+    private fun runLocked(context: Context, command: String, retry: Boolean): Result {
         var attempt = 0
         while (true) {
             try {
@@ -109,7 +113,7 @@ object SelfAdb {
                 drop()
                 val kind = classify(t)
                 // Conexão antiga que caiu (central dormiu, adbd reiniciou): uma nova tentativa.
-                if (attempt == 0 && kind == Kind.OTHER && t is IOException) {
+                if (retry && attempt == 0 && kind == Kind.OTHER && t is IOException) {
                     attempt++
                     AppLog.w("Conexão ADB caiu (${t.javaClass.simpleName}); reconectando")
                     continue

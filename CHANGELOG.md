@@ -4,7 +4,12 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
-## Não lançado — interface Aura na tela central
+## Não lançado — interface Aura na central e no painel
+
+- Rodada 4: “Área segura no painel” agora é opcional e desligada por padrão, inclusive com
+  margens antigas salvas. Desligada usa todo o conteúdo do menu; ligada preserva o cálculo anterior.
+  Aplicação imediata, sem reiniciar. Aviso de telemetria acompanha o canto superior direito nos dois
+  layouts; rota, debug e modos do menu preservados. Regressões JVM para preferência e posições.
 
 Branch `feat/interface-aura` (base 0.5.2 teste). Versão não mudou. Detalhes, mapeamento e inventário
 em `docs/INTERFACE-AURA.md`.
@@ -17,8 +22,7 @@ em `docs/INTERFACE-AURA.md`.
   janelas ancoradas (uma por vez, 180 ms, sem animação se o Android estiver sem animações) e dock.
 - Painel de instrumentos: o botão Painel do dock abre uma janela com estado, motivo da falha e
   Mostrar no painel / Voltar ao painel original.
-- Climatização, bancos, vidros, porta-malas e trava **só mostram** o que o carro informa; nenhum
-  controle manda comando ao carro. Sem dado, o chip some ou diz "Sem dado".
+- Estado inicial da Aura: controles só mostravam dados; a rodada 3 abaixo acrescenta comandos com liberação explícita. Sem dado não vira fechado.
 - Nada inventado: mídia real ("Nada tocando" sem sessão), Casa/Trabalho com distância real ou
   "Definir", categorias da busca fazem busca de verdade no Photon.
 - Busca completa (NavSearch) com a escolha Painel Livre/Maps/Waze, rota ativa, lugares, mapa com a rota
@@ -29,6 +33,17 @@ em `docs/INTERFACE-AURA.md`.
 - Testes: `AuraTest` (14 novos) — 223 testes JVM, 0 falhas; `lintDebug` 0 erros (76 avisos, antes 174
   nesta branch); `assembleDebug` concluído. Emulador `emulator-5580`: claro, escuro, em pé, cada janela,
   simulação de telemetria do debug e animações desligadas. **Não testado no carro.**
+
+### Rodada 2
+
+- Painel Aura com tokens claro/escuro, Sora/Albert Sans e ícones de linha; menu, área segura,
+  aviso de telemetria, rota nativa e debug preservados.
+- Ruas mais largas por zoom nos dois mapas, seta larga em accent com contorno branco/sombra e
+  rota accent com contorno. Duração da chegada sem reticências; idade do GPS simulado corrigida.
+- Reproduzir sem sessão retoma mídia dentro da interface; nenhuma abertura externa nova.
+  Exceções antigas documentadas em `docs/INTERFACE-AURA.md` para decisão do dono.
+- 238 testes JVM passando, lintDebug sem erros (76 avisos), assembleDebug concluído.
+  Emulador disponível; capturas `/tmp/pl-aura-prints/r2-*`. Sem teste no carro, versão inalterada.
 
 ## 0.5.2 (teste) — 2026-10-23 — área segura, menu do painel, telemetria e carro 3D
 
@@ -273,3 +288,19 @@ APK `PainelLivre-v0.1.0-release.apk`, SHA-256 `15eaf960dc714fa850ebb3fcc927cef95
 - Launcher simples na central, Configurações, Diagnóstico (dual/single-OS, displays, AutoContainer),
   simulação de rota.
 - Testes: `NavParserTest` (13).
+
+### Rodada 3 — comandos internos (não lançado)
+
+- `CarCommands` centraliza a transação 6, com catálogo fechado, valores limitados, chave geral e
+  individuais desligados, bloqueio de movimento sem P real recente e registro no Diagnóstico.
+- Clima/temperaturas do dock e mídia Android passam pela camada. Confirmação humana no clima,
+  releitura real, feedback imediato, limite de um envio/s e ADB sem repetição automática.
+- Temperaturas inteiras 16–30, fan 0–7, energia/A-C/AUTO/recirculação/desembaçador comprovados na
+  fonte estática, ainda sem teste no carro. Meio grau, bancos, porta-malas/vidros/teto, bateria e
+  rádio BYD seguem bloqueados por evidência incompleta. Tabela e fontes em `docs/COMANDOS.md`.
+- Sem alteração de versão, manifesto, assinatura; sem acesso ao carro, push ou merge.
+
+Validação da rodada 3: 248 testes JVM, zero falhas; `testDebugUnitTest lintDebug assembleDebug`
+com JDK 17. Lint sem erros (79 avisos). No emulator-5580 foram conferidos a janela de clima,
+seletor, confirmação e rejeição com a chave desligada, registrada no log; lista de liberações
+individuais e recusa de hipótese. Capturas `docs/telas/aura-r3-*.png`. Nenhum teste no carro.

@@ -141,6 +141,18 @@ class MapLookTest {
         }
     }
 
+    @Test fun smallModeReservesRoomForDistanceWithoutTouchingTheArrow() {
+        val insets = SafeArea.resolve(1920, 720, SafeArea.SONG_PLUS, SafeArea.NONE)
+        for (frame in listOf(SafeArea.Rect(0, 0, 1920, 720), SafeArea.Rect(537, 86, 1383, 634))) {
+            val p = SafeArea.plan(1920, 720, insets, frame)
+            val width = ClusterLook.maneuverWidth(p)
+            val textWidth = width - p.unit * (ClusterLook.ICON_BOX + 3.6f * ClusterLook.PAD)
+            // Reserva para cinco caracteres Sora grandes, incluindo unidade e vírgula.
+            assertTrue(textWidth >= p.unit * ClusterLook.DISTANCE * 3.4f)
+            assertTrue(p.safe.left + width <= p.carX - p.unit * SafeArea.CAR_SIZE / 2)
+        }
+    }
+
     private fun round(v: Any?): Any? = when (v) {
         is Double -> Math.round(v * 1000) / 1000.0
         is Array<*> -> v.map(::round)

@@ -1,7 +1,6 @@
 package br.painellivre.ui.aura
 
 import br.painellivre.car.TelemetrySnapshot
-import br.painellivre.car.TelemetryText
 import br.painellivre.car.VehicleData
 import br.painellivre.ui.cockpit.CarOverlay
 
@@ -82,7 +81,7 @@ object CarReadouts {
         return when {
             alerts == 1 -> Chip("tyres", Icon.GAUGE, "Pneus", "1 fora da faixa", Level.WARN)
             alerts > 1 -> Chip("tyres", Icon.GAUGE, "Pneus", "$alerts fora da faixa", Level.WARN)
-            state.pressures.size == 4 -> Chip("tyres", Icon.GAUGE, "Pneus", "Calibrados", Level.NEUTRAL)
+            state.pressures.size == 4 -> Chip("tyres", Icon.GAUGE, "Pneus", "Na faixa", Level.NEUTRAL)
             else -> Chip("tyres", Icon.GAUGE, "Pneus", "Sem dado", Level.UNKNOWN)
         }
     }
@@ -93,7 +92,9 @@ object CarReadouts {
     fun summary(snapshot: TelemetrySnapshot?): Summary? {
         val s = usable(snapshot) ?: return null
         val open = DOOR_KEYS.count { s.isOpen(it) == true } + WINDOW_KEYS.count { (s.value(it) ?: 0.0) > 0 } +
-            listOf("hood", "trunk").count { s.isOpen(it) == true } + (if (s.chargeLidOpen == true) 1 else 0)
+            listOf("hood", "trunk").count { s.isOpen(it) == true } +
+            // Tampa aberta com o cabo carregando é o normal (o chip mostra "Carregando"), não abertura.
+            (if (s.chargeLidOpen == true && s.charging != true) 1 else 0)
         if (open > 0) return Summary(if (open == 1) "1 abertura" else "$open aberturas", warn = true)
         val allKnown = TelemetrySnapshot.OPENING_KEYS.all { s.isOpen(it) == false }
         return if (allKnown) Summary("Tudo fechado", warn = false) else null
@@ -173,6 +174,17 @@ object CarReadouts {
         val hasAny get() = soc != null || totalKm != null || fuelPercent != null
     }
 
+    /** Linha da carga no formato Aura: "Carregando · 6,6 kW · 1h20" (o painel segue com TelemetryText.charge). */
+    fun chargeLine(s: TelemetrySnapshot): String? = when {
+        s.charging == true -> listOfNotNull(
+            "Carregando",
+            s.chargeKw?.let { String.format(java.util.Locale("pt", "BR"), "%.1f kW", it) },
+            s.chargeRemainingMin?.let(AuraFormat::duration),
+        ).joinToString(" · ")
+        s.plugged == true -> "Cabo conectado, sem carregar"
+        else -> null
+    }
+
     /** O SDK BYD vence; sem ele (permissão recusada no uid do app), vale a leitura pelo ADB local. */
     fun battery(sdk: VehicleData.Snapshot?, snapshot: TelemetrySnapshot?): Battery {
         val t = usable(snapshot)
@@ -182,7 +194,7 @@ object CarReadouts {
             fuelKm = sdk?.fuelRangeKm ?: t?.fuelRangeKm,
             fuelPercent = sdk?.fuelPercent ?: t?.value("fuel_pct")?.toInt(),
             volt12 = t?.value("volt12"),
-            charge = t?.let(TelemetryText::charge),
+            charge = t?.let(::chargeLine),
             charging = t?.charging == true,
             plugged = t?.plugged,
             remainingMin = t?.chargeRemainingMin,

@@ -80,7 +80,7 @@ class AuraPainter(val c: AuraColors, private val density: Float) {
             "a_db_on" -> { root.background = ripple(shape(c.accentSoft, dp(r.md)), dp(r.md)); tint(root, c.accent) }
             "a_plain_click" -> root.background = ripple(ColorDrawable(0), dp(r.md))
             "a_divider" -> root.background = ColorDrawable(c.line)
-            "a_banner" -> root.background = shape(c.warnSoft, pill, c.warn)
+            "a_banner" -> root.background = shape(c.warnSoft, dp(r.md), c.warn)
             "a_ic" -> { root.background = shape(c.surfaceSunken, 0f, oval = true); tint(root, c.inkMuted) }
             "a_ic_warn" -> { root.background = shape(c.warn, 0f, oval = true); tint(root, c.warnSoft) }
             "a_ic_acc" -> { root.background = shape(c.accent, 0f, oval = true); tint(root, c.onAccent) }

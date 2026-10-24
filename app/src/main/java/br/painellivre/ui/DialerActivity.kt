@@ -34,7 +34,8 @@ import br.painellivre.phone.CallPaths
 import br.painellivre.phone.CallPlan
 import br.painellivre.phone.DialNumber
 import br.painellivre.phone.PhoneApps
-import br.painellivre.ui.cockpit.BackdropDrawable
+import br.painellivre.ui.aura.AuraBackdropDrawable
+import br.painellivre.ui.aura.AuraColors
 import br.painellivre.ui.cockpit.Palette
 import br.painellivre.util.AppLog
 import br.painellivre.util.Prefs
@@ -59,11 +60,14 @@ class DialerActivity : AppCompatActivity() {
     private val store by lazy { getSharedPreferences("dialer", Context.MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.Theme_PainelLivre_Aura) // fontes Aura (Albert Sans)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dialer)
-        palette = Palette.forSetting(Prefs(this).theme)
+        // Mesmas cores da tela inicial Aura (docs/INTERFACE-AURA.md); o painel segue com o Palette próprio.
+        val aura = AuraColors.forSetting(Prefs(this).theme)
+        palette = aura.toPalette()
         number = savedInstanceState?.getString(STATE_NUMBER) ?: DialNumber.clean(intent?.dataString)
-        findViewById<ImageView>(R.id.backdrop).setImageDrawable(BackdropDrawable(palette.dark))
+        findViewById<ImageView>(R.id.backdrop).setImageDrawable(AuraBackdropDrawable(aura))
         buildKeys()
         palette.apply(findViewById(R.id.root), density)
         styleCallButton()

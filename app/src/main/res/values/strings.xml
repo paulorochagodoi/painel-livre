@@ -106,6 +106,8 @@
     <string name="cat_parking_query">estacionamento</string>
     <string name="car_data_off">Dados do carro desligados. Toque para ligar em Ajustes → Ler dados do carro.</string>
     <string name="car_data_off_short">Ligue a leitura em Ajustes</string>
+    <string name="car_data_no_adb">Sem ADB local</string>
+    <string name="car_data_error">Leitura indisponível</string>
     <string name="car_data_all">Ver todos os dados</string>
     <string name="range_total">Autonomia total</string>
     <string name="range_split">Elétrica %1$d km · Combustível %2$d km</string>

@@ -711,7 +711,8 @@ class LauncherActivity : AppCompatActivity() {
             TelemetrySnapshot.Status.OFF -> off
             TelemetrySnapshot.Status.WAITING -> t.status.label
             TelemetrySnapshot.Status.OK -> getString(R.string.car_data_unavailable)
-            else -> t.message
+            TelemetrySnapshot.Status.NO_ADB -> if (short) getString(R.string.car_data_no_adb) else t.message
+            else -> if (short) getString(R.string.car_data_error) else t.message
         }
     }
 
@@ -792,6 +793,9 @@ class LauncherActivity : AppCompatActivity() {
         pop.findViewById<TextView>(R.id.popMediaArtist).text = if (hasTrack) m!!.artist.orEmpty() else getString(R.string.media_pick_app)
         pop.findViewById<TextView>(R.id.popMediaSource).apply { text = app.orEmpty(); visibility = if (app == null) View.GONE else View.VISIBLE }
         pop.findViewById<ImageView>(R.id.popMediaPlay).setImageResource(icon)
+        // Sem sessão de mídia, anterior/próxima não fazem nada: ficam apagados (tocar abre o app).
+        listOf(findViewById<View>(R.id.tileMediaNext), pop.findViewById(R.id.popMediaPrev), pop.findViewById(R.id.popMediaNext))
+            .forEach { it.isEnabled = m != null; it.alpha = if (m != null) 1f else 0.4f }
         val art = pop.findViewById<ImageView>(R.id.popMediaArt)
         if (m?.art != null) { art.setImageBitmap(m.art); art.visibility = View.VISIBLE } else { art.setImageDrawable(null); art.visibility = View.GONE }
         pop.findViewById<EqualizerView>(R.id.popMediaEq).playing = playing && m?.art == null

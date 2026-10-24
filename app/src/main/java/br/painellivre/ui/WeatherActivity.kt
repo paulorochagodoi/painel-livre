@@ -15,7 +15,8 @@ import br.painellivre.info.Forecast
 import br.painellivre.info.ForecastText
 import br.painellivre.info.WeatherRepository
 import br.painellivre.location.LocationRepository
-import br.painellivre.ui.cockpit.BackdropDrawable
+import br.painellivre.ui.aura.AuraBackdropDrawable
+import br.painellivre.ui.aura.AuraColors
 import br.painellivre.ui.cockpit.Palette
 import br.painellivre.ui.cockpit.WeatherIconDrawable
 import br.painellivre.util.Prefs
@@ -33,10 +34,13 @@ class WeatherActivity : AppCompatActivity() {
     private var loading = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.Theme_PainelLivre_Aura) // fontes Aura (Albert Sans)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_weather)
-        palette = Palette.forSetting(Prefs(this).theme)
-        findViewById<ImageView>(R.id.backdrop).setImageDrawable(BackdropDrawable(palette.dark))
+        // Mesmas cores da tela inicial Aura (docs/INTERFACE-AURA.md); o painel segue com o Palette próprio.
+        val aura = AuraColors.forSetting(Prefs(this).theme)
+        palette = aura.toPalette()
+        findViewById<ImageView>(R.id.backdrop).setImageDrawable(AuraBackdropDrawable(aura))
         palette.apply(findViewById(R.id.root), density)
         findViewById<View>(R.id.wxClose).setOnClickListener { finish() }
         findViewById<View>(R.id.wxRefresh).setOnClickListener { load(force = true) }

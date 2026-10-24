@@ -77,19 +77,25 @@
 
     <include layout="@layout/aura_nav_apps" />
 
-    <LinearLayout
-        android:id="@+id/navCats"
+    <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="44dp"
         android:layout_marginTop="12dp"
-        android:orientation="horizontal">
+        android:scrollbars="none">
 
-        <include layout="@layout/aura_cat_charge" />
+        <LinearLayout
+            android:id="@+id/navCats"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:orientation="horizontal">
 
-        <include layout="@layout/aura_cat_fuel" />
+            <include layout="@layout/aura_cat_charge" />
 
-        <include layout="@layout/aura_cat_parking" />
-    </LinearLayout>
+            <include layout="@layout/aura_cat_fuel" />
+
+            <include layout="@layout/aura_cat_parking" />
+        </LinearLayout>
+    </HorizontalScrollView>
 
     <LinearLayout
         android:id="@+id/navActive"

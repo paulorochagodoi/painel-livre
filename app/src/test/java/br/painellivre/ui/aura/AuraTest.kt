@@ -162,12 +162,18 @@ class AuraTest {
         val chip = CarReadouts.chips(s).single { it.id == "charge" }
         assertEquals("Carregando · 62%", chip.value)
         assertEquals(Level.ACCENT, chip.level)
+        val charge = snapshot("bms" to 1, "gun" to 2, "charge_kw" to float(6.6f), "charge_h" to 1, "charge_min" to 40)
+        assertEquals("Carregando · 6,6 kW · 1h40", CarReadouts.battery(null, charge).charge)
+        assertEquals("Cabo conectado, sem carregar", CarReadouts.battery(null, snapshot("gun" to 2, "bms" to 2)).charge)
         assertEquals(Level.WARN, CarReadouts.chips(snapshot("charge_lid" to 1)).single().level)
         val tyres = CarReadouts.chips(snapshot("tyre_p_fl" to 250, "tyre_p_fr" to 250, "tyre_p_rl" to 250, "tyre_p_rr" to 180)).single()
         assertEquals("1 fora da faixa", tyres.value)
         assertEquals(Level.WARN, tyres.level)
         val ok = CarReadouts.chips(snapshot("tyre_p_fl" to 250, "tyre_p_fr" to 250, "tyre_p_rl" to 250, "tyre_p_rr" to 250)).single()
-        assertEquals("Calibrados", ok.value)
+        assertEquals("Na faixa", ok.value)
+        // Carregando com a tampa aberta: não conta como abertura.
+        assertNull(CarReadouts.summary(snapshot("bms" to 1, "charge_lid" to 1)))
+        assertEquals(CarReadouts.Summary("1 abertura", warn = true), CarReadouts.summary(snapshot("bms" to 2, "charge_lid" to 1)))
     }
 
     @Test fun climateIsReadOnlyAndOnlyWhatWasRead() {

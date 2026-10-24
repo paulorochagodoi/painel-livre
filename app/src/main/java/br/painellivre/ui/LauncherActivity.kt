@@ -61,6 +61,8 @@ import br.painellivre.nav.Place
 import br.painellivre.nav.Places
 import br.painellivre.nav.native.NativeNavigation
 import br.painellivre.nav.native.NativeRouteLayer
+import br.painellivre.nav.MapLook
+import br.painellivre.nav.MapStyler
 import br.painellivre.ui.aura.AnchoredLayout
 import br.painellivre.ui.aura.AuraBackdropDrawable
 import br.painellivre.ui.aura.AuraColors
@@ -170,7 +172,7 @@ class LauncherActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { NavRepository.state.collect { renderNav(it) } }
-                launch { NativeNavigation.route.collect { NativeRouteLayer.draw(navMapLibre?.style) } }
+                launch { NativeNavigation.route.collect { NativeRouteLayer.draw(navMapLibre?.style, colors) } }
                 launch { ClusterService.status.collect { renderCluster(it) } }
                 launch { MediaRepository.now.collect { renderMedia(it) } }
                 launch { WeatherRepository.weather.collect { renderWeather(it) } }
@@ -265,7 +267,7 @@ class LauncherActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.themeText).text = c.label
         renderCarArt()
         renderAll()
-        navMapLibre?.setStyle(Style.Builder().fromUri(mapStyleUri())) { NativeRouteLayer.draw(it) }
+        navMapLibre?.setStyle(Style.Builder().fromUri(mapStyleUri())) { MapStyler.widenRoads(it); NativeRouteLayer.draw(it, colors) }
         navCar?.setImageDrawable(carArrow())
         (findViewById<RecyclerView>(R.id.appsGrid).adapter as? AppsAdapter)?.let { @Suppress("NotifyDataSetChanged") it.notifyDataSetChanged() }
     }
@@ -805,14 +807,14 @@ class LauncherActivity : AppCompatActivity() {
         packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
     }.getOrNull()
 
-    private fun openMedia() {
-        val pkg = MediaRepository.now.value?.appPackage
     /** Tocar/pausar dentro da interface; sem sessão, retoma o último app de mídia sem abri-lo. */
     private fun playOrResume() {
         if (MediaRepository.now.value == null) MediaRepository.resumeLast(this) else MediaRepository.playPause()
     }
 
     /** "Abrir app" da janela Mídia: função antiga (cartão Mídia do cockpit), mantida para o Paulo decidir. */
+    private fun openMedia() {
+        val pkg = MediaRepository.now.value?.appPackage
         val launch = pkg?.let { packageManager.getLaunchIntentForPackage(it) }
             ?: Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_MUSIC)
         startSafely(launch)
@@ -1094,7 +1096,7 @@ class LauncherActivity : AppCompatActivity() {
         val mv = MapView(this)
         host.addView(mv, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         val car = ImageView(this).apply { setImageDrawable(carArrow()) }
-        val size = (44 * density).toInt()
+        val size = (MapLook.CENTRAL_ARROW_DP * density).toInt()
         host.addView(car, FrameLayout.LayoutParams(size, size, Gravity.CENTER))
         navMap = mv
         navCar = car
@@ -1107,7 +1109,8 @@ class LauncherActivity : AppCompatActivity() {
             m.uiSettings.isLogoEnabled = false
             m.uiSettings.isCompassEnabled = false
             m.setStyle(Style.Builder().fromUri(mapStyleUri())) {
-                NativeRouteLayer.draw(it)
+                MapStyler.widenRoads(it)
+                NativeRouteLayer.draw(it, colors)
                 updateNavMap()
             }
         }
@@ -1122,7 +1125,7 @@ class LauncherActivity : AppCompatActivity() {
         navCar?.rotation = loc?.bearing ?: 0f
     }
 
-    private fun carArrow(): Drawable = br.painellivre.cluster.CarArrowDrawable()
+    private fun carArrow(): Drawable = br.painellivre.cluster.CarArrowDrawable(MapLook.arrowColors(colors))
 
     // ── Apps ────────────────────────────────────────────────────────────────
 

@@ -141,7 +141,7 @@ object SafeArea {
     }
 
     /** Tamanho do carro em [Plan.unit]. */
-    const val CAR_SIZE = 0.095f
+    const val CAR_SIZE = 0.12f
 
     /**
      * Padding mínimo que leva o centro da câmera do MapLibre (meio da área sem padding) ao ponto

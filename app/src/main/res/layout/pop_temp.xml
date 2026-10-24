@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Temperatura de um lado (au-tcard), só o número lido. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="1"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:tag="a_sunken">
+
+    <TextView
+        android:id="@+id/tempLabel"
+        style="@style/AuLabelMuted"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/tempValue"
+        style="@style/AuNumL"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp" />
+</LinearLayout>

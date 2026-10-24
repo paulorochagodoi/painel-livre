@@ -28,7 +28,9 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
         set(v) = sp.edit().putString(KEY_NAV_APP, v).apply()
 
     /** Tema da central e do mapa: "auto" (dia/noite pela hora), "day" ou "night". */
-    val theme: String get() = sp.getString(KEY_THEME, "auto") ?: "auto"
+    var theme: String
+        get() = sp.getString(KEY_THEME, "auto") ?: "auto"
+        set(v) = sp.edit().putString(KEY_THEME, v).apply()
 
     /** Foto do carro escolhida pelo motorista (content://), no lugar da ilustração. */
     var carPhoto: String?

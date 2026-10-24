@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- StatusBar (40): conectividade · clima e bateria · troca de tema. Nunca mais de três grupos. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/statusBar"
+    android:layout_width="match_parent"
+    android:layout_height="40dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp">
+
+    <ImageView
+        android:id="@+id/statusWifi"
+        style="@style/AuIconSmall"
+        android:contentDescription="@string/status_wifi"
+        android:importantForAccessibility="yes"
+        android:src="@drawable/au_wifi" />
+
+    <ImageView
+        android:id="@+id/statusBt"
+        style="@style/AuIconSmall"
+        android:layout_marginStart="14dp"
+        android:contentDescription="@string/status_bt"
+        android:importantForAccessibility="yes"
+        android:src="@drawable/au_bt" />
+
+    <ImageView
+        android:id="@+id/statusGps"
+        style="@style/AuIconSmall"
+        android:layout_marginStart="14dp"
+        android:contentDescription="@string/status_gps"
+        android:importantForAccessibility="yes"
+        android:src="@drawable/au_locate" />
+
+    <TextView
+        android:id="@+id/statusPanel"
+        style="@style/AuLabelMuted"
+        android:layout_marginStart="14dp" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <LinearLayout
+        android:id="@+id/statusClimate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:importantForAccessibility="no"
+            style="@style/AuIconSmall"
+            android:src="@drawable/au_fan" />
+
+        <TextView
+            android:id="@+id/statusClimateText"
+            style="@style/AuLabelMuted"
+            android:layout_marginStart="6dp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/statusBattery"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:importantForAccessibility="no"
+            style="@style/AuIconSmall"
+            android:src="@drawable/au_battery" />
+
+        <TextView
+            android:id="@+id/statusBatteryText"
+            style="@style/AuLabelMuted"
+            android:layout_marginStart="6dp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/themeButton"
+        android:layout_width="wrap_content"
+        android:layout_height="30dp"
+        android:layout_marginStart="16dp"
+        android:contentDescription="@string/theme_toggle"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:tag="a_sunken_pill">
+
+        <ImageView
+            android:importantForAccessibility="no"
+            android:id="@+id/themeIcon"
+            style="@style/AuIconSmall"
+            android:src="@drawable/au_moon"
+            android:tag="a_icon" />
+
+        <TextView
+            android:id="@+id/themeText"
+            style="@style/AuLabel"
+            android:layout_marginStart="6dp" />
+    </LinearLayout>
+</LinearLayout>

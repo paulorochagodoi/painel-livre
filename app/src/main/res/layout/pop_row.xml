@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Linha de informação (au-opt) só de leitura: título, detalhe e valor à direita. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:minHeight="56dp"
+    android:orientation="horizontal"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/rowTitle"
+            style="@style/AuBodyStrong"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/rowSub"
+            style="@style/AuCaption"
+            android:maxLines="1"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/rowValue"
+        style="@style/AuNumS"
+        android:layout_marginStart="12dp"
+        android:textSize="18sp" />
+</LinearLayout>

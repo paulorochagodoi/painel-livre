@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Segmentado "rota pelo": Painel Livre (rota nativa), Google Maps ou Waze. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="52dp"
+    android:layout_marginTop="12dp"
+    android:orientation="horizontal"
+    android:padding="4dp"
+    android:tag="a_sunken_pill">
+
+    <TextView
+        android:id="@+id/appNative"
+        style="@style/AuSegment"
+        android:text="@string/open_native" />
+
+    <TextView
+        android:id="@+id/appMaps"
+        style="@style/AuSegment"
+        android:layout_marginStart="4dp"
+        android:text="@string/open_maps" />
+
+    <TextView
+        android:id="@+id/appWaze"
+        style="@style/AuSegment"
+        android:layout_marginStart="4dp"
+        android:text="@string/open_waze" />
+</LinearLayout>

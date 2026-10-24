@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Interface Aura (docs/INTERFACE-AURA.md). Medidas em dp do desenho base 1280 × 720: a tela
+     inicial usa densidade própria (AuraScale), então 1 dp aqui = 1 px do desenho da designer.
+     Cores não vão aqui: as tags "a_…" são pintadas pelo AuraPainter (claro/escuro). -->
+<resources>
+
+    <style name="Theme.PainelLivre.Aura" parent="Theme.PainelLivre">
+        <item name="android:fontFamily">@font/albert_sans_medium</item>
+        <item name="fontFamily">@font/albert_sans_medium</item>
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+
+    <!-- Tipografia: Sora para números grandes, Albert Sans para o resto. -->
+    <style name="AuClock">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:fontFamily">@font/sora_light</item>
+        <item name="android:textSize">72sp</item>
+        <item name="android:letterSpacing">-0.028</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:tag">a_ink</item>
+    </style>
+
+    <style name="AuNumL">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:fontFamily">@font/sora_light</item>
+        <item name="android:textSize">44sp</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:tag">a_ink</item>
+    </style>
+
+    <style name="AuNumM" parent="AuNumL">
+        <item name="android:fontFamily">@font/sora_regular</item>
+        <item name="android:textSize">30sp</item>
+    </style>
+
+    <style name="AuNumS" parent="AuNumL">
+        <item name="android:fontFamily">@font/sora_regular</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+
+    <style name="AuTitle">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:fontFamily">@font/albert_sans_semibold</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:tag">a_ink</item>
+    </style>
+
+    <style name="AuTileTitle" parent="AuTitle">
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="AuBody">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:fontFamily">@font/albert_sans_medium</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:tag">a_ink</item>
+    </style>
+
+    <style name="AuBodyStrong" parent="AuBody">
+        <item name="android:fontFamily">@font/albert_sans_semibold</item>
+    </style>
+
+    <style name="AuLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:fontFamily">@font/albert_sans_semibold</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:tag">a_ink</item>
+    </style>
+
+    <style name="AuLabelMuted" parent="AuLabel">
+        <item name="android:tag">a_muted</item>
+    </style>
+
+    <style name="AuCaption">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:fontFamily">@font/albert_sans_medium</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:maxLines">2</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:tag">a_muted</item>
+    </style>
+
+    <style name="AuSection" parent="AuCaption">
+        <item name="android:fontFamily">@font/albert_sans_semibold</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.06</item>
+        <item name="android:maxLines">1</item>
+    </style>
+
+    <!-- Atalhos (ShortcutTiles) -->
+    <style name="AuTile">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:paddingStart">18dp</item>
+        <item name="android:paddingEnd">18dp</item>
+        <item name="android:paddingTop">16dp</item>
+        <item name="android:paddingBottom">16dp</item>
+        <item name="android:tag">a_tile</item>
+    </style>
+
+    <style name="AuTileHead">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+    </style>
+
+    <style name="AuBadge">
+        <item name="android:layout_width">34dp</item>
+        <item name="android:layout_height">34dp</item>
+        <item name="android:padding">7dp</item>
+        <item name="android:importantForAccessibility">no</item>
+        <item name="android:tag">a_badge</item>
+    </style>
+
+    <style name="AuChevron">
+        <item name="android:layout_width">20dp</item>
+        <item name="android:layout_height">20dp</item>
+        <item name="android:importantForAccessibility">no</item>
+        <item name="android:src">@drawable/au_chev_d</item>
+        <item name="android:rotation">-90</item>
+        <item name="android:tag">a_icon_muted</item>
+    </style>
+
+    <!-- Ícones -->
+    <style name="AuIcon">
+        <item name="android:layout_width">24dp</item>
+        <item name="android:layout_height">24dp</item>
+        <item name="android:importantForAccessibility">no</item>
+        <item name="android:tag">a_icon</item>
+    </style>
+
+    <style name="AuIconSmall" parent="AuIcon">
+        <item name="android:layout_width">18dp</item>
+        <item name="android:layout_height">18dp</item>
+        <item name="android:tag">a_icon_muted</item>
+    </style>
+
+    <!-- Dock -->
+    <style name="AuDockButton">
+        <item name="android:layout_width">56dp</item>
+        <item name="android:layout_height">56dp</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:tag">a_db</item>
+    </style>
+
+    <!-- Chips de estado do carro (VehicleStatus) -->
+    <style name="AuChipIcon">
+        <item name="android:layout_width">30dp</item>
+        <item name="android:layout_height">30dp</item>
+        <item name="android:padding">6dp</item>
+        <item name="android:importantForAccessibility">no</item>
+        <item name="android:tag">a_ic</item>
+    </style>
+
+    <!-- Controles dentro das janelas -->
+    <style name="AuRoundSmall">
+        <item name="android:layout_width">44dp</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:padding">10dp</item>
+        <item name="android:tag">a_sunken_round</item>
+    </style>
+
+    <style name="AuClose" parent="AuRoundSmall">
+        <item name="android:src">@drawable/au_close</item>
+        <item name="android:contentDescription">@string/close</item>
+    </style>
+
+    <style name="AuPopHead">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">16dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+    </style>
+
+    <style name="AuPillButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">56dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">26dp</item>
+        <item name="android:paddingEnd">26dp</item>
+        <item name="android:fontFamily">@font/albert_sans_semibold</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:tag">a_primary_pill</item>
+    </style>
+
+    <style name="AuPillSecondary" parent="AuPillButton">
+        <item name="android:layout_height">44dp</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:tag">a_sunken_pill</item>
+    </style>
+
+    <style name="AuSegment">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:gravity">center</item>
+        <item name="android:fontFamily">@font/albert_sans_semibold</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:tag">a_seg_off</item>
+    </style>
+
+    <style name="AuMode">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">64dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:gravity">center</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:tag">a_mode_off</item>
+    </style>
+</resources>

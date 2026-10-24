@@ -15,6 +15,9 @@ class SongCarView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     var modelEnabled = true
     var palette = Palette.NIGHT
         set(value) { field = value; invalidate() }
+    /** Cor do halo sob o carro; null = verde do tema (cockpit antigo). A tela Aura usa platform-glow. */
+    var glow: Int? = null
+        set(value) { field = value; glowShader = null; invalidate() }
     var snapshot: TelemetrySnapshot? = null
         set(value) {
             field = value
@@ -77,18 +80,19 @@ class SongCarView @JvmOverloads constructor(context: Context, attrs: AttributeSe
             return rect
         }
         // O render base já inclui sombra de contato; halo elíptico discreto integra o fundo.
-        val glow = c.save()
+        val glowSave = c.save()
         c.translate(paddingLeft+w*.5f, paddingTop+h*.76f)
         c.scale(w*.36f,h*.12f)
         paint.alpha = 255
-        if (glowColor != palette.ok || glowShader == null) {
-            glowColor = palette.ok
-            glowShader = RadialGradient(0f,0f,1f,intArrayOf((palette.ok and 0xFFFFFF) or 0x18000000,Color.TRANSPARENT),null,Shader.TileMode.CLAMP)
+        val g = glow ?: ((palette.ok and 0xFFFFFF) or 0x18000000)
+        if (glowColor != g || glowShader == null) {
+            glowColor = g
+            glowShader = RadialGradient(0f,0f,1f,intArrayOf(g,Color.TRANSPARENT),null,Shader.TileMode.CLAMP)
         }
         paint.shader = glowShader
         c.drawCircle(0f,0f,1f,paint)
         paint.shader = null
-        c.restoreToCount(glow)
+        c.restoreToCount(glowSave)
         if (mix < 1f) image(base, 1f-mix)
         if (mix > 0f) {
             val r = image(top, mix)

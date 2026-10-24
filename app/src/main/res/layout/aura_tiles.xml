@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ShortcutTiles (486–624 no desenho): Navegação · Bateria · Climatização · Mídia, nesta ordem. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tiles"
+    android:layout_width="match_parent"
+    android:layout_height="138dp"
+    android:layout_marginStart="32dp"
+    android:layout_marginTop="6dp"
+    android:layout_marginEnd="32dp"
+    android:layout_marginBottom="16dp"
+    android:orientation="horizontal">
+
+    <include layout="@layout/tile_nav" />
+
+    <Space android:layout_width="16dp" android:layout_height="0dp" />
+
+    <include layout="@layout/tile_battery" />
+
+    <Space android:layout_width="16dp" android:layout_height="0dp" />
+
+    <include layout="@layout/tile_climate" />
+
+    <Space android:layout_width="16dp" android:layout_height="0dp" />
+
+    <include layout="@layout/tile_media" />
+</LinearLayout>

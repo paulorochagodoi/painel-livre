@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Temperatura do motorista no dock (só leitura). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/dockTempDriver"
+    android:layout_width="wrap_content"
+    android:layout_height="56dp"
+    android:layout_marginStart="8dp"
+    android:contentDescription="@string/climate_driver"
+    android:gravity="center"
+    android:minWidth="110dp"
+    android:orientation="vertical"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:tag="a_plain_click">
+
+    <TextView
+        android:id="@+id/dockTempDriverValue"
+        style="@style/AuNumS"
+        android:textSize="24sp" />
+
+    <TextView
+        style="@style/AuLabelMuted"
+        android:text="@string/climate_driver"
+        android:textSize="11sp" />
+</LinearLayout>

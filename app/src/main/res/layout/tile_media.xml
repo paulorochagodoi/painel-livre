@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Atalho Mídia: o que toca em qualquer app, com tocar/pausar e próxima direto no atalho. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tileMedia"
+    style="@style/AuTile"
+    android:contentDescription="@string/tab_media">
+
+    <LinearLayout style="@style/AuTileHead">
+
+        <ImageView
+            android:importantForAccessibility="no"
+            style="@style/AuBadge"
+            android:src="@drawable/au_music" />
+
+        <TextView
+            style="@style/AuTileTitle"
+            android:layout_width="0dp"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:text="@string/tab_media" />
+
+        <ImageView android:importantForAccessibility="no" style="@style/AuChevron" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tileMediaTitle"
+                style="@style/AuBodyStrong"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/tileMediaSub"
+                style="@style/AuCaption"
+                android:maxLines="1" />
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/tileMediaPlay"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="6dp"
+            android:contentDescription="@string/media_play"
+            android:padding="11dp"
+            android:src="@drawable/au_play"
+            android:tag="a_primary_round" />
+
+        <ImageView
+            android:id="@+id/tileMediaNext"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="6dp"
+            android:contentDescription="@string/media_next"
+            android:padding="11dp"
+            android:src="@drawable/au_next"
+            android:tag="a_sunken_round" />
+    </LinearLayout>
+</LinearLayout>

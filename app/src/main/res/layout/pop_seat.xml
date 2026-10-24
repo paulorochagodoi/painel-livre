@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Banco (au-seat): aquecimento (heat, laranja) e ventilação (cool, azul) com o nível lido. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:padding="10dp"
+    android:tag="a_sunken">
+
+    <TextView
+        android:id="@+id/seatLabel"
+        style="@style/AuLabelMuted"
+        android:layout_marginStart="4dp"
+        android:layout_marginBottom="8dp"
+        android:textSize="13sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="62dp"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/seatHeat"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:tag="a_seat_off">
+
+            <ImageView
+                android:importantForAccessibility="no"
+                android:id="@+id/seatHeatIcon"
+                style="@style/AuIcon"
+                android:src="@drawable/au_seat_heat" />
+
+            <br.painellivre.ui.aura.LevelBars
+                android:id="@+id/seatHeatLevel"
+                android:layout_width="50dp"
+                android:layout_height="4dp"
+                android:layout_marginTop="5dp" />
+        </LinearLayout>
+
+        <Space android:layout_width="8dp" android:layout_height="0dp" />
+
+        <LinearLayout
+            android:id="@+id/seatVent"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:tag="a_seat_off">
+
+            <ImageView
+                android:importantForAccessibility="no"
+                android:id="@+id/seatVentIcon"
+                style="@style/AuIcon"
+                android:src="@drawable/au_seat_vent" />
+
+            <br.painellivre.ui.aura.LevelBars
+                android:id="@+id/seatVentLevel"
+                android:layout_width="50dp"
+                android:layout_height="4dp"
+                android:layout_marginTop="5dp" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

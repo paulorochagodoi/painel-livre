@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Atalho Climatização: temperatura dos dois lados e o modo, como o carro informa (só mostra). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tileClimate"
+    style="@style/AuTile"
+    android:contentDescription="@string/climate_title">
+
+    <LinearLayout style="@style/AuTileHead">
+
+        <ImageView
+            android:importantForAccessibility="no"
+            style="@style/AuBadge"
+            android:src="@drawable/au_fan" />
+
+        <TextView
+            style="@style/AuTileTitle"
+            android:layout_width="0dp"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:text="@string/climate_title" />
+
+        <ImageView android:importantForAccessibility="no" style="@style/AuChevron" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:baselineAligned="true"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tileClimateBig"
+            style="@style/AuNumM" />
+
+        <TextView
+            android:id="@+id/tileClimateSmall"
+            style="@style/AuLabelMuted"
+            android:layout_marginStart="6dp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tileClimateSub"
+        style="@style/AuCaption"
+        android:layout_marginTop="4dp"
+        android:maxLines="1" />
+</LinearLayout>

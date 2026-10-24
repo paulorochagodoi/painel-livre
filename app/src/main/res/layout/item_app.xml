@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- App na grade de Apps: ícone do próprio app e o nome. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/selectableItemBackgroundBorderless"
     android:gravity="center_horizontal"
     android:orientation="vertical"
     android:paddingTop="16dp"
-    android:paddingBottom="16dp">
+    android:paddingBottom="16dp"
+    android:tag="a_plain_click">
 
     <ImageView
         android:id="@+id/appIcon"
@@ -16,14 +17,11 @@
 
     <TextView
         android:id="@+id/appLabel"
+        style="@style/AuLabel"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:ellipsize="end"
         android:gravity="center"
-        android:maxLines="1"
         android:paddingStart="4dp"
         android:paddingEnd="4dp"
-        android:tag="t1"
         android:textSize="15sp" />
 </LinearLayout>

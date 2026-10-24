@@ -4,7 +4,7 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
-## Não lançado — interface Aura na central e no painel
+## [0.5.3] — 2026-10-23 (teste) — interface Aura na central e no painel
 
 - Rodada 4: “Área segura no painel” agora é opcional e desligada por padrão, inclusive com
   margens antigas salvas. Desligada usa todo o conteúdo do menu; ligada preserva o cálculo anterior.

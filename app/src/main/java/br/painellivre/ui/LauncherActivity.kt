@@ -431,7 +431,7 @@ class LauncherActivity : AppCompatActivity() {
         click(R.id.tileBattery) { togglePopover(PopoverState.Id.BATTERY) }
         click(R.id.tileClimate) { togglePopover(PopoverState.Id.CLIMATE) }
         click(R.id.tileMedia) { togglePopover(PopoverState.Id.MEDIA) }
-        click(R.id.tileMediaPlay) { if (MediaRepository.now.value == null) openMedia() else MediaRepository.playPause() }
+        click(R.id.tileMediaPlay) { playOrResume() }
         click(R.id.tileMediaNext) { MediaRepository.next() }
         click(R.id.carChips) { startActivity(Intent(this, DiagnosticsActivity::class.java)) }
         click(R.id.lockPill) { startActivity(Intent(this, DiagnosticsActivity::class.java)) }
@@ -517,7 +517,7 @@ class LauncherActivity : AppCompatActivity() {
         media.findViewById<View>(R.id.popMediaOpen).setOnClickListener { closePopover(); openMedia() }
         media.findViewById<View>(R.id.popMediaPrev).setOnClickListener { MediaRepository.previous() }
         media.findViewById<View>(R.id.popMediaNext).setOnClickListener { MediaRepository.next() }
-        media.findViewById<View>(R.id.popMediaPlay).setOnClickListener { if (MediaRepository.now.value == null) openMedia() else MediaRepository.playPause() }
+        media.findViewById<View>(R.id.popMediaPlay).setOnClickListener { playOrResume() }
         media.findViewById<View>(R.id.popVolDown).setOnClickListener { adjustVolume(AudioManager.ADJUST_LOWER) }
         media.findViewById<View>(R.id.popVolUp).setOnClickListener { adjustVolume(AudioManager.ADJUST_RAISE) }
 
@@ -793,7 +793,7 @@ class LauncherActivity : AppCompatActivity() {
         pop.findViewById<TextView>(R.id.popMediaArtist).text = if (hasTrack) m!!.artist.orEmpty() else getString(R.string.media_pick_app)
         pop.findViewById<TextView>(R.id.popMediaSource).apply { text = app.orEmpty(); visibility = if (app == null) View.GONE else View.VISIBLE }
         pop.findViewById<ImageView>(R.id.popMediaPlay).setImageResource(icon)
-        // Sem sessão de mídia, anterior/próxima não fazem nada: ficam apagados (tocar abre o app).
+        // Sem sessão de mídia, anterior/próxima não fazem nada: ficam apagados (tocar retoma o último app).
         listOf(findViewById<View>(R.id.tileMediaNext), pop.findViewById(R.id.popMediaPrev), pop.findViewById(R.id.popMediaNext))
             .forEach { it.isEnabled = m != null; it.alpha = if (m != null) 1f else 0.4f }
         val art = pop.findViewById<ImageView>(R.id.popMediaArt)
@@ -807,6 +807,12 @@ class LauncherActivity : AppCompatActivity() {
 
     private fun openMedia() {
         val pkg = MediaRepository.now.value?.appPackage
+    /** Tocar/pausar dentro da interface; sem sessão, retoma o último app de mídia sem abri-lo. */
+    private fun playOrResume() {
+        if (MediaRepository.now.value == null) MediaRepository.resumeLast(this) else MediaRepository.playPause()
+    }
+
+    /** "Abrir app" da janela Mídia: função antiga (cartão Mídia do cockpit), mantida para o Paulo decidir. */
         val launch = pkg?.let { packageManager.getLaunchIntentForPackage(it) }
             ?: Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_MUSIC)
         startSafely(launch)

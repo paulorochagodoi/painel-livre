@@ -37,7 +37,7 @@
     <string name="panel_working">Ligando o painel…</string>
     <string name="panel_yielded">Outro app está no painel</string>
     <string name="destination_hint">Para onde vamos?</string>
-    <string name="media_open">Toque para abrir a mídia</string>
+    <string name="media_open">Toque para ver a mídia</string>
     <string name="media_prev">Anterior</string>
     <string name="media_play">Tocar ou pausar</string>
     <string name="media_next">Próxima</string>
@@ -143,7 +143,7 @@
     <string name="state_off">desligado</string>
     <string name="level_n">nível %1$d</string>
     <string name="media_nothing">Nada tocando</string>
-    <string name="media_pick_app">Toque em Abrir app para escolher</string>
+    <string name="media_pick_app">Toque no play para retomar a última música</string>
     <string name="media_open_app">Abrir app</string>
     <string name="volume_down">Diminuir volume</string>
     <string name="volume_up">Aumentar volume</string>

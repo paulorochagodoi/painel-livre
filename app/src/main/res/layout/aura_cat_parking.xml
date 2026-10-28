@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Categoria da busca: procura o termo perto da posição (Photon), sem lista inventada. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/catParking"
+    android:layout_width="wrap_content"
+    android:layout_height="44dp"
+    android:layout_marginEnd="8dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="10dp"
+    android:paddingEnd="14dp"
+    android:tag="a_sunken_pill">
+
+    <ImageView
+        android:importantForAccessibility="no"
+        style="@style/AuIcon"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:src="@drawable/au_parking"
+        android:tag="a_icon_accent" />
+
+    <TextView
+        style="@style/AuLabel"
+        android:layout_marginStart="6dp"
+        android:text="@string/cat_parking" />
+</LinearLayout>

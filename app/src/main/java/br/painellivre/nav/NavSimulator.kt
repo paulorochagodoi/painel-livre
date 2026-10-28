@@ -56,6 +56,8 @@ object NavSimulator {
                             LocationRepository.injectForTest(android.location.Location("sim").apply {
                                 latitude = lat; longitude = lon; this.bearing = bearing.toFloat(); speed = step.toFloat()
                                 accuracy = 5f; time = System.currentTimeMillis()
+                                // Sem isto a rota nativa acha o fix velho e não calcula (teste no emulador).
+                                elapsedRealtimeNanos = android.os.SystemClock.elapsedRealtimeNanos()
                             })
                         }
                         delay(1000)

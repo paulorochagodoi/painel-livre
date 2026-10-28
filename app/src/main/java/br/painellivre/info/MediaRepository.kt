@@ -3,12 +3,14 @@ package br.painellivre.info
 import android.content.ComponentName
 import android.content.Context
 import android.graphics.Bitmap
+import android.media.AudioManager
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.os.Handler
 import android.os.Looper
+import android.view.KeyEvent
 import br.painellivre.nav.NavNotificationListener
 import br.painellivre.util.AppLog
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,9 +81,25 @@ object MediaRepository {
         )
     }
 
+    /** Relê o controller real após um pedido; não usa só o último callback em cache. */
+    fun refreshState(): NowPlaying? { publish(); return _now.value }
+
     fun playPause() {
         val c = controller ?: return
         if (c.playbackState?.state == PlaybackState.STATE_PLAYING) c.transportControls.pause() else c.transportControls.play()
+    }
+
+    /**
+     * Tocar sem sessão ativa: manda a tecla "play" de mídia ao Android, que retoma o último app
+     * de música em segundo plano. A tela continua no Painel Livre (nada de abrir outro app); se
+     * nenhum app responder, segue "Nada tocando".
+     */
+    fun resumeLast(ctx: Context) {
+        val am = ctx.getSystemService(AudioManager::class.java) ?: return
+        runCatching {
+            am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY))
+            am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY))
+        }.onFailure { AppLog.w("Mídia: tecla play recusada: ${it.message}") }
     }
 
     fun next() { controller?.transportControls?.skipToNext() }

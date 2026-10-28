@@ -2,6 +2,8 @@ package br.painellivre.cluster
 
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.location.Location
@@ -20,6 +22,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
+import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -27,7 +30,10 @@ import androidx.preference.PreferenceManager
 import br.painellivre.location.LocationRepository
 import br.painellivre.nav.NavRepository
 import br.painellivre.nav.NavState
-import br.painellivre.ui.cockpit.Palette
+import br.painellivre.R
+import br.painellivre.nav.MapLook
+import br.painellivre.nav.MapStyler
+import br.painellivre.ui.aura.AuraColors
 import br.painellivre.car.TelemetrySnapshot
 import br.painellivre.car.TelemetryText
 import br.painellivre.car.VehicleTelemetry
@@ -149,7 +155,8 @@ open class ClusterActivity : ComponentActivity() {
             or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LAYOUT_STABLE)
 
         loadPrefs()
-        pal = Palette.forSetting(prefs.theme)
+        colors = AuraColors.forSetting(prefs.theme)
+        look = ClusterLook.of(colors)
         styleLoaded = styleUri()
         root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         mapView = MapView(this)
@@ -202,6 +209,10 @@ open class ClusterActivity : ComponentActivity() {
                     PanelMenuWatcher.layouts(this@ClusterActivity).collect {
                         menuFrame.apply(it)
                         carView.alpha = if (it.showCar) 1f else 0f
+                        // Simples mostra somente manobra/chegada, mesmo se os dados mudarem depois.
+                        telemetryCard.alpha = if (it.showMap) 1f else 0f
+                        statusText.alpha = if (it.showMap) 1f else 0f
+                        osmText.alpha = if (it.showMap) 1f else 0f
                     }
                 }
                 launch {
@@ -233,16 +244,18 @@ open class ClusterActivity : ComponentActivity() {
     private var styleLoaded: String? = null
 
     private fun styleUri(): String {
-        val name = prefs.mapStyle.takeIf { it != "auto" } ?: if (pal.dark) "dark" else "positron"
+        val name = prefs.mapStyle.takeIf { it != "auto" } ?: if (colors.dark) "dark" else "positron"
         return STYLE_BASE + name
     }
 
-    /** Tema do dia/noite (Configurações → Tema): cores dos cartões e estilo do mapa. */
+    /** Tema Aura claro/escuro (mesma preferência da central): cores dos cartões, da rota e do mapa. */
     private fun applyTheme(force: Boolean = false) {
-        val p = Palette.forSetting(prefs.theme)
-        if (!force && p == pal && styleLoaded == styleUri()) return
-        pal = p
+        val c = AuraColors.forSetting(prefs.theme)
+        if (!force && c == colors && styleLoaded == styleUri()) return
+        colors = c
+        look = ClusterLook.of(c)
         applyColors()
+        drawNativeRoute()
         val uri = styleUri()
         if (uri != styleLoaded) {
             styleLoaded = uri
@@ -254,7 +267,7 @@ open class ClusterActivity : ComponentActivity() {
         tilt = prefs.mapTilt
         safeBase = SafeArea.preset(prefs.safeArea)
         safeAdjust = prefs.insetAdjust
-        showSafeOutline = prefs.debugMode
+        showSafeOutline = prefs.debugMode && prefs.safeAreaEnabled
         maxFps = prefs.maxFps
         autoHeal = prefs.autoHeal
     }
@@ -274,16 +287,21 @@ open class ClusterActivity : ComponentActivity() {
     // logo abaixo, carro no centro a 67,5% da altura (y 360 no Song Plus) e a atribuição no canto
     // de baixo à direita. Nada de relógio: a BYD já mostra.
 
-    private var pal: Palette = Palette.NIGHT
+    private var colors: AuraColors = AuraColors.DARK
+    private var look: ClusterLook = ClusterLook.of(colors)
 
-    private fun cardBg(radius: Float) = GradientDrawable().apply {
-        setColor(if (pal.dark) Color.argb(228, 20, 26, 34) else Color.argb(238, 255, 255, 255))
+    /** Cartão Aura sobre o mapa: `surface` quase opaco, borda `line` e raio do Aura. */
+    private fun cardBg(radius: Float, stroke: Int = look.cardStroke) = GradientDrawable().apply {
+        setColor(look.card)
         cornerRadius = radius
-        setStroke(2, if (pal.dark) Color.argb(40, 255, 255, 255) else Color.argb(30, 0, 0, 0))
+        setStroke((h * ClusterLook.STROKE).toInt().coerceAtLeast(2), stroke)
     }
 
-    private fun label(bold: Boolean = false) = TextView(this).apply {
-        typeface = if (bold) Typeface.create("sans-serif-medium", Typeface.BOLD) else Typeface.create("sans-serif", Typeface.NORMAL)
+    /** Fontes Aura dentro do APK (funcionam offline): Sora nos números, Albert Sans no texto. */
+    private fun font(id: Int): Typeface = runCatching { ResourcesCompat.getFont(this, id) }.getOrNull() ?: Typeface.DEFAULT
+
+    private fun label(fontId: Int = R.font.albert_sans_medium) = TextView(this).apply {
+        typeface = font(fontId)
         includeFontPadding = false
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
@@ -298,6 +316,8 @@ open class ClusterActivity : ComponentActivity() {
     private lateinit var instructionText: TextView
     private val etaValues = arrayOfNulls<TextView>(3)
     private val etaLabels = arrayOfNulls<TextView>(3)
+    /** Ícones Aura de cada coluna da chegada (bandeira, relógio, rota). */
+    private val etaIcons = intArrayOf(R.drawable.au_pin, R.drawable.au_clock, R.drawable.au_route)
 
     private lateinit var telemetryCard: LinearLayout
     private lateinit var carStatus: CarStatusView
@@ -306,13 +326,13 @@ open class ClusterActivity : ComponentActivity() {
     private fun buildOverlay() {
         // O carro fica fixo no ponto focal da câmera (a câmera segue o carro), então é uma View
         // por cima do mapa: não depende de atualizar uma camada do mapa a cada quadro.
-        carView = ImageView(this).apply { visibility = View.INVISIBLE; setImageDrawable(CarArrowDrawable()) }
+        carView = ImageView(this).apply { visibility = View.INVISIBLE; setImageDrawable(CarArrowDrawable(MapLook.arrowColors(colors))) }
         overlay.addView(carView)
 
         leftColumn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         overlay.addView(leftColumn)
 
-        // Cartão da manobra: seta branca no quadrado azul + distância, instrução e rua.
+        // Cartão da manobra: seta no quadrado `accent` + distância (Sora), instrução e rua.
         tbtCard = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -323,9 +343,9 @@ open class ClusterActivity : ComponentActivity() {
         tbtIconBox.addView(maneuverView, FrameLayout.LayoutParams(-1, -1))
         tbtCard.addView(tbtIconBox)
         val texts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        distanceText = label(bold = true)
-        instructionText = label()
-        streetText = label(bold = true).apply { maxLines = 2 }
+        distanceText = label(R.font.sora_semibold)
+        instructionText = label(R.font.albert_sans_medium)
+        streetText = label(R.font.albert_sans_semibold).apply { maxLines = 2 }
         texts.addView(distanceText)
         texts.addView(instructionText)
         texts.addView(streetText)
@@ -336,8 +356,9 @@ open class ClusterActivity : ComponentActivity() {
         etaCard = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; visibility = View.GONE }
         for (i in 0 until 3) {
             val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-            val l = label().apply { isAllCaps = true; letterSpacing = 0.08f }
-            val v = label(bold = true)
+            val l = label(R.font.albert_sans_semibold).apply { isAllCaps = true; letterSpacing = 0.06f }
+            // Valor nunca cortado ("16 min", "1 h 05 min"): a coluna cresce até caber.
+            val v = label(R.font.sora_semibold).apply { ellipsize = null }
             col.addView(l); col.addView(v)
             etaLabels[i] = l; etaValues[i] = v
             etaCard.addView(col)
@@ -355,15 +376,15 @@ open class ClusterActivity : ComponentActivity() {
         }
         carStatus = CarStatusView(this)
         telemetryCard.addView(carStatus)
-        telemetryText = label(bold = true).apply { maxLines = 2 }
+        telemetryText = label(R.font.albert_sans_semibold).apply { maxLines = 2 }
         telemetryCard.addView(telemetryText, LinearLayout.LayoutParams(0, -2, 1f))
         overlay.addView(telemetryCard)
 
-        statusText = label(bold = true)
+        statusText = label(R.font.albert_sans_semibold).apply { gravity = Gravity.CENTER_VERTICAL }
         overlay.addView(statusText)
-        osmText = label().apply { text = "© OpenStreetMap" }
+        osmText = label(R.font.albert_sans_regular).apply { text = "© OpenStreetMap" }
         overlay.addView(osmText)
-        safeOutline = label().apply {
+        safeOutline = label(R.font.albert_sans_regular).apply {
             // Rótulo embaixo à esquerda: em cima fica o cartão da manobra.
             gravity = Gravity.BOTTOM or Gravity.START
             setTextColor(Color.rgb(255, 64, 160))
@@ -376,57 +397,83 @@ open class ClusterActivity : ComponentActivity() {
 
     private fun applyColors() {
         if (!::tbtCard.isInitialized) return
-        val r = h * 0.035f
+        val r = h * ClusterLook.RADIUS
         tbtCard.background = cardBg(r)
         etaCard.background = cardBg(r)
-        telemetryCard.background = cardBg(r)
-        carStatus.palette = pal
-        telemetryText.setTextColor(pal.text1)
-        tbtIconBox.background = GradientDrawable().apply { setColor(pal.accent); cornerRadius = r * 0.8f }
-        maneuverView.color = Color.WHITE
+        // Aviso do carro (porta aberta, tampa de carga): borda `warn`, texto em palavras.
+        telemetryCard.background = cardBg(r, look.warn)
+        carStatus.palette = colors.toPalette()
+        telemetryText.setTextColor(look.ink)
+        tbtIconBox.background = GradientDrawable().apply { setColor(look.accent); cornerRadius = r * 0.8f }
+        maneuverView.color = look.onAccent
         maneuverView.tint = true
-        distanceText.setTextColor(pal.text1)
-        instructionText.setTextColor(pal.text2)
-        streetText.setTextColor(pal.text1)
-        etaLabels.forEach { it?.setTextColor(pal.text2) }
-        etaValues.forEachIndexed { i, v -> v?.setTextColor(if (i == 0) pal.accent else pal.text1) }
-        statusText.setTextColor(Color.WHITE)
-        statusText.background = GradientDrawable().apply { setColor(Color.argb(200, 230, 140, 0)); cornerRadius = h * 0.03f }
-        osmText.setTextColor(if (pal.dark) Color.argb(150, 255, 255, 255) else Color.argb(150, 0, 0, 0))
+        distanceText.setTextColor(look.ink)
+        instructionText.setTextColor(look.inkMuted)
+        streetText.setTextColor(look.ink)
+        etaLabels.forEach { it?.setTextColor(look.inkMuted) }
+        etaValues.forEachIndexed { i, v -> v?.setTextColor(if (i == 0) look.accent else look.ink) }
+        statusText.setTextColor(look.statusInk)
+        statusText.background = GradientDrawable().apply { setColor(look.statusBg); setStroke(2, look.warn); cornerRadius = h.toFloat() }
+        osmText.setTextColor(look.attribution)
+        carView.setImageDrawable(CarArrowDrawable(MapLook.arrowColors(colors)))
+        applyIcons()
+    }
+
+    /** Ícones de linha Aura nos rótulos da chegada e no aviso de status, na cor do texto. */
+    private fun applyIcons() {
+        val u = plan?.unit ?: h.toFloat()
+        val size = (u * ClusterLook.ETA_ICON).toInt().coerceAtLeast(12)
+        fun icon(id: Int, color: Int) = ResourcesCompat.getDrawable(resources, id, theme)?.mutate()?.apply {
+            setBounds(0, 0, size, size)
+            colorFilter = PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN)
+        }
+        etaLabels.forEachIndexed { i, l ->
+            l?.setCompoundDrawables(icon(etaIcons[i], look.inkMuted), null, null, null)
+            l?.compoundDrawablePadding = size / 3
+        }
+        statusText.setCompoundDrawables(icon(R.drawable.au_alert, look.statusInk), null, null, null)
+        statusText.compoundDrawablePadding = size / 3
     }
 
     private fun applySizes() {
         // A área segura é do display do painel; o conteúdo pode estar encolhido pelo menu (#9).
         val dw = displayFrame.width.takeIf { it > 0 } ?: w
         val dh = displayFrame.height.takeIf { it > 0 } ?: h
-        val insets = SafeArea.resolve(dw, dh, safeBase, safeAdjust)
-        val p = SafeArea.plan(dw, dh, insets, SafeArea.Rect(root.left, root.top, root.left + w, root.top + h))
+        val insets = SafeArea.effectiveInsets(prefs.safeAreaEnabled, dw, dh, safeBase, safeAdjust)
+        val content = SafeArea.Rect(root.left, root.top, root.left + w, root.top + h)
+        val p = if (prefs.safeAreaEnabled) SafeArea.plan(dw, dh, insets, content)
+            else SafeArea.defaultPlan(dw, dh, content)
         if (p != plan) AppLog.i("Área segura do painel ${dw}x$dh: margens $insets, carro em ${p.carX},${p.carY}")
         plan = p
         val safe = p.safe
         val u = p.unit
         fun px(f: Float) = u * f
-        val pad = px(0.025f).toInt()
+        val pad = px(ClusterLook.PAD).toInt()
         leftColumn.layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.START or Gravity.TOP).apply {
             // Manobra colada na faixa de cima da BYD, na borda da área segura.
             leftMargin = safe.left; topMargin = safe.top
         }
-        tbtCard.layoutParams = LinearLayout.LayoutParams(p.cardWidth, -2)
+        tbtCard.layoutParams = LinearLayout.LayoutParams(
+            if (p.compact) p.cardWidth else ClusterLook.maneuverWidth(p),
+            if (p.compact) (u * 0.25f).toInt() else -2)
         tbtCard.setPadding(pad, pad, (pad * 1.4f).toInt(), pad)
-        val icon = px(0.19f).toInt()
+        val icon = px(ClusterLook.ICON_BOX).toInt()
         tbtIconBox.layoutParams = LinearLayout.LayoutParams(icon, icon).apply { marginEnd = (pad * 1.2f).toInt() }
         tbtIconBox.setPadding(pad, pad, pad, pad)
-        distanceText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.085f))
-        instructionText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.035f))
-        streetText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.045f))
+        distanceText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(if (p.compact) 0.073f else ClusterLook.DISTANCE))
+        instructionText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(if (p.compact) 0.030f else ClusterLook.INSTRUCTION))
+        streetText.maxLines = if (p.compact) 1 else 2
+        streetText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(if (p.compact) 0.042f else ClusterLook.STREET))
 
-        etaCard.layoutParams = LinearLayout.LayoutParams(-2, -2).apply { topMargin = px(0.025f).toInt() }
+        etaCard.layoutParams = LinearLayout.LayoutParams(if (p.compact) p.cardWidth else -2,
+            if (p.compact) px(0.215f).toInt() else -2).apply { topMargin = px(if (p.compact) 0.02f else 0.025f).toInt() }
         etaCard.setPadding((pad * 1.2f).toInt(), (pad * 0.8f).toInt(), (pad * 1.2f).toInt(), (pad * 0.8f).toInt())
         etaCard.children().forEachIndexed { i, col ->
-            col.layoutParams = LinearLayout.LayoutParams(-2, -2).apply { if (i > 0) marginStart = (pad * 1.6f).toInt() }
+            col.layoutParams = LinearLayout.LayoutParams(if (p.compact) 0 else -2, -2,
+                if (p.compact) 1f else 0f).apply { if (i > 0) marginStart = (pad * 1.6f).toInt() }
         }
-        etaLabels.forEach { it?.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.026f)) }
-        etaValues.forEach { it?.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.058f)) }
+        etaLabels.forEach { it?.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(ClusterLook.ETA_LABEL)) }
+        etaValues.forEach { it?.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(ClusterLook.ETA_VALUE)) }
 
         // O aviso tem seu próprio canto seguro: não aumenta a pilha de manobra/chegada.
         val telemetry = p.telemetryBounds
@@ -436,20 +483,23 @@ open class ClusterActivity : ComponentActivity() {
         telemetryCard.setPadding(pad, pad / 2, (pad * 1.4f).toInt(), pad / 2)
         carStatus.layoutParams = LinearLayout.LayoutParams(px(0.09f).toInt(), px(0.17f).toInt()).apply { marginEnd = pad }
         telemetryText.maxWidth = (telemetry.width - px(0.09f).toInt() - 4 * pad).coerceAtLeast(0)
-        telemetryText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.04f))
+        telemetryText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(ClusterLook.TELEMETRY))
 
         // Aviso centralizado na área segura (as margens laterais entram no centro do FrameLayout).
-        statusText.layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.CENTER_HORIZONTAL or Gravity.TOP).apply {
-            leftMargin = safe.left; rightMargin = w - safe.right; topMargin = safe.top + pad
+        statusText.layoutParams = FrameLayout.LayoutParams(if (p.compact) p.statusBounds.width else -2,
+            if (p.compact) p.statusBounds.height else -2,
+            (if (p.compact) Gravity.START else Gravity.CENTER_HORIZONTAL) or Gravity.TOP).apply {
+            leftMargin = safe.left; rightMargin = if (p.compact) w - safe.left - p.cardWidth else w - safe.right
+            topMargin = if (p.compact) p.statusBounds.top else safe.top + pad
         }
-        statusText.setPadding(pad, pad / 3, pad, pad / 3)
-        statusText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.03f))
+        statusText.setPadding(pad, pad / 2, pad, pad / 2)
+        statusText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(ClusterLook.STATUS))
         // Atribuição no canto de baixo à direita da área segura: longe dos cartões, dos avisos e
         // do assistente de faixa (que fica abaixo dela no Song Plus).
         osmText.layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.BOTTOM).apply {
             rightMargin = w - safe.right + pad / 2; bottomMargin = h - safe.bottom + pad / 2
         }
-        osmText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(0.02f))
+        osmText.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(ClusterLook.ATTRIBUTION))
 
         safeOutline.layoutParams = FrameLayout.LayoutParams(safe.width, safe.height, Gravity.TOP or Gravity.START).apply {
             leftMargin = safe.left; topMargin = safe.top
@@ -531,10 +581,11 @@ open class ClusterActivity : ComponentActivity() {
     // ── Mapa e câmera por quadro ────────────────────────────────────────────
 
     private fun drawNativeRoute() {
-        br.painellivre.nav.native.NativeRouteLayer.draw(map?.style)
+        br.painellivre.nav.native.NativeRouteLayer.draw(map?.style, colors)
     }
 
     private fun onStyleReady() {
+        MapStyler.widenRoads(map?.style)
         drawNativeRoute()
         if (!smoother.hasFix) {
             map?.moveCamera(CameraUpdateFactory.newCameraPosition(

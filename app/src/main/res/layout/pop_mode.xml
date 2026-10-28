@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Modo do ar (au-mode): aceso = ligado no carro. Indicador, não botão. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/AuMode"
+    android:layout_marginEnd="8dp">
+
+    <ImageView
+        android:importantForAccessibility="no"
+        android:id="@+id/modeIcon"
+        style="@style/AuIcon"
+        android:layout_width="22dp"
+        android:layout_height="22dp" />
+
+    <TextView
+        android:id="@+id/modeLabel"
+        style="@style/AuLabelMuted"
+        android:layout_marginTop="4dp"
+        android:textSize="12sp" />
+</LinearLayout>

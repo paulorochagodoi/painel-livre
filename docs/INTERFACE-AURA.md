@@ -1,0 +1,295 @@
+# Interface Aura — central e painel
+
+Atualizado: 2026-10-23. Branch `feat/interface-aura` (não lançada). Desenho da designer em
+`docs/design/aura-launcher/` (HTML/CSS/JS de referência; **não** é usado pelo app). O app implementa o
+mesmo padrão em Android nativo (Views + Kotlin), sem WebView, na **tela central** (tela inicial,
+busca, apps, discador e previsão) e, desde a rodada 2, no **painel de instrumentos** (`ClusterActivity`).
+
+## Regras que esta interface segue
+
+- **Comandos internos com liberação explícita (rodada 3).** `CarCommands` valida cada ação.
+  A chave geral “Permitir comandos ao carro” e cada função no Diagnóstico começam desligadas.
+  Com elas desligadas, nada muda no carro. Clima e temperaturas do dock abrem escolhas internas;
+  o envio pede confirmação. Bancos/porta-malas ainda não têm contrato seguro e ficam bloqueados.
+  Bateria continua leitura: não há comando confirmado. Rádio BYD sem API confirmada; mídia Android
+  usa MediaSession/AudioManager dentro da interface, também com as duas liberações.
+  Catálogo, fontes, limites e hipóteses em [COMANDOS.md](COMANDOS.md).
+- **Nada inventado.** Sem endereços, rádios ou músicas de exemplo. Sem dado, o chip some ou diz
+  "Sem dado"; nunca "Fechado"/"Travado" chutado. Sem mídia: "Nada tocando". Casa/Trabalho sem
+  endereço: "Definir". Categorias da busca fazem uma busca de verdade (Photon) pelo termo.
+- **Estado nunca só pela cor**: chip = ícone + peça + estado em palavras; aberto em `warn`.
+- **Uma janela por vez**, ancorada no atalho, fecha no X, tocando fora, no mesmo atalho, em Início
+  ou no voltar. Entrada de 180 ms (fade + 10 dp); com "remover animações" do Android, aparece direto.
+
+## Escala e medidas
+
+O Aura é desenhado em 1280 × 720. Em vez de `scale()` (que estragaria o mapa e o teclado), a
+`LauncherActivity` usa densidade própria (`AuraScale.densityDpi`): 1 dp do layout = 1 px do desenho.
+Ex.: 1920 × 1080 → 240 dpi; com a barra do sistema (1920 × 1024) a altura manda (228 dpi) e sobra
+largura, que os atalhos e o dock absorvem. Em pé a referência é 720 × 1280 (`layout-port/`). O
+manifesto não mudou (o tema Aura entra por `setTheme` no código).
+
+## Mapeamento Aura → Android
+
+| Aura (docs/design) | Android | Observação |
+|---|---|---|
+| `tokens.json` (cores claro/escuro) | `ui/aura/AuraTokens.kt` (`AuraColors.LIGHT/DARK`) | Preferência `theme` de sempre: auto/day/night. `AuraTest` confere todas as cores com o `tokens.json` |
+| espaços, raios, toque, alturas | `AuraDims` + dp nos layouts `aura_*`, `tile_*`, `pop_*`, `dock_*` | 56 dp mínimo; 80 dp no play e no "Mostrar no painel" |
+| Sora / Albert Sans | `res/font/*.ttf` (OFL, `assets/licencas/`) e estilos `Au*` em `res/values/aura.xml` | Offline, sem Google Fonts |
+| Icons (linha, 24, traço 1,8) | `res/drawable/au_*.xml` (vetores gerados dos caminhos do `aura.js`) | Play/pausa/anterior/próxima preenchidos |
+| cores por classe CSS | `AuraPainter` por `android:tag="a_…"` (tabela abaixo) | Troca de tema sem recriar a tela |
+| Backdrop (horizonte + halo) | `AuraBackdropDrawable` | Também no discador e na previsão |
+| StatusBar | `aura_status.xml` | Wi-Fi, Bluetooth, GPS (apagados quando desligados) + estado do painel · clima e bateria lidos · botão Claro/Escuro. Sem "4G": não há dado do celular |
+| Herói: relógio/data/tempo | `aura_clock.xml` | Saudação + data; tempo do Open-Meteo e temperatura interna lida; toque abre a previsão |
+| Herói: modelo/trava/resumo | `aura_summary.xml` | Modelo pela identificação da central (`PanelSize.matchModel`); trava e resumo só com leitura; toque abre o Diagnóstico |
+| VehicleStatus (carro de cima 2D) | **carro 3D atual** `SongCarView` + `CarOverlay` em `aura_car.xml`, chips em `AnchoredLayout` | 3/4 padrão; vista de cima quando há destaque; bocal na traseira direita (.84, .15). Chips: Portas, Vidros, Capô, Porta-malas, Carregamento e Pneus |
+| ShortcutTiles | `aura_tiles.xml` + `tile_nav/battery/climate/media.xml` | Ordem fixa; tile aberto com borda `accent` |
+| NavPanel | `pop_nav.xml` | Rota ativa (Encerrar na nativa, Abrir no Maps/Waze), campo, Casa/Trabalho (km em linha reta), categorias |
+| NavSearch | `aura_nav.xml` (+ `aura_nav_side/map`) | Busca Photon, Painel Livre/Maps/Waze, rota atual, lugares, mapa MapLibre com a rota nativa e Centralizar |
+| BatteryPanel | `pop_battery.xml` | Anel %, autonomia total, elétrica/combustível, carga, cabo, tempo, combustível no tanque, potência, 12 V; "Ver todos os dados" |
+| ClimatePanel | `pop_climate.xml` | Temperatura de cada lado, ventilação, interna/externa, modos (só com leitura 0/1), bancos aquecer/ventilar com nível |
+| MediaPanel | `pop_media.xml` | Sessão de mídia real; anterior/tocar/próxima; volume da mídia do Android; Abrir app |
+| (novo) janela do painel | `pop_panel.xml`, aberta pelo botão Painel do dock | Estado da projeção, motivo da falha, Mostrar/Voltar ao original, Ajustes do painel |
+| Dock | `aura_dock.xml` + `dock_buttons.xml` + `dock_temp_*.xml` | Início · motorista (lida) · Painel, app de navegação, Clima, Telefone, Apps, Ajustes, Mídia · passageiro (lida). Em pé, sem as temperaturas |
+| Popover (`.au-pop` + seta) | `PopoverFrame` (desenho, sombra, seta, altura máx. 420) | Posição pela regra pura `PopoverAnchor` |
+| `state.ui.open` | `PopoverState` | Uma janela por vez |
+| `Aura.fmt.dec` / textos | `AuraFormat` | `22,0°`, `6,4 km`, `1h40`, `62%` |
+
+### Tags do `AuraPainter`
+
+| Tag | Efeito |
+|---|---|
+| `a_tile`, `a_tile_on` | atalho (`surface`, borda `line`; aberto com borda `accent`); sombra só no claro |
+| `a_chip`, `a_chip_click`, `a_chip_warn`, `a_chip_warn_click` | chip de estado neutro / aberto |
+| `a_ic`, `a_ic_warn`, `a_ic_acc` | círculo do ícone do chip (neutro / aberto / carregando) |
+| `a_sunken`, `a_sunken_click`, `a_sunken_sm`, `a_sunken_pill`, `a_sunken_round` | controles internos (`surface-sunken`) |
+| `a_raised_sm`, `a_raised_md`, `a_raised_round` | sobre janela/mapa (`surface-raised`) |
+| `a_primary_pill`, `a_primary_round` | ação principal (`accent` + `on-accent`) |
+| `a_badge`, `a_badge_on`, `a_soft`, `a_soft_pill` | selos `accent-soft` / `accent` |
+| `a_seg_on`, `a_seg_off` | segmentado |
+| `a_mode_on`, `a_mode_off`, `a_heat_on`, `a_cool_on`, `a_seat_off` | indicadores do clima e dos bancos |
+| `a_field`, `a_side`, `a_dock`, `a_db`, `a_db_on`, `a_plain_click`, `a_divider`, `a_banner`, `a_bar` | campo, lateral da busca, dock e botões, divisória, aviso, barra |
+| `a_ink`, `a_muted`, `a_accent`, `a_warn`, `a_ok`, `a_on_accent` | texto |
+| `a_icon`, `a_icon_muted`, `a_icon_accent`, `a_icon_ok`, `a_icon_warn`, `a_icon_heat`, `a_icon_cool`, `a_icon_on_accent` | tint de ícone |
+
+Views desenhadas à mão (`PopoverFrame`, `RingView`, `LevelBars`, `EqualizerView`) recebem as cores por
+`AuraThemed`. As telas antigas que usam `Palette` (discador, previsão, itens) ganham as cores Aura por
+`AuraColors.toPalette()`; o painel usa `ClusterLook.of(AuraColors.forSetting(...))`.
+
+## Inventário de funções (antes → agora) — conferido em 2026-10-23
+
+Todas as funções da tela central do cockpit anterior continuam; nada foi removido. "Emulador" = visto
+no `emulator-5580` (prints em `/tmp/pl-aura-prints/`, cópias em `docs/telas/aura-*.png`).
+
+| # | Função (cockpit anterior) | Onde ficou | Conferido |
+|---|---|---|---|
+| 1 | Saudação (Bom dia/Boa tarde/Boa noite) | herói, antes da data | emulador |
+| 2 | Estado do painel na barra de cima | barra de status, "Painel: …" | emulador |
+| 3 | Relógio e data | herói (Sora 72) | emulador |
+| 4 | Wi-Fi / Bluetooth / GPS apagados quando desligados | barra de status (e o leitor de tela diz "desligado") | emulador |
+| 5 | Temperatura do tempo e cartão do tempo; toque abre a previsão (#4) | linha do tempo no herói | código (emulador sem GPS → linha some, como antes) |
+| 6 | Carro 3D (3/4, vista de cima com destaques, portas, vidros, teto, capô, porta-malas, bocal .84/.15, pressões, cadeado, pulso de carga) | centro do herói, mesmo `SongCarView`/`CarOverlay` | emulador (simulação "Porta e carga") |
+| 7 | Foto do carro (Ajustes) no lugar da ilustração | igual | código |
+| 8 | Autonomia total, elétrica/combustão e barra | atalho Bateria + janela | emulador |
+| 9 | Cartão "Carro" (2D, título, clima/bancos/pneus/vidros); toque → Diagnóstico | chips + resumo/trava + janela Climatização; toque no carro ou na trava → Diagnóstico | emulador |
+| 10 | Aviso "Falta permitir…" + Configurar | cartão `warn` no herói | emulador |
+| 11 | Mídia: título/artista/app, capa, anterior/tocar/próxima, abrir app | atalho (tocar, próxima) + janela (capa, anterior/tocar/próxima, Abrir app) | emulador (sem sessão) |
+| 12 | Bateria: %, barra, linha da carga; toque → Diagnóstico | atalho + janela; "Ver todos os dados" → Diagnóstico | emulador |
+| 13 | Painel: estado, motivo da falha, Mostrar no painel / Painel original | janela do botão Painel do dock; botão aceso com o painel ativo | emulador |
+| 14 | Destino: Casa/Trabalho (ou Definir), manobra ativa, "Abrir Maps/Waze" | atalho Navegação + janela | emulador (sem rota) |
+| 15 | Chip "Painel" no dock (liga/volta) | botão Painel → janela com o mesmo botão | emulador |
+| 16 | Chip do app de navegação (abre Maps/Waze; nativo abre a busca) | botão de rota do dock | código |
+| 17 | Abas Início, Navegação, Mídia, Telefone (discador #3/#15), Apps, Ajustes | dock: Início, Mídia, Telefone, Apps, Ajustes; Navegação pelo atalho/janela/busca | emulador |
+| 18 | Busca (450 ms, tecla Buscar, limpar) | NavSearch | emulador |
+| 19 | Painel Livre / Google Maps / Waze | NavSearch (e "Rota pelo …" na janela) | emulador |
+| 20 | Rota ativa: encerrar a nativa (pergunta) ou abrir o app | NavSearch e janela Navegação | código |
+| 21 | Casa/Trabalho/recentes, resultados, "Buscar no …", segurar para redefinir, faixa "Escolha o endereço…" | NavSearch (e segurar Casa/Trabalho na janela) | emulador |
+| 22 | Mapa da busca com o carro e a linha da rota nativa (#14) | NavSearch + botão Centralizar | emulador |
+| 23 | `route_search` (pedido de rota de outro app) | abre a busca com o texto | código |
+| 24 | Grade de apps | página Apps (dock) | emulador |
+| 25 | Início pelo botão HOME volta ao início; voltar não fecha o launcher | igual (e fecha a janela aberta) | código |
+| 26 | Pedido de localização, `ClusterService`, `MediaRepository`, teste do ADB local | igual | emulador |
+| 27 | Tema automático/claro/escuro (Ajustes) | igual + botão Claro/Escuro na barra | emulador |
+| 28 | Tela em pé | `layout-port/` (atalhos 2 × 2) | emulador |
+
+Comportamento preservado fora da tela central: Ajustes (todas as opções, inclusive área segura e ajuste fino,
+menu do painel Simples/Pequeno/Cheio/OFF, telemetria, modo de debug, simular rota, tela inicial),
+registro do debug, Diagnóstico, comportamento do painel de instrumentos (rota nativa, aviso de telemetria, área
+segura; visual Aura na rodada 2), discador (só as cores) e previsão (só as cores).
+
+**Novos** (todos com dado real): botão Claro/Escuro; categorias Recarga/Combustível/Estacionamento
+(busca Photon); volume da mídia (o mesmo das teclas de volume do Android); Centralizar no mapa;
+chip Pneus.
+
+**Só visual que saiu da central**: o carro 2D pequeno do cartão "Carro" (`CarStatusView` continua no
+painel), o ícone de velocímetro da saudação e o fundo "estúdio" (`BackdropDrawable`, ainda no código).
+
+## Testes
+
+`AuraTest` (JVM): todas as cores dos dois temas contra o `tokens.json`, contraste 4,5:1 do texto em
+todas as superfícies, tema e botão de tema, cores Aura nas telas antigas, números BR, chips (sem dado
+não vira fechado, fechado neutro, aberto `warn` com palavra, carregando `accent`, pneus), resumo,
+trava, clima só com o que foi lido, bateria SDK → telemetria, linha da carga, uma janela por vez,
+âncora/seta da janela e escala.
+
+## Decisões que precisam do Paulo
+
+1. **Painel em dois toques.** Antes o cartão/chip "Painel" ligava direto; agora o botão do dock abre
+   a janela (mostra o motivo da falha) e o botão grande liga/volta. Dá para voltar ao toque único.
+2. **Botão Claro/Escuro** sai do automático; o automático volta em Ajustes → Tema.
+3. **Volume** na janela Mídia usa o volume de mídia do Android (não é comando ao carro). Se preferir
+   sem, é só tirar.
+4. **Resolvido na rodada 2:** clima, energia e estados do carro ficam dentro do Painel Livre.
+   Não adicionar botão para abrir apps da BYD ou apps externos nas novas janelas.
+5. **Casa/Trabalho** mostram distância em linha reta (km), não minutos: sem rota calculada não há
+   tempo de verdade.
+6. **Modos do ar** (AUTO, A/C, Recircular, Desembaçador) só aparecem se o carro responder 0/1
+   (significado ainda é hipótese, `docs/TELEMETRIA.md`).
+7. **Densidade própria**: conferir no carro se textos e toques ficam do tamanho certo na DiLink 3.
+8. **Resolvido na rodada 2:** painel redesenhado no padrão Aura; validação no carro pendente.
+
+
+## Rodada 2 — tudo dentro, painel Aura e mapas
+
+- Nenhum atalho novo abre apps externos. Tocar em reproduzir sem sessão usa o evento de mídia do
+  Android (`resumeLast`), sem abrir outro app. Clima/energia continuam internos e somente leitura.
+- **Exceções antigas preservadas para o Paulo decidir:** “Abrir app” na mídia; Maps/Waze pelo dock,
+  destinos e rota ativa; grade Apps; telas do Android para conceder permissões; opção experimental de
+  mover Maps/Waze ao painel. O discador mantém o caminho HFP/Telecom e a reserva do telefone BYD.
+  A previsão é uma Activity do próprio Painel Livre. Não foram adicionados pacotes da BYD.
+- `ClusterLook` usa os tokens Aura, cartões 95% opacos, borda/raio, Sora nos números e Albert Sans no
+  texto. Ícones de linha na chegada e no aviso; manobras preservadas. Menu Simples/Pequeno/Cheio/OFF,
+  SafeArea, `telemetryBounds`, aviso de telemetria, rota nativa e contorno debug mantidos.
+- `MapLook`/`MapStyler` alargam vias principais em 1,6× e ruas em 1,4×, conservando as paradas de zoom
+  do estilo. Trilhas/ferrovias não mudam. Aplicação tanto na central quanto no painel após carregar
+  cada estilo. Rota em accent com contorno e largura por zoom; seta cheia e larga, contorno branco e
+  sombra leve (60 dp na central, 12% da unidade no painel).
+- Correções da revisão: duração da chegada sem reticências; cartão Pequeno ampliado antes da seta para não cortar a distância; GPS da simulação com relógio monotônico
+  atualizado para a navegação nativa não rejeitar o fix como antigo.
+- Regressão: 238 testes JVM, zero falhas (15 novos: `InsideInterfaceTest` e `MapLookTest`), lintDebug
+  zero erros/76 avisos, assembleDebug concluído. Inclui contraste sobre mapas, tamanho dos textos,
+  seta e área segura, expressões de zoom e as exceções de abertura externa. O bloqueio de setters da
+  telemetria segue passando. Nada testado no carro nesta rodada.
+- Capturas novas: `/tmp/pl-aura-prints/r2-*`. Pré-visualização na central do emulador 1920×720;
+  a linha rosa é o contorno de debug da área segura. Não representa a sobreposição real da BYD.
+
+Capturas finais: oito modos/temas do painel e duas com rota nativa (central e painel),
+com cópias em `docs/telas/aura-r2-*.png`. Preferências de antes da rodada 2 restauradas
+no emulador a partir do backup do Claude (`prefs-orig.xml`, debug desligado).
+
+## Rodada 3 — comandos
+
+Decisão explícita do Paulo substitui a regra de somente leitura das rodadas anteriores. As descrições
+históricas da rodada 2 permanecem como registro, não como restrição atual.
+
+- Temperaturas (janela e dock) escolhem 16–30 °C inteiros: a fonte não comprova escala de meio grau.
+  Ventilação escolhe 0–7; cabeçalho da janela liga/desliga o ar; modos escolhem ligar/desligar.
+- Não há mudança otimista dos números ou cores. “Aguarde…” é imediato; Toast e cabeçalho mostram
+  rejeição, envio e confirmação/ausência dela. A telemetria relida atualiza os indicadores reais.
+- Bancos e porta-malas estão ligados à mesma fronteira, mas o seletor informa bloqueio antes de
+  permitir escolher. IDs/valores ambíguos nunca são enviados. Sem dado não vira desligado.
+- Modos sem dado aparecem apagados e com descrição “Sem dado”. GET cru desses modos não permite
+  declarar confirmação da escrita; AUTO usa 1/2 no fio e isso não redefine o decoder do GET.
+- Mídia sem sessão envia play ao Android; próximo/anterior podem não ser atendidos por rádio BYD.
+  Volume é relido no AudioManager; callbacks continuam mostrando o estado real da sessão.
+- Confirmação humana antes de cada comando de clima. Limite global de um envio por segundo,
+  serialização e transporte sem repetição automática; sair durante envio não o cancela no carro.
+
+Validação da rodada 3: 248 testes JVM, zero falhas; `testDebugUnitTest lintDebug assembleDebug`
+com JDK 17. Lint sem erros (79 avisos). No emulator-5580 foram conferidos a janela de clima,
+seletor, confirmação e rejeição com a chave desligada, registrada no log; lista de liberações
+individuais e recusa de hipótese. Capturas `docs/telas/aura-r3-*.png`. Nenhum teste no carro.
+
+
+## Rodada 4 — área segura opcional
+
+Decisão do Paulo após observar o painel real: **Ajustes → Área segura no painel**
+(`safe_area_enabled`) é opt-in, desligada por padrão, inclusive nas instalações com margens
+antigas salvas. Desligada, ignora o padrão e os quatro ajustes: mapa, carro, cartões e aviso de
+telemetria usam todo o conteúdo disponível do menu, sem recorte da SafeArea. Ligada, conserva
+o cálculo anterior (padrão Song Plus e ajustes salvos). Os ajustes só ficam disponíveis quando ligada.
+Esta decisão substitui as descrições anteriores que tratavam a área segura como obrigatória.
+
+`Prefs.safeAreaEnabled` persiste em SharedPreferences; `SafeArea.effectiveInsets` retorna zero
+quando desligada. `SafeArea.Plan` continua organizando os elementos, agora sobre o conteúdo inteiro.
+O listener de `ClusterActivity` recalcula posições e câmera sem reiniciar. Menu
+Simples/Pequeno/Cheio/OFF, rota nativa e aviso de telemetria conservam seus fluxos; OFF continua
+ocultando o conteúdo. Debug continua disponível, mas o contorno da área segura só aparece com
+a opção ligada. O aviso de telemetria fica no canto superior direito do conteúdo nos dois casos.
+
+Regressões JVM: padrão desligado mesmo com margens antigas, opt-in explícito, margens ligadas e
+ignoradas, cartões e aviso dentro do conteúdo inteiro/reduzido. No carro, conferir as duas opções,
+rota, manobras, telemetria e os quatro modos, com atenção às sobreposições originais da BYD.
+
+Validação da rodada 4: comando solicitado `JAVA_HOME=$HOME/.jdks/jdk-17.0.21+9
+ANDROID_HOME=$HOME/Android/Sdk ./gradlew testDebugUnitTest lintDebug assembleDebug` concluído:
+250 testes JVM, zero falhas; lintDebug zero erros e 79 avisos; assembleDebug concluído.
+Emulador `emulator-5580`: capturas 1920×720, modo Cheio, área segura desligada, manobras
+simuladas nos temas claro e escuro, inspecionadas visualmente:
+`docs/telas/aura-r4-painel-claro-cheio.png` e `aura-r4-painel-escuro-cheio.png`.
+Preferências originais restauradas. Telemetria posicionada nos dois layouts coberta na JVM;
+não houve teste no carro nesta rodada.
+
+## Correções 0.5.4 — foto do Song Plus e menu do painel
+
+A foto `foto-painel-0.5.3.jpg` mostrou a manobra sobre o relógio/HEV/D/NORMAL/RDS e a chegada
+cortada à esquerda. Geometria estimada em 1920×720: topo nativo até y 170, borda curva x < 120,
+ícones esquerdos x 100–180/y 520–580, base nativa desde y 540 e ícones direitos x 1800–1900/y 180–340.
+Com Área segura desligada (continua opt-in), `SafeArea.defaultPlan` posiciona a coluna em x 170/y 185,
+largura 590, manobra 110, espaço ~9 e chegada ~95. Telemetria abaixo dos cartões até y 493;
+aviso logo abaixo, antes de y 520. O foco fica em x 960/y 380, no centro visível.
+Tudo escala pelo display real. Área segura ligada preserva o cálculo e ajustes anteriores.
+Texto de rua compacto usa uma linha para caber; o mapa Cheio continua ocupando todo o display.
+
+### Causa do seletor e correção
+
+O histórico `4fa8f47` introduziu a leitura opcional em `feat/comandos-painel-debug`;
+`bac5aa0` acrescentou SDK → ADB (0.5.1), mas manteve o padrão false. O histórico da branch
+`feat/rota-nativa-painel` não continha os arquivos do menu naquela base; a rota nativa não era
+um leitor alternativo. No código 0.5.3, `PanelMenuWatcher.layouts` nem chamava o leitor com
+`panel_menu_follow=false`; `effective` devolvia UNKNOWN e `layoutFor` mantinha Cheio.
+Essa é a causa comprovada no código, sem afirmar qual evento chega hoje no carro.
+
+Agora a chave ausente vale true (XML também). Como o XML antigo gravava false mesmo sem escolha
+do usuário, a migração única `panel_menu_migration=1` liga também esse false. Depois da migração,
+desligamentos explícitos são respeitados.
+O observador roda enquanto ClusterActivity está STARTED, independentemente do debug e da rota.
+SDK negado usa o único comando ADB fixo conferido, somente API 29; a estabilização requer duas
+leituras iguais. Erros preservam temporariamente o último modo e depois voltam a Cheio.
+Cada leitura boa registra bruto, modo e origem no AppLog; falhas são registradas uma vez por
+mudança e incluem o motivo SDK/ADB. Toda troca de desenho é registrada, incluindo o primeiro.
+
+Ajustes → Tamanho do mapa no painel salva Seguir o painel (padrão), Cheio, Pequeno, Simples ou OFF.
+Prioridade: teste temporário do debug > escolha manual > leitura estável do painel.
+OFF cobre mapa e cartões; Simples cobre mapa e esconde carro; Pequeno reduz o conteúdo ao centro
+entre os mostradores; Cheio ocupa todo o display com as margens fixas dos cartões.
+`PanelMenu.bounds` extrai a geometria pura da moldura. Dimensões zero aguardam o primeiro layout;
+o listener já existente reaplica após medir. Mudança de tamanho do conteúdo recalcula cartões,
+carro e padding da câmera pelo listener de ClusterActivity. Nenhum código novo de AutoContainer.
+
+No carro, confirmar as quatro opções e a origem/bruto no Log do app, incluindo atualização de
+2 leituras (~2 s), ADB indisponível, escolha manual e retorno a Seguir; conferir cortes com nomes
+de rua longos, ETA com três campos, avisos/telemetria e Área segura ligada/desligada.
+As medidas vêm de foto, não de calibração física; prints do emulador não incluem a sobreposição BYD.
+
+### Validação e capturas da 0.5.4
+
+`JAVA_HOME=$HOME/.jdks/jdk-17.0.21+9 ANDROID_HOME=$HOME/Android/Sdk ./gradlew test lintDebug assembleDebug`:
+258 testes por variante (debug e release), zero falhas; lint com zero erros e 81 avisos.
+Regressões novas: `Panel054Test` (geometria/moldura/modos/prioridade), `PrefsTest` (migrações,
+padrões e desligamentos posteriores), `CarCommandsTest` (toque direto e todas as hipóteses
+bloqueadas). Testes existentes de leitor SDK negado → ADB, estabilização, P, limites, frequência,
+log e releitura também executados. Nenhum teste no carro.
+
+Capturas em `emulator-5580`, display 0 com `wm size 1920x720`, `ClusterPreviewActivity` e
+simulação de navegação; escolha manual persistente exercita o mesmo layout de cada modo:
+
+- `docs/telas/aura-054-painel-cheio.png`
+- `docs/telas/aura-054-painel-pequeno.png`
+- `docs/telas/aura-054-painel-simples.png`
+- `docs/telas/aura-054-painel-off.png`
+- `docs/telas/aura-054-comandos.png` (climatização sem telemetria inventada)
+
+Cópias em `/tmp/aura-054-prints/`. O sandbox não permite escrever em
+`/home/paulo/Documentos/REA-BYD/prints/aura/`; por isso a cópia nesse destino ficou pendente.
+Preferências do emulador usadas para os quatro modos foram restauradas após as capturas.

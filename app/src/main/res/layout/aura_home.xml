@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Início Aura (tela deitada): herói (relógio à esquerda, modelo/trava/resumo à direita, carro 3D
+     com os chips de estado no centro) e os quatro atalhos. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/viewHome"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <FrameLayout
+        android:id="@+id/hero"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <include layout="@layout/aura_car" />
+
+        <include layout="@layout/aura_clock" />
+
+        <include layout="@layout/aura_summary" />
+
+        <include layout="@layout/aura_setup" />
+    </FrameLayout>
+
+    <include layout="@layout/aura_tiles" />
+</LinearLayout>

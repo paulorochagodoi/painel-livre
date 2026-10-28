@@ -69,6 +69,22 @@ class DiagnosticsActivity : AppCompatActivity() {
         button("Conceder permissões") { runCatchingShow { SystemSetup.grantAll(this) } }
         button("Dados do carro") { runCatchingShow { withContext(Dispatchers.IO) { carText() } } }
         button("Navegação atual") { append(NavRepository.state.value.let { "ativa=${it.active} fonte=${it.sourceLabel}\n${it.nav}" }) }
+        button("Liberar comandos individuais") {
+            val settings = br.painellivre.util.Prefs(this)
+            val specs = br.painellivre.car.CarCommands.CATALOG
+            val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Um comando por vez · chave geral em Ajustes")
+                .setMultiChoiceItems(specs.map { it.label + if (it.confirmed) "" else " · não confirmado" }.toTypedArray(),
+                    specs.map { settings.carCommandAllowed(it.key) }.toBooleanArray()) { dialog, index, checked ->
+                    val spec = specs[index]
+                    prefs.edit().putBoolean("car_command_${spec.key}", checked && spec.confirmed).apply()
+                    if (checked && !spec.confirmed) {
+                        (dialog as androidx.appcompat.app.AlertDialog).listView.setItemChecked(index, false)
+                        Toast.makeText(this, "Bloqueado até confirmar o comando", Toast.LENGTH_LONG).show()
+                    }
+                }.setPositiveButton("Fechar", null).show()
+        }
         button("Log do app") { append(AppLog.dump()) }
         button("Copiar tudo") {
             getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Painel Livre", out.text))

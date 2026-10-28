@@ -53,7 +53,7 @@ class TelemetryTest {
         }
     }
 
-    @Test fun setterIsRejectedForEveryCatalogAddressAndProtocol() {
+    @Test fun telemetryStillRejectsSettersForEveryCatalogAddressAndProtocol() {
         assertEquals(setOf(5, 7), Autoservice.READ_TRANSACTIONS)
         for (signal in TelemetryCatalog.SIGNALS) {
             for (protocol in Autoservice.Protocol.values()) {

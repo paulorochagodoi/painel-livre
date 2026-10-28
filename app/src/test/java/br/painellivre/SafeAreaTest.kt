@@ -9,6 +9,23 @@ import org.junit.Test
 
 /** Área segura do mapa no painel (foto do painel do Song Plus, 1920×720). */
 class SafeAreaTest {
+    @Test fun optInControlsInsetsAndTelemetryForFullAndSmallMenu() {
+        for (content in listOf(Rect(0, 0, 1920, 720), Rect(537, 86, 1383, 634))) {
+            for (enabled in listOf(false, true)) {
+                val insets = SafeArea.effectiveInsets(enabled, 1920, 720, SafeArea.SONG_PLUS, Insets(20, 20, 20, 20))
+                val p = SafeArea.plan(1920, 720, insets, content)
+                assertEquals(if (enabled) SafeArea.resolve(1920, 720, SafeArea.SONG_PLUS, Insets(20, 20, 20, 20)) else SafeArea.NONE, insets)
+                if (!enabled) assertEquals(Rect(0, 0, content.width, content.height), p.safe)
+                assertTrue(p.safe.contains(p.telemetryBounds))
+                assertEquals(p.safe.right, p.telemetryBounds.right)
+                assertEquals(p.safe.top, p.telemetryBounds.top)
+                assertTrue(p.telemetryBounds.width > 0 && p.telemetryBounds.height > 0)
+                assertTrue(p.safe.contains(Rect(p.safe.left, p.safe.top,
+                    p.safe.left + p.cardWidth, p.safe.top + (p.unit * SafeArea.CARDS_HEIGHT_UNITS).toInt())))
+            }
+        }
+    }
+
 
     private val full = Rect(0, 0, 1920, 720)
     private fun songPlus(adjust: Insets = SafeArea.NONE) = SafeArea.resolve(1920, 720, SafeArea.SONG_PLUS, adjust)
@@ -106,8 +123,8 @@ class SafeAreaTest {
         // Em coordenadas do conteúdo: os lados já estão longe dos avisos, só topo e base cortam.
         assertEquals(0, p.safe.left)
         assertEquals(content.width, p.safe.right)
-        assertEquals(90 - content.top, p.safe.top)
-        assertEquals(490 - content.top, p.safe.bottom)
+        assertEquals((90 - content.top).coerceAtLeast(0), p.safe.top)
+        assertEquals((490 - content.top).coerceAtMost(content.height), p.safe.bottom)
         assertTrue(p.cardWidth <= p.safe.width)
     }
 

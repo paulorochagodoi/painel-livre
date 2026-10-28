@@ -22,6 +22,67 @@ class PrefsTest {
         return Prefs(sp)
     }
 
+    private fun storage(data: MutableMap<String, Any?>): SharedPreferences {
+        lateinit var editor: SharedPreferences.Editor
+        editor = Proxy.newProxyInstance(SharedPreferences.Editor::class.java.classLoader,
+            arrayOf(SharedPreferences.Editor::class.java)) { _, method, args ->
+            when (method.name) {
+                "putBoolean", "putInt" -> { data[args!![0] as String] = args[1]; editor }
+                "commit" -> true
+                "apply" -> null
+                else -> error(method.name)
+            }
+        } as SharedPreferences.Editor
+        return Proxy.newProxyInstance(SharedPreferences::class.java.classLoader,
+            arrayOf(SharedPreferences::class.java)) { _, method, args ->
+            when (method.name) {
+                "getBoolean", "getInt" -> data[args!![0]] ?: args[1]
+                "edit" -> editor
+                else -> error(method.name)
+            }
+        } as SharedPreferences
+    }
+
+    @Test fun migracaoUnicaLigaSomenteComandosComEvidencia() {
+        for (old in listOf(emptyMap(), mapOf("car_commands_enabled" to false, "car_command_ac_on" to false))) {
+            val data = old.mapValues<String, Boolean, Any?> { it.value }.toMutableMap()
+            val p = Prefs(storage(data))
+            p.migrateCommands()
+            assertTrue(p.carCommandsEnabled)
+            br.painellivre.car.CarCommands.CATALOG.forEach { assertEquals(it.confirmed, p.carCommandAllowed(it.key)) }
+            assertFalse(p.carCommandAllowed("radio_byd"))
+            data["car_commands_enabled"] = false
+            data["car_command_ac_on"] = false
+            p.migrateCommands()
+            assertFalse(p.carCommandsEnabled)
+            assertFalse(p.carCommandAllowed("ac_on"))
+        }
+    }
+
+    @Test fun migracaoMenuLigaAntigoFalseERespeitaDesligamentoPosterior() {
+        val data = mutableMapOf<String, Any?>(Prefs.KEY_PANEL_MENU_FOLLOW to false)
+        val p = Prefs(storage(data))
+        p.migratePanelMenu()
+        assertTrue(p.panelMenuFollow)
+        data[Prefs.KEY_PANEL_MENU_FOLLOW] = false
+        p.migratePanelMenu()
+        assertFalse(p.panelMenuFollow)
+    }
+
+    @Test fun padraoMenuMigraAusenciaMasRespeitaEscolhaExplicita() {
+        assertTrue(prefs().panelMenuFollow)
+        assertFalse(prefs(Prefs.KEY_PANEL_MENU_FOLLOW to false).panelMenuFollow)
+        assertNull(prefs().panelMenuManual)
+        assertEquals(br.painellivre.cluster.PanelMenu.Mode.SMALL, prefs("panel_map_mode" to "small").panelMenuManual)
+    }
+
+    @Test fun safeAreaRequiresExplicitOptInEvenWithSavedMargins() {
+        assertFalse(prefs().safeAreaEnabled)
+        assertFalse(prefs(Prefs.KEY_SAFE_AREA to "songplus", "inset_left" to "300").safeAreaEnabled)
+        assertTrue(prefs(Prefs.KEY_SAFE_AREA_ENABLED to true).safeAreaEnabled)
+        assertFalse(prefs(Prefs.KEY_SAFE_AREA_ENABLED to false).safeAreaEnabled)
+    }
+
     @Test fun defaults() {
         val p = prefs()
         assertEquals("integrated", p.panelContent)
@@ -39,9 +100,9 @@ class PrefsTest {
         assertNull(p.panelGeometry)
         assertNull(p.carPhoto)
         assertEquals(0L, p.lastBootAt)
-        // Issue #9: debug e seguir o menu do painel ficam desligados até o motorista ligar.
+        // Debug continua opt-in; o menu do painel passa a ser seguido por padrão.
         assertFalse(p.debugMode)
-        assertFalse(p.panelMenuFollow)
+        assertTrue(p.panelMenuFollow)
     }
 
     @Test fun telemetryIsOffByDefaultAndIntervalIsBounded() {
@@ -96,7 +157,7 @@ class PrefsTest {
     }
 
     @Test fun safeAreaAdjustAcceptsNegativeAndClamps() {
-        val keys = listOf(Prefs.KEY_INSET_LEFT, Prefs.KEY_INSET_TOP, Prefs.KEY_INSET_RIGHT, Prefs.KEY_INSET_BOTTOM)
+        val keys = listOf("inset_left", Prefs.KEY_INSET_TOP, Prefs.KEY_INSET_RIGHT, Prefs.KEY_INSET_BOTTOM)
         for ((raw, expected) in listOf(null to 0, "abc" to 0, "-40" to -40, " 25 " to 25,
             "-1501" to -400, "1501" to 400, "42" to 42)) {
             val p = prefs(*keys.map { it to raw }.toTypedArray())
@@ -105,7 +166,7 @@ class PrefsTest {
     }
 
     @Test fun oldMarginsRemainAdditiveAndMalformedAdjustmentsFallBack() {
-        val old = prefs(Prefs.KEY_INSET_LEFT to "1500", Prefs.KEY_INSET_TOP to "90",
+        val old = prefs("inset_left" to "1500", Prefs.KEY_INSET_TOP to "90",
             Prefs.KEY_INSET_RIGHT to "999999999999", Prefs.KEY_INSET_BOTTOM to "")
         assertEquals("songplus", old.safeArea)
         assertEquals(SafeArea.Insets(400, 90, 0, 0), old.insetAdjust)

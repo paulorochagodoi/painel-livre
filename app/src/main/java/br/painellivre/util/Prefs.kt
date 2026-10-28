@@ -7,7 +7,7 @@ import br.painellivre.cluster.SafeArea
 
 /** Acesso tipado às preferências (as chaves batem com res/xml/preferences.xml). */
 class Prefs internal constructor(private val sp: SharedPreferences) {
-    constructor(context: Context) : this(PreferenceManager.getDefaultSharedPreferences(context.applicationContext))
+    constructor(context: Context) : this(PreferenceManager.getDefaultSharedPreferences(context.applicationContext)) { migratePanelMenu(); migrateCommands() }
 
     /** "nav" = só durante a navegação, "always" = sempre, "manual" = só pelos botões. */
     val panelContent: String get() = sp.getString(KEY_PANEL_CONTENT, "integrated") ?: "integrated"
@@ -16,6 +16,7 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
     val mapStyle: String get() = sp.getString(KEY_MAP_STYLE, "auto") ?: "auto"
     val mapTilt: Double get() = sp.getString(KEY_MAP_TILT, "45")?.toDoubleOrNull()?.coerceIn(0.0, 60.0) ?: 45.0
     /** Área segura do mapa no painel: "songplus" (padrão) ou "none" ([br.painellivre.cluster.SafeArea]). */
+    val safeAreaEnabled: Boolean get() = sp.getBoolean(KEY_SAFE_AREA_ENABLED, false)
     val safeArea: String get() = sp.getString(KEY_SAFE_AREA, "songplus") ?: "songplus"
     /** Ajuste fino da área segura, somado ao padrão (pode ser negativo). */
     val insetAdjust: SafeArea.Insets
@@ -28,7 +29,9 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
         set(v) = sp.edit().putString(KEY_NAV_APP, v).apply()
 
     /** Tema da central e do mapa: "auto" (dia/noite pela hora), "day" ou "night". */
-    val theme: String get() = sp.getString(KEY_THEME, "auto") ?: "auto"
+    var theme: String
+        get() = sp.getString(KEY_THEME, "auto") ?: "auto"
+        set(v) = sp.edit().putString(KEY_THEME, v).apply()
 
     /** Foto do carro escolhida pelo motorista (content://), no lugar da ilustração. */
     var carPhoto: String?
@@ -46,8 +49,30 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
 
     /** Modo de debug (issue #9): registra settings, propriedades e broadcasts. Desligado por padrão. */
     val debugMode: Boolean get() = sp.getBoolean(KEY_DEBUG_MODE, false)
-    /** Seguir o menu de navegação do painel (Simples/Pequeno/Cheio/OFF). Experimental, desligado. */
-    val panelMenuFollow: Boolean get() = sp.getBoolean(KEY_PANEL_MENU_FOLLOW, false)
+    /** Ausência da chave segue o painel; após a migração, desligamentos são respeitados. */
+    val panelMenuFollow: Boolean get() = sp.getBoolean(KEY_PANEL_MENU_FOLLOW, true)
+    val panelMenuManual: br.painellivre.cluster.PanelMenu.Mode?
+        get() = br.painellivre.cluster.PanelMenu.manualMode(sp.getString("panel_map_mode", "follow"))
+
+    /** O XML antigo gravava false também sem escolha do usuário; não é distinguível. */
+    internal fun migratePanelMenu() {
+        if (sp.getInt("panel_menu_migration", 0) >= 1) return
+        sp.edit().putBoolean(KEY_PANEL_MENU_FOLLOW, true).putInt("panel_menu_migration", 1).commit()
+    }
+
+    /** Migração única autorizada na 0.5.4. Desligamentos posteriores são preservados. */
+    internal fun migrateCommands() {
+        if (sp.getInt("car_commands_migration", 0) >= 1) return
+        val e = sp.edit().putBoolean("car_commands_enabled", true)
+        br.painellivre.car.CarCommands.CATALOG.forEach {
+            e.putBoolean("car_command_${it.key}", it.confirmed)
+        }
+        e.putInt("car_commands_migration", 1).commit()
+    }
+    val carCommandsEnabled: Boolean get() = sp.getBoolean("car_commands_enabled", true)
+    fun carCommandAllowed(key: String): Boolean =
+        br.painellivre.car.CarCommands.CATALOG.any { it.key == key && it.confirmed } &&
+            sp.getBoolean("car_command_$key", true)
     /** Ler dados do carro pelo `autoservice` via ADB local (issue #16). Experimental, desligado. */
     val telemetryEnabled: Boolean get() = sp.getBoolean(KEY_TELEMETRY, false)
     /** Aviso compacto no painel (porta aberta, carregando). Desligado por padrão. */
@@ -90,6 +115,7 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
         const val KEY_RESTORE_DELAY = "restore_delay"
         const val KEY_MAP_STYLE = "map_style"
         const val KEY_MAP_TILT = "map_tilt"
+        const val KEY_SAFE_AREA_ENABLED = "safe_area_enabled"
         const val KEY_SAFE_AREA = "safe_area"
         const val KEY_INSET_LEFT = "inset_left"
         const val KEY_INSET_TOP = "inset_top"

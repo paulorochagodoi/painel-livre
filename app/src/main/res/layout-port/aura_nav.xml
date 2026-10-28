@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- NavSearch em pé: lista em cima, mapa embaixo. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/viewNav"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:visibility="gone">
+
+    <include
+        layout="@layout/aura_nav_side"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1.3" />
+
+    <include
+        layout="@layout/aura_nav_map"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+</LinearLayout>

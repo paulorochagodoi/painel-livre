@@ -164,6 +164,41 @@ Checklist no carro (carro parado, celular pareado, número conhecido que não se
    telefone da BYD (pacotes com bt/phone). Se a conta não for reconhecida, ajustar `CallAccounts.isBluetooth`.
 5. Se a resposta for `NOT_CONFIRMED` sem ligar, tocar em App do carro (reserva) e mandar o registro.
 
+## Interface Aura na tela central (2026-10-23, não lançado)
+
+Pedido do dono: refazer a tela inicial no padrão visual **Aura** da designer
+(`docs/design/aura-launcher/`), substituindo o cockpit na central e, por decisão da rodada 2,
+redesenhando também o painel de instrumentos no padrão Aura. Mantidas todas as funções, o carro 3D e a telemetria só
+leitura. Mapeamento, inventário conferido e decisões pendentes em `docs/INTERFACE-AURA.md`.
+Validação: 223 testes JVM (14 novos em `AuraTest`), `lintDebug` 0 erros, `assembleDebug`, emulador
+(claro, escuro, em pé, cada janela, sem animações). Prints: `docs/telas/aura-*.png`.
+
+Checklist no carro (parado; só olhar e tocar na central):
+
+1. Instalar por cima e abrir: conferir se textos, atalhos e dock têm o tamanho certo na DiLink 3
+   (densidade própria do desenho 1280 × 720) e se a fonte nova aparece com acentos.
+2. Tocar em cada atalho (Navegação, Bateria, Climatização, Mídia) e no botão Painel do dock: a janela
+   abre perto do dedo, a seta aponta para o atalho, fecha no X, tocando fora, no mesmo atalho e em
+   Início. Nunca duas abertas.
+3. Com "Ler dados do carro" ligado: abrir uma porta, o porta-malas e um vidro → chips em laranja com a
+   palavra certa, carro na vista de cima; fechar tudo → "Tudo fechado"; conferir a trava. Conferir que
+   clima e bancos só mostram (nenhum botão muda o carro) e se os modos AUTO/A/C aparecem coerentes.
+4. Janela do painel: Mostrar no painel / Voltar ao painel original funcionam como o cartão antigo.
+5. Busca: Casa/Trabalho, uma categoria e um endereço abrem a rota no app escolhido; rota nativa
+   aparece no mapa da busca. Mídia: tocar/pausar/próxima e volume com o Bluetooth do celular.
+6. Botão Claro/Escuro e Ajustes → Tema (automático) voltam a funcionar como antes.
+
+Rodada 2: 238 testes JVM passando, lintDebug sem erros (76 avisos), assembleDebug concluído.
+Mapas com vias mais largas, seta larga e rota accent com contorno; painel com fontes e tokens Aura.
+Somente leitura; aberturas externas antigas mantidas e listadas em `INTERFACE-AURA.md`.
+
+Checklist adicional (depende do dono; nenhum acesso ao carro nesta rodada):
+
+7. Conferir painel claro/escuro em Simples, Pequeno, Cheio e OFF; números legíveis, cartões e aviso
+   de telemetria dentro da área segura, sem cobrir instrumentos BYD. Conferir contorno debug.
+8. Conferir rota nativa nos dois mapas, seta e larguras em diferentes zooms, sem perder o contorno.
+9. Decidir se as funções antigas que abrem apps externos devem ser substituídas por telas internas.
+
 ## Fase 1 — Primeiro teste no carro
 
 1. Instalar `PainelLivre-v0.3.0-release.apk`, aceitar "Permitir depuração USB" e tocar em **Configurar**
@@ -448,3 +483,76 @@ modo Pequeno e ajustes extremos. Transação 6 continua bloqueada. Nenhuma mudan
 Validação conjunta local: 209 testes JVM sem falhas, lintDebug com 0 erros/116 avisos e
 assembleDebug concluído. Conferir visualmente navegação + aviso de telemetria,
 modo Pequeno, ajuste fino e contorno debug no emulador e depois com o dono no carro.
+
+## Rodada 3 Aura — comandos internos (não lançado)
+
+Decisão explícita do Paulo substitui o plano de só leitura: primeira implementação pelo ADB local,
+sem esperar o ajudante próprio; ajudante autenticado continua evolução futura. Nenhum acesso ao
+carro nesta rodada. Catálogo e evidências em [COMANDOS.md](COMANDOS.md).
+
+Checklist **apenas pelo Paulo, carro parado em P**, um comando por vez:
+
+- [ ] Salvar diagnóstico/firmware/protocolo e estado inicial. Conferir controles originais disponíveis.
+- [ ] Chave geral desligada: tentar clima/dock/mídia e conferir rejeição no Log do app, sem atuação.
+- [ ] Ligar “Permitir comandos ao carro”; manter individuais desligados e conferir rejeição.
+- [ ] No Diagnóstico liberar **somente temperatura motorista**; escolher grau inteiro próximo do atual,
+  confirmar envio e comparar painel original, GET relido e log. Repetir passageiro separadamente.
+  Meio grau permanece bloqueado; não experimentar multiplicadores ou float no carro.
+- [ ] Desligar individual anterior e testar ventilador 0–7, um valor próximo do atual por toque.
+- [ ] Separadamente: energia do clima → A/C → AUTO → recirculação → desembaçador. Observar efeito,
+  comparar antes/depois no controle original e salvar GET cru. Não insistir se ficar inconclusivo.
+  Não reproduzir automaticamente as sequências de inicialização do app de referência.
+- [ ] Confirmar ausência de repetição em falha ADB; não provocar desconexão durante movimento.
+- [ ] Separadamente liberar mídia play/pausa, próxima, anterior e volume; testar sessão real, sem sessão
+  e rádio original. Registrar o que o rádio atende; sintonia FM/AM ainda não implementada.
+- [ ] Bancos/porta-malas/vidros/teto devem continuar bloqueados mesmo com preferências adulteradas.
+  Antes de liberar código futuro, resolver contratos de escrita, sequência e escalas. Testar P
+  ausente/antigo/simulado e fora de P só em testes locais; não movimentar o carro para este roteiro.
+- [ ] Bateria/carga seguem leitura. Nenhum EV/HEV/V2L/agendamento inventado.
+- [ ] Ao concluir, desligar todas as liberações e a chave geral; salvar log e observações.
+
+Não declarar modos confirmados só porque o Binder respondeu. A releitura dos modos ainda tem escala
+incerta; registrar resposta e levar para testes JVM. Nenhum comando de travas, portas, câmbio,
+freio, direção, ADAS ou CAN cru faz parte desta implementação.
+
+Validação da rodada 3: 248 testes JVM, zero falhas; `testDebugUnitTest lintDebug assembleDebug`
+com JDK 17. Lint sem erros (79 avisos). No emulator-5580 foram conferidos a janela de clima,
+seletor, confirmação e rejeição com a chave desligada, registrada no log; lista de liberações
+individuais e recusa de hipótese. Capturas `docs/telas/aura-r3-*.png`. Nenhum teste no carro.
+
+
+## Rodada 4 — área segura opcional
+
+Decisão do Paulo após observar o painel real: **Ajustes → Área segura no painel**
+(`safe_area_enabled`) é opt-in, desligada por padrão, inclusive nas instalações com margens
+antigas salvas. Desligada, ignora o padrão e os quatro ajustes: mapa, carro, cartões e aviso de
+telemetria usam todo o conteúdo disponível do menu, sem recorte da SafeArea. Ligada, conserva
+o cálculo anterior (padrão Song Plus e ajustes salvos). Os ajustes só ficam disponíveis quando ligada.
+Esta decisão substitui as descrições anteriores que tratavam a área segura como obrigatória.
+
+`Prefs.safeAreaEnabled` persiste em SharedPreferences; `SafeArea.effectiveInsets` retorna zero
+quando desligada. `SafeArea.Plan` continua organizando os elementos, agora sobre o conteúdo inteiro.
+O listener de `ClusterActivity` recalcula posições e câmera sem reiniciar. Menu
+Simples/Pequeno/Cheio/OFF, rota nativa e aviso de telemetria conservam seus fluxos; OFF continua
+ocultando o conteúdo. Debug continua disponível, mas o contorno da área segura só aparece com
+a opção ligada. O aviso de telemetria fica no canto superior direito do conteúdo nos dois casos.
+
+Regressões JVM: padrão desligado mesmo com margens antigas, opt-in explícito, margens ligadas e
+ignoradas, cartões e aviso dentro do conteúdo inteiro/reduzido. No carro, conferir as duas opções,
+rota, manobras, telemetria e os quatro modos, com atenção às sobreposições originais da BYD.
+
+Validação da rodada 4: comando solicitado `JAVA_HOME=$HOME/.jdks/jdk-17.0.21+9
+ANDROID_HOME=$HOME/Android/Sdk ./gradlew testDebugUnitTest lintDebug assembleDebug` concluído:
+250 testes JVM, zero falhas; lintDebug zero erros e 79 avisos; assembleDebug concluído.
+Emulador `emulator-5580`: capturas 1920×720, modo Cheio, área segura desligada, manobras
+simuladas nos temas claro e escuro, inspecionadas visualmente:
+`docs/telas/aura-r4-painel-claro-cheio.png` e `aura-r4-painel-escuro-cheio.png`.
+Preferências originais restauradas. Telemetria posicionada nos dois layouts coberta na JVM;
+não houve teste no carro nesta rodada.
+
+### Conferência pendente — 0.5.4
+
+- No carro: conferir cartões compactos (Área segura desligada), os quatro modos do menu e o
+  seletor manual em Ajustes; obter AppLog com bruto/origem/erro e desenhos aplicados.
+- Comandos enviam ao tocar; chaves com evidência ligadas por migração única. Conferir uma função
+  por vez no carro parado; hipóteses continuam bloqueadas. Não houve acesso ao carro nesta etapa.

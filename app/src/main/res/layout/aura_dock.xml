@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dock (80): Início e temperatura do motorista à esquerda, atalhos no meio, passageiro à direita.
+     As temperaturas só mostram o que o carro informa (tocar abre a Climatização); nada é ajustado
+     daqui. No meio, no lugar do banco e do desembaçador do Aura (que mandariam comandos ao carro):
+     Painel (projeção no painel de instrumentos) e o app de navegação escolhido. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/dock"
+    android:layout_width="match_parent"
+    android:layout_height="80dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp"
+    android:tag="a_dock">
+
+    <ImageView
+        android:id="@+id/dockHome"
+        style="@style/AuDockButton"
+        android:contentDescription="@string/tab_home"
+        android:src="@drawable/au_home" />
+
+    <include layout="@layout/dock_temp_driver" />
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="8dp"
+        android:tag="a_divider" />
+
+    <include layout="@layout/dock_buttons" />
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="32dp"
+        android:layout_marginEnd="8dp"
+        android:tag="a_divider" />
+
+    <include layout="@layout/dock_temp_passenger" />
+</LinearLayout>

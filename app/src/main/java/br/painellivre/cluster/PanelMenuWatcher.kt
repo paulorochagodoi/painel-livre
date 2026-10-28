@@ -71,22 +71,20 @@ object PanelMenuWatcher {
             if (follow) {
                 val r = read(ctx)
                 _last.value = r
-                // Cada mudança lida (valor bruto e modo) vai para o log e, com o debug ligado, para o registro.
+                // Leituras boas sempre entram no AppLog; falhas só quando o motivo muda.
                 val text = describe(r)
-                if (text != lastReading) {
+                if (r.error == null || text != lastReading) {
                     lastReading = text
                     AppLog.i("Menu do painel: $text")
                     DebugLog.add("menu", "$text ${r.detail}".trim())
                 }
                 follower.update(r.mode)
             }
-            val mode = PanelMenu.effective(follow, forced, follower.stable)
+            val mode = PanelMenu.effective(follow, forced, follower.stable, prefs.panelMenuManual)
             val layout = PanelMenu.layoutFor(mode)
             if (layout != shown) {
-                if (shown != null || !layout.isNormal) {
-                    AppLog.i("Painel: desenho para o modo ${mode.label}${if (forced != null) " (teste do debug)" else ""}")
-                    DebugLog.add("menu", "desenho aplicado: ${mode.label} $layout")
-                }
+                AppLog.i("Painel: desenho para o modo ${mode.label}${if (forced != null) " (teste do debug)" else ""}")
+                DebugLog.add("menu", "desenho aplicado: ${mode.label} $layout")
                 shown = layout
                 emit(layout)
             }
@@ -129,10 +127,11 @@ class PanelMenuFrame(ctx: Context, private val content: FrameLayout) {
     private fun place() {
         val w = frame.width
         val h = frame.height
-        if (w == 0 || h == 0) return
+        val bounds = PanelMenu.bounds(w, h, layout) ?: return
         val lp = content.layoutParams as FrameLayout.LayoutParams
-        val want = intArrayOf((w * layout.left).toInt(), (h * layout.top).toInt(), (w * layout.right).toInt(), (h * layout.bottom).toInt())
+        val want = intArrayOf(bounds.left, bounds.top, w - bounds.right, h - bounds.bottom)
         if (lp.leftMargin == want[0] && lp.topMargin == want[1] && lp.rightMargin == want[2] && lp.bottomMargin == want[3]) return
+        AppLog.i("Painel: moldura aplicada ${w}x$h, área $bounds, mapa=${layout.showMap}, cartões=${layout.showCards}")
         lp.setMargins(want[0], want[1], want[2], want[3])
         content.layoutParams = lp
     }

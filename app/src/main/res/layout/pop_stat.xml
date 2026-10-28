@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cartão pequeno de número (au-stats): ícone + rótulo e valor em Sora. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:paddingStart="12dp"
+    android:paddingTop="10dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="10dp"
+    android:tag="a_sunken_sm">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:importantForAccessibility="no"
+            android:id="@+id/statIcon"
+            style="@style/AuIconSmall"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/au_bolt" />
+
+        <TextView
+            android:id="@+id/statLabel"
+            style="@style/AuLabelMuted"
+            android:layout_marginStart="6dp"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/statValue"
+        style="@style/AuNumS"
+        android:layout_marginTop="2dp" />
+</LinearLayout>

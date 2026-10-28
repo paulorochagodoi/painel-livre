@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Atalho Bateria e autonomia: km total e %, barra e a divisão elétrica/combustível (só leitura). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tileBattery"
+    style="@style/AuTile"
+    android:contentDescription="@string/battery_title">
+
+    <LinearLayout style="@style/AuTileHead">
+
+        <ImageView
+            android:importantForAccessibility="no"
+            style="@style/AuBadge"
+            android:src="@drawable/au_battery" />
+
+        <TextView
+            style="@style/AuTileTitle"
+            android:layout_width="0dp"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:text="@string/battery_title" />
+
+        <ImageView android:importantForAccessibility="no" style="@style/AuChevron" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:baselineAligned="true"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tileBatteryBig"
+            style="@style/AuNumM" />
+
+        <TextView
+            android:id="@+id/tileBatterySmall"
+            style="@style/AuLabelMuted"
+            android:layout_marginStart="6dp" />
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/tileBatteryBar"
+        style="@android:style/Widget.Material.ProgressBar.Horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="6dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="6dp"
+        android:max="100"
+        android:tag="a_bar" />
+
+    <TextView
+        android:id="@+id/tileBatterySub"
+        style="@style/AuCaption"
+        android:maxLines="1" />
+</LinearLayout>

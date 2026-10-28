@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Aviso de configuração (quando falta permissão): em pé, centralizado abaixo do
+     relógio, para não cobrir os chips do carro. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/setupCard"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="top|center_horizontal"
+    android:layout_marginStart="0dp"
+    android:layout_marginTop="196dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="14dp"
+    android:paddingTop="10dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="10dp"
+    android:tag="a_banner"
+    android:visibility="gone">
+
+    <ImageView
+        android:importantForAccessibility="no"
+        style="@style/AuIconSmall"
+        android:src="@drawable/au_alert"
+        android:tag="a_icon_warn" />
+
+    <TextView
+        android:id="@+id/setupText"
+        style="@style/AuLabel"
+        android:layout_marginStart="8dp"
+        android:maxWidth="440dp"
+        android:maxLines="4"
+        android:tag="a_warn" />
+
+    <TextView
+        android:id="@+id/setupButton"
+        style="@style/AuPillButton"
+        android:layout_height="44dp"
+        android:layout_marginStart="10dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:text="@string/setup_now"
+        android:textSize="15sp" />
+</LinearLayout>

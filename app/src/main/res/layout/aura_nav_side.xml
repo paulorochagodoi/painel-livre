@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lado da busca: voltar, campo, escolha do app da rota, categorias, rota atual e lugares. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/navSide"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingStart="24dp"
+    android:paddingTop="16dp"
+    android:paddingEnd="24dp"
+    android:paddingBottom="16dp"
+    android:tag="a_side">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="58dp"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/navBack"
+            android:layout_width="58dp"
+            android:layout_height="58dp"
+            android:contentDescription="@string/back"
+            android:padding="17dp"
+            android:src="@drawable/au_back"
+            android:tag="a_sunken_click" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="6dp"
+            android:tag="a_field">
+
+            <ImageView
+                android:importantForAccessibility="no"
+                style="@style/AuIcon"
+                android:src="@drawable/au_search" />
+
+            <EditText
+                android:id="@+id/navSearch"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:background="@null"
+                android:fontFamily="@font/albert_sans_medium"
+                android:hint="@string/search_dest"
+                android:imeOptions="actionSearch"
+                android:importantForAutofill="no"
+                android:inputType="text"
+                android:maxLines="1"
+                android:tag="a_ink"
+                android:textSize="17sp" />
+
+            <ImageView
+                android:id="@+id/navClear"
+                style="@style/AuRoundSmall"
+                android:contentDescription="@string/clear"
+                android:src="@drawable/au_close"
+                android:tag="a_icon_muted"
+                android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/navPickBanner"
+        style="@style/AuLabel"
+        android:layout_marginTop="12dp"
+        android:maxLines="2"
+        android:tag="a_accent"
+        android:visibility="gone" />
+
+    <include layout="@layout/aura_nav_apps" />
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_marginTop="12dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/navCats"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:orientation="horizontal">
+
+            <include layout="@layout/aura_cat_charge" />
+
+            <include layout="@layout/aura_cat_fuel" />
+
+            <include layout="@layout/aura_cat_parking" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <LinearLayout
+        android:id="@+id/navActive"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center_vertical"
+        android:minHeight="62dp"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:tag="a_sunken_click"
+        android:visibility="gone">
+
+        <br.painellivre.cluster.ManeuverView
+            android:importantForAccessibility="no"
+            android:id="@+id/navActiveManeuver"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="6dp"
+            android:tag="a_badge_on" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/navActiveDistance"
+                style="@style/AuNumS" />
+
+            <TextView
+                android:id="@+id/navActiveStreet"
+                style="@style/AuCaption"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/navActiveEta"
+                style="@style/AuCaption"
+                android:maxLines="1"
+                android:tag="a_accent" />
+        </LinearLayout>
+
+        <ImageView
+            android:importantForAccessibility="no"
+            style="@style/AuIcon"
+            android:src="@drawable/au_chev_r"
+            android:tag="a_icon_muted" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/navListTitle"
+        style="@style/AuSection"
+        android:layout_marginStart="6dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="4dp"
+        android:text="@string/places" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/navList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+</LinearLayout>

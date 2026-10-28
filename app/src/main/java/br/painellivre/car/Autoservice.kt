@@ -22,7 +22,7 @@ object Autoservice {
     const val TX_GET_INT = 5
     const val TX_GET_FLOAT = 7
 
-    /** Únicas transações que este app manda. Nunca acrescentar a 6 (setInt). */
+    /** Únicas transações do leitor. A escrita pertence exclusivamente a CarCommands. */
     val READ_TRANSACTIONS = setOf(TX_GET_INT, TX_GET_FLOAT)
 
     /** Tipos de dispositivo da BYD (1000 = ar-condicionado … 1043 = sensores). */

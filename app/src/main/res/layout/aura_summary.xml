@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Herói, à direita: modelo, trava e resumo das aberturas. Só leitura: a trava não é botão de
+     trancar; tocar abre o Diagnóstico. Sem dado, a trava e o resumo somem (nunca "Travado" chutado). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/summaryBlock"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="top|end"
+    android:layout_marginTop="22dp"
+    android:layout_marginEnd="32dp"
+    android:gravity="end"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/model"
+        style="@style/AuLabelMuted"
+        android:letterSpacing="0.02"
+        android:textSize="15sp" />
+
+    <LinearLayout
+        android:id="@+id/lockPill"
+        android:layout_width="wrap_content"
+        android:layout_height="56dp"
+        android:layout_marginTop="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="20dp"
+        android:tag="a_chip_click"
+        android:visibility="gone">
+
+        <ImageView
+            android:importantForAccessibility="no"
+            android:id="@+id/lockIcon"
+            style="@style/AuIcon"
+            android:src="@drawable/au_lock"
+            android:tag="a_icon_ok" />
+
+        <TextView
+            android:id="@+id/lockText"
+            style="@style/AuBodyStrong"
+            android:layout_marginStart="10dp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/summaryLine"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <ImageView
+            android:importantForAccessibility="no"
+            android:id="@+id/summaryIcon"
+            style="@style/AuIconSmall"
+            android:src="@drawable/au_check"
+            android:tag="a_icon_ok" />
+
+        <TextView
+            android:id="@+id/summaryText"
+            style="@style/AuLabel"
+            android:layout_marginStart="6dp"
+            android:tag="a_ok" />
+    </LinearLayout>
+</LinearLayout>

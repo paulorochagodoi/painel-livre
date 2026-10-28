@@ -1,47 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Linha de lugar (casa, trabalho, recente ou resultado da busca). -->
+<!-- Linha de lugar da busca (au-li): casa, trabalho, recente ou resultado, com a distância. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/selectableItemBackground"
     android:gravity="center_vertical"
-    android:minHeight="68dp"
+    android:minHeight="62dp"
     android:orientation="horizontal"
     android:paddingStart="6dp"
     android:paddingTop="8dp"
     android:paddingEnd="6dp"
-    android:paddingBottom="8dp">
+    android:paddingBottom="8dp"
+    android:tag="a_plain_click">
 
     <ImageView
         android:id="@+id/placeIcon"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
         android:importantForAccessibility="no"
-        android:padding="10dp"
-        android:tag="chip" />
+        android:padding="9dp"
+        android:tag="a_sunken_sm" />
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="14dp"
+        android:layout_marginStart="12dp"
         android:layout_weight="1"
         android:orientation="vertical">
 
         <TextView
             android:id="@+id/placeName"
-            style="@style/CcTitle"
-            android:textSize="17sp" />
+            style="@style/AuBodyStrong" />
 
         <TextView
             android:id="@+id/placeAddress"
-            style="@style/CcSub" />
+            style="@style/AuCaption"
+            android:maxLines="1" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/placeDistance"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        style="@style/AuLabel"
         android:layout_marginStart="10dp"
-        android:tag="t2"
-        android:textSize="14sp" />
+        android:textSize="15sp" />
 </LinearLayout>

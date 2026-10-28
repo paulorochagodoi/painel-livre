@@ -1,6 +1,6 @@
 # Telemetria do carro (issue #16)
 
-Atualizado: 2026-10-23. **Somente leitura. Esta implementação ainda não foi testada no carro.**
+Atualizado: 2026-10-23. **Este leitor permanece somente leitura. Comandos separados em COMANDOS.md (rodada 3). Nenhum comando foi testado no carro.**
 O diagnóstico anterior da issue local contém algumas respostas reais; isso não valida o restante do catálogo.
 
 ## Como o app lê
@@ -14,7 +14,7 @@ O diagnóstico anterior da issue local contém algumas respostas reais; isso nã
 |---|---|---|
 | 5 | `getInt(dev, fid)` | usado |
 | 7 | leitura (buffer na issue); interpretada como float IEEE-754 pelo app, **a confirmar** | usado |
-| 6 | `setInt(dev, fid, valor, binder)` — **escrita** | **proibido**: não existe no código; `Autoservice.command` recusa e o teste confere |
+| 6 | `setInt(dev, fid, valor, binder)` — **escrita** | somente `CarCommands`, com chave geral + individual, whitelist e limites; o leitor continua recusando |
 | 8, 10, 12, 40, 42 | buffer, vetores, controle remoto, CAN | proibido (aridade errada já derrubou o `autoservice` em outro carro) |
 
   A issue chama 7 de leitura de buffer; a implementação herdada interpreta sua palavra como float.
@@ -150,7 +150,7 @@ A fonte local disponível é /tmp/issue-telemetria.md; o catálogo em Kotlin é 
 
 ## Riscos e regras
 
-- Só 5 e 7. A 6 (escrita) e qualquer outra transação ficam fora; ampliar exige falar com o dono (AGENTS.md).
+- O leitor só usa 5 e 7. Por decisão explícita do dono, a escrita 6 passa exclusivamente por `CarCommands` (COMANDOS.md). Outras transações continuam bloqueadas.
 - Só ids desta tabela (`TelemetryCatalog`), sempre `i32 dev i32 fid`. Nada de varrer o catálogo no carro.
 - Interface conferida antes; ADB ausente, serviço ausente ou interface diferente = sem leitura, com aviso.
 - Polling leve e só com tela visível; o painel só lê se o aviso estiver ligado.
@@ -206,7 +206,7 @@ Conferir especialmente 7 (formato float/buffer), trava 1/2, carga/BMS, tampa, n�
 percentuais dos vidros/teto, IDs CAN versus CAN-FD e unidades dos pneus.
 A conferência do descriptor é uma barreira adicional, **não prova** que uma firmware preserva
 o contrato das transações. A autorização desta tarefa limita o transporte a 5 e 7 e não autoriza
-execução pelo agente no carro nem escrita futura.
+execução pelo agente no carro nem execução de escrita pelo agente. A decisão posterior autoriza implementar comandos, conforme COMANDOS.md.
 
 ## Carro 3D na tela inicial (não publicado)
 
@@ -250,3 +250,19 @@ backup do APK e dados em `/tmp/pl-car3d-ref/emulador-original.apk` e
 `emulador-dados-original.tar`. Capturas da vista padrão, porta, carga e pneu em alerta:
 `docs/telas/carro-3d-*.png` e `/tmp/pl-car3d-ref/print-*.png`.
 A posição da tampa e os estados reais continuam pendentes de conferência pelo dono.
+
+## Rodada 3 — releitura após comando
+
+`VehicleTelemetry.refresh` faz uma leitura real pontual, independente do polling visível, e mescla
+só os sinais relidos no StateFlow. A confirmação usa o snapshot dessa leitura, nunca o cache anterior.
+Temperatura/ventilador podem confirmar igualdade; os modos de clima ainda têm codificação GET
+incerta e sempre mostram “Não confirmado pelo carro”, com valor cru no registro. Simulação não
+pode validar ambiente nem posição P para uma escrita. A leitura de câmbio é pontual e recente;
+falha/valor desconhecido/simulado bloqueia movimento. IDs de escrita são diferentes dos GETs.
+`TelemetryTest` mantém o bloqueio do setter nos lotes do leitor; `CarCommandsTest` confere a nova
+fronteira, limites, chaves, log, exclusividade da tx 6, intervalo e falta de confirmação.
+
+Validação da rodada 3: 248 testes JVM, zero falhas; `testDebugUnitTest lintDebug assembleDebug`
+com JDK 17. Lint sem erros (79 avisos). No emulator-5580 foram conferidos a janela de clima,
+seletor, confirmação e rejeição com a chave desligada, registrada no log; lista de liberações
+individuais e recusa de hipótese. Capturas `docs/telas/aura-r3-*.png`. Nenhum teste no carro.

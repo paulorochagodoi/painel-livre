@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mapa da busca (MapLibre, criado só ao abrir) e o botão Centralizar. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <FrameLayout
+        android:id="@+id/navMapHost"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ImageView
+        android:id="@+id/navLocate"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="24dp"
+        android:contentDescription="@string/map_center"
+        android:padding="16dp"
+        android:src="@drawable/au_locate"
+        android:tag="a_raised_md" />
+</FrameLayout>

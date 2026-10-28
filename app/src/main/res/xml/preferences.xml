@@ -78,12 +78,13 @@
             app:entryValues="@array/max_fps_values"
             app:useSimpleSummaryProvider="true"
             app:iconSpaceReserved="false" />
-        <SwitchPreferenceCompat
-            app:key="panel_menu_follow"
-            app:title="Seguir o menu de navegação do painel (experimental)"
-            app:summary="Lê a opção Simples, Pequeno, Cheio ou OFF do painel e ajusta o mapa. Sem leitura, fica como sempre. Ainda não testado no carro."
-            app:defaultValue="false"
+        <ListPreference app:key="panel_map_mode" app:title="Tamanho do mapa no painel"
+            app:defaultValue="follow" app:entries="@array/panel_map_entries"
+            app:entryValues="@array/panel_map_values" app:useSimpleSummaryProvider="true"
             app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat app:key="panel_menu_follow" app:title="Ler o menu do painel"
+            app:summary="Segue Simples, Pequeno, Cheio e OFF. A escolha manual acima tem prioridade."
+            app:defaultValue="true" app:iconSpaceReserved="false" />
         <SwitchPreferenceCompat
             app:key="auto_heal"
             app:title="Recuperar o mapa se ele travar"
@@ -96,7 +97,14 @@
         app:title="Área segura do mapa no painel"
         app:summary="Onde o mapa, o carro e os cartões ficam, longe dos desenhos da BYD por cima do painel."
         app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat
+            app:key="safe_area_enabled"
+            app:title="Área segura no painel"
+            app:summary="Afasta os cartões e o carro das bordas. Desligado, usa a tela inteira. A mudança é imediata."
+            app:defaultValue="false"
+            app:iconSpaceReserved="false" />
         <ListPreference
+            app:dependency="safe_area_enabled"
             app:key="safe_area"
             app:title="Padrão"
             app:defaultValue="songplus"
@@ -105,17 +113,22 @@
             app:useSimpleSummaryProvider="true"
             app:iconSpaceReserved="false" />
         <Preference
-            app:key="safe_area_help"
+            app:dependency="safe_area_enabled" app:key="safe_area_help"
             app:title="Ajuste fino (pixels do painel)"
             app:summary="Some ou tire pixels de cada lado do padrão: positivo afasta da borda, negativo aproxima. Com o modo de debug ligado, o painel mostra o contorno da área."
             app:selectable="false"
             app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="inset_left" app:title="Esquerda" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="inset_top" app:title="Topo" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="inset_right" app:title="Direita" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="inset_bottom" app:title="Base" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:dependency="safe_area_enabled" app:key="inset_left" app:title="Esquerda" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:dependency="safe_area_enabled" app:key="inset_top" app:title="Topo" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:dependency="safe_area_enabled" app:key="inset_right" app:title="Direita" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:dependency="safe_area_enabled" app:key="inset_bottom" app:title="Base" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="Comandos ao carro" app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat app:key="car_commands_enabled" app:title="Permitir comandos ao carro"
+            app:summary="Envia ao tocar. Funções individuais no Diagnóstico; comandos sem evidência continuam bloqueados."
+            app:defaultValue="true" app:iconSpaceReserved="false" />
+    </PreferenceCategory>
     <PreferenceCategory app:title="Dados do carro" app:iconSpaceReserved="false">
         <SwitchPreferenceCompat
             app:key="telemetry"

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- NavSearch (tela deitada): lista à esquerda (440), mapa com a posição e a rota nativa à direita.
+     Ocupa o espaço entre a barra de status e o dock, que continua visível. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/viewNav"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:visibility="gone">
+
+    <include
+        layout="@layout/aura_nav_side"
+        android:layout_width="440dp"
+        android:layout_height="match_parent" />
+
+    <include
+        layout="@layout/aura_nav_map"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1" />
+</LinearLayout>

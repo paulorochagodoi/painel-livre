@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- VehicleStatus com o carro 3D do Song Plus (SongCarView): vista 3/4 padrão, vista de cima quando há
+     destaque. Os chips ficam ao redor (AnchoredLayout); o código põe cada um perto da sua peça.
+     Tocar no carro abre o Diagnóstico (dados do carro). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/carBox"
+    android:layout_width="680dp"
+    android:layout_height="360dp"
+    android:layout_gravity="bottom|center_horizontal"
+    android:layout_marginBottom="20dp">
+
+    <br.painellivre.ui.cockpit.SongCarView
+        android:id="@+id/carArt"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/car_title"
+        android:paddingStart="48dp"
+        android:paddingTop="30dp"
+        android:paddingEnd="48dp"
+        android:paddingBottom="34dp"
+        android:scaleType="fitCenter" />
+
+    <br.painellivre.ui.aura.AnchoredLayout
+        android:id="@+id/carChips"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+</FrameLayout>

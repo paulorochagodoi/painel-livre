@@ -26,7 +26,7 @@ object VehicleData {
             "Combustível: ${fuelPercent?.let { "$it %" } ?: "indisponível"}",
             "Autonomia a combustível: ${fuelRangeKm?.let { "$it km" } ?: "indisponível"}",
             "Hodômetro: ${odometerKm?.let { "$it km" } ?: "indisponível"}",
-            "Portas/travas: indisponível (leitura ainda não implementada; constantes do SDK precisam ser confirmadas no carro)",
+            "Portas/travas: não lidas pelo SDK (ver a leitura pelo ADB local, issue #16)",
             error ?: "Leituras estatísticas disponíveis",
         ).joinToString("\n")
         val isEmpty get() = listOf(batteryPercent, evRangeKm, fuelPercent, fuelRangeKm, odometerKm).all { it == null }

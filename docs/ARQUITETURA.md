@@ -39,7 +39,11 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | | `ClusterService.kt` | Serviço em primeiro plano: GPS, liga o painel quando a rota começa (modo `nav`), devolve o original depois de `restore_delay` s, vigia de 15 s que reabre a tela, convivência com outros apps, ações `SHOW/RESTORE/LAUNCH_ONLY/RELAUNCH/SIMULATE`, `status: StateFlow<ClusterStatus>` |
 | | `ClusterActivity.kt` | Tela do painel: MapLibre (OpenFreeMap), carro como View fixa no ponto focal, câmera por quadro (Choreographer + `PoseSmoother`), limite de fps (`setMaximumFps`), vigia (`FreezeWatch`), cartões da manobra e da chegada, tema dia/noite, sai se cair no display 0, avisa o serviço quando é coberta |
 | | `ClusterPreviewActivity.kt` | Mesma tela na central (toque fecha), para testar sem o painel |
+| | `PanelMenu.kt` | **Kotlin puro.** Menu de navegação do painel (issue #9): valor → modo (1 OFF, 2 Simples, 3 Pequeno, 4 Cheio, confirmado no carro), parser do `Parcel`, desenho de cada modo, `Follower` (2 leituras iguais, volta ao normal após falhas), só getters no debug |
+| | `PanelMenuReader.kt` | **Kotlin puro.** Lê `INSTRUMENT_NAVI_TYPE`: SDK primeiro; se recusar por permissão, ADB local com o comando fixo de leitura |
+| | `PanelMenuWatcher.kt` | Lê o modo enquanto a tela do painel está aberta (se "Seguir o menu" estiver ligado) e `PanelMenuFrame`, a moldura que reposiciona/cobre o conteúdo da `ClusterActivity` |
 | | `PoseSmoother.kt` | **Kotlin puro.** Posição/rumo do carro entre fixes do GPS (segue em frente ≤1,5 s, corrige em 0,6 s, salto >150 m, parado ignora <8 m) |
+| | `SafeArea.kt` | **Kotlin puro.** Área segura do mapa no painel (padrão Song Plus + ajuste fino), posição dos cartões, do carro e foco da câmera |
 | | `FreezeWatch.kt` | **Kotlin puro.** Escada do vigia (`FreezeWatch`), limite por janela (`Budget`) e `YieldPolicy` |
 | | `ManeuverView.kt` | Desenha a seta (bitmap do Maps/Waze recolorido, ou vetor por `Maneuver`) |
 | | `CarArrowDrawable.kt` | Seta azul do carro (painel e mapa da central) |
@@ -52,8 +56,13 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | `info` | `WeatherRepository.kt` | Open-Meteo (posição arredondada a 0,1°, no máximo a cada 15 min; sem dados, 1 vez por minuto): `weather` (cartão) e `forecast` (tela de previsão) do mesmo pedido |
 | | `Forecast.kt` | **Kotlin puro.** `ForecastParser` (URL e leitura de agora, 24 h e 7 dias, rótulos "Agora"/"15h"/"Hoje"/"Amanhã"/"Sáb 25") e `ForecastText` |
 | | `MediaRepository.kt` | Sessão de mídia ativa (`MediaSessionManager`, usa o acesso às notificações) e controles |
-| `phone` | `DialNumber.kt` | **Kotlin puro.** `DialNumber` (teclas aceitas, limpeza, formato brasileiro, `tel:` com `#` escapado), `CallPlan` (ordem de tentativas para ligar e quando pedir `CALL_PHONE`), `PhoneApps` (acha o app de telefone/Bluetooth do carro) |
+| `phone` | `DialNumber.kt` | **Kotlin puro.** `DialNumber` (teclas aceitas, limpeza, formato brasileiro, `tel:` com `#` escapado), `CallPlan` (ordem de tentativas para ligar, caminhos diretos, conferência depois de ligar, quando pedir `CALL_PHONE`), `CallAccounts` (conta HFP, quem atende o `ACTION_CALL`), `PhoneApps` (acha o app de telefone/Bluetooth do carro) |
+| | `CallPaths.kt` | Contas de chamada do Telecom, proxy do cliente HFP (`HEADSET_CLIENT`) e `dial` por reflexão, `isInCall` |
 | `car` | `VehicleData.kt` | Leitura por reflexão de `BYDAutoStatisticDevice` (bateria, autonomias, hodômetro). Só leitura |
+| | `InstrumentSdk.kt` | Leitura por reflexão de `BYDAutoInstrumentDevice`: `INSTRUMENT_NAVI_TYPE` pelo `get(device, feature)` e getters candidatos do debug. Só leitura |
+| `debug` | `DebugLog.kt` | **Kotlin puro.** `DebugBuffer`: registro do modo de debug (3000 linhas, horário, origem), só grava ligado |
+| | `Probe.kt` | **Kotlin puro.** `ProbeParse` (seções do comando de coleta, `settings list`, `getprop`, histórico de broadcasts, candidatos ★, esconder números/MAC) e `ProbeTracker` (linha de base e só as novidades) |
+| | `DebugProbe.kt` | Coleta a cada 3 s (SDK + ADB só leitura + receptores), fotografia completa, liga/desliga pela preferência |
 | `location` | `LocationRepository.kt` | GPS da central (`LocationManager`), mantém o rumo quando parado, injeção só em debug |
 | `ui` | `LauncherActivity.kt` | Cockpit: barra de cima, carro, cartões, abas (Início, Navegação, Apps; Mídia/Telefone/Ajustes abrem outra tela), lista de lugares, mapa da aba Navegação, aviso de configuração; toque no tempo abre a previsão; `onNewIntent` com `HOME` volta à aba Início |
 | | `DialerActivity.kt` | Discador interno (aba Telefone): teclado, Rediscar, App do carro; liga pela ordem de `CallPlan` e passa ao próximo caminho se a central recusar |
@@ -62,6 +71,7 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | | `cockpit/CockpitArt.kt` | Fundo "estúdio" e ilustração do SUV, desenhados em código |
 | | `cockpit/WeatherIconDrawable.kt` | Ícone do tempo desenhado em código |
 | | `SettingsActivity.kt` | `PreferenceFragmentCompat` (`res/xml/preferences.xml`) + ações (foto do carro, simular, conceder, diagnóstico, tela inicial) |
+| | `DebugActivity.kt` | Tela do modo de debug: marcar a opção do painel, testar desenho, fotografia, escutar ação, copiar/compartilhar/salvar |
 | | `DiagnosticsActivity.kt` | Info da central (getprop, displays, AutoContainer), tamanho do painel, fps, log, copiar |
 | | `AppsAdapter.kt` | Grade de apps |
 | `util` | `Prefs.kt` | Preferências tipadas (chaves abaixo) |
@@ -93,12 +103,30 @@ Android pode mostrar o seletor uma vez ao tocar em Início — é o comportament
 
 ## Telefone
 
-A central não tem chip; a ligação é do celular pelo Bluetooth. `CallPlan.routes` tenta, nesta ordem:
-`ACTION_CALL` (com `CALL_PHONE`, pedida uma vez no primeiro Ligar) → `ACTION_DIAL` com o número →
-`TelecomManager.placeCall` → abrir o app de telefone do carro (`PhoneApps.pick`) com o número na
-área de transferência. Cada falha (`ActivityNotFound`, `SecurityException`) passa para a próxima; sem
-nenhuma, a tela avisa para usar o volante/celular. `uses-feature android.hardware.telephony` é
-opcional. O número nunca vai para o `AppLog`.
+A central não tem chip; a ligação é do celular pelo Bluetooth (HFP). No AOSP de carro, o
+`HfpClientConnectionService` (`com.android.bluetooth`) registra no Telecom uma conta de chamada por
+celular conectado; é por ela que a ligação sai pelo celular. Issue #15: no carro a chamada ia para o
+app de telefone da BYD; por isso os caminhos **diretos** vêm primeiro. `CallPlan.routes`:
+
+1. `PLACE_CALL_HFP` — `TelecomManager.placeCall` com `EXTRA_PHONE_ACCOUNT_HANDLE` da conta Bluetooth
+   (`CallAccounts.pickHfp`: classe com "hfp", pacote `com.android.bluetooth` ou "bluetooth" no nome).
+2. `CALL_INTENT` — `ACTION_CALL`, só se quem atende for o Telecom do Android
+   (`CallAccounts.SYSTEM_CALL_HANDLERS`).
+3. `HFP_DIAL` — `BluetoothHeadsetClient.dial(device, número)` por reflexão (perfil 16, celular conectado).
+4. `PLACE_CALL` — `placeCall` com a conta padrão.
+5. `CALL_INTENT_APP` — `ACTION_CALL` atendido por um app (o telefone da BYD): pode só abrir o app.
+6. `DIAL_INTENT` — `ACTION_DIAL` com o número. 7. `CAR_PHONE_APP` — app do carro com o número copiado.
+
+Os caminhos 1–4 precisam de `CALL_PHONE` (menos o 3); `READ_PHONE_STATE` é pedida junto (sem ela o
+Telecom não lista as contas) e as duas entram no "Conceder permissões pelo ADB". Cada falha
+(`ActivityNotFound`, `SecurityException`, `dial` nulo) passa para a próxima. Depois de um caminho
+direto o app confere `TelecomManager.isInCall` em 3 s (`CallPlan.afterCheck`) e, sem confirmação,
+**só avisa** ("toque em App do carro"): nunca tenta outro caminho sozinho, para não ligar duas vezes.
+A tela de chamada em andamento é a do discador padrão da central (InCallService): o Android a mostra
+com qualquer caminho. Com o modo de debug ligado, o discador registra quem atende cada intent, as
+contas do Telecom, o cliente HFP, a ordem, o caminho usado, as falhas e a resposta do sistema —
+sem o número, com números e MACs escondidos (`ProbeParse.redactPersonal`). O número nunca vai para o
+`AppLog`. `uses-feature android.hardware.telephony` é opcional.
 
 ## Ciclo do painel
 
@@ -133,14 +161,35 @@ Layouts: `activity_launcher.xml` inclui `include_home`, `include_nav`, `include_
 
 ## Painel: posições
 
-Frações da altura `h` e largura `w` do display (1920×720 no Song Plus), dentro das margens do usuário:
+Tudo fica dentro da **área segura** (`cluster/SafeArea.kt`, Kotlin puro, `SafeAreaTest`): o retângulo
+que os desenhos da BYD não cobrem. Medidas na foto do painel do Song Plus (1920×720):
 
-- coluna de cartões em `x = 0,06w`, `y = 0,16h`; cartão da manobra com `0,30w` de largura e ícone de `0,19h`;
-- cartão de chegada logo abaixo (Chegada / Tempo / Distância);
-- câmera com padding de cima `0,30h` e de baixo `0,12h` → carro a `~0,59h`, centralizado;
-- crédito "© OpenStreetMap" em `y = 0,66h`; aviso "SIMULAÇÃO" em cima no centro;
-- nada de relógio: a faixa de cima é da BYD (hora, P, ECO, temperatura) e a de baixo também (kW,
-  bateria, autonomia, velocidade).
+| Desenho da BYD por cima | Onde |
+|---|---|
+| Faixa de cima (hora, HEV, P, NORMAL, ASE, temperatura, luzes) | y 0–75 no centro |
+| Moldura curva | recorta os cantos de cima; o cartão perdia 40–60 px à esquerda |
+| Avisos à esquerda / à direita | x < 200, y 380–460 / x > 1720, y 60–300 |
+| Assistente de faixa | x 1290–1450, y 420–520 |
+| Faixa de baixo (kW, bateria %, autonomia, OK, velocidade, odômetro) | y > 500, toda a largura |
+
+- Padrão Song Plus: margens **esquerda 230, topo 90, direita 230, base 230** → área x 230–1690,
+  y 90–490. As medidas são do painel de referência 1920×720 e escalam com o display real.
+  `safe_area=none` usa a tela inteira.
+- Ajuste fino (`inset_*`, ±400 px por lado) somado ao padrão; a área nunca fica menor que 30% × 30%
+  do display.
+- Com o menu do painel em "Pequeno" (#9) o conteúdo encolhe: a área segura é do display e é recortada
+  pelo conteúdo (`SafeArea.plan`).
+- Cartão da manobra colado no canto de cima à esquerda da área (x 230, y 90), largura `0,30w` sem
+  passar do carro; cartão de chegada logo abaixo. Tamanhos em função de `unit` = altura do display,
+  menor só se a área for baixa demais para os cartões (`CARDS_HEIGHT_UNITS`).
+- Carro no meio da largura da área, a **67,5% da altura** dela (x 960, y 360 no Song Plus). A câmera
+  usa o padding mínimo que põe o ponto focal no carro (`SafeArea.focusPadding`; no Song Plus é zero,
+  porque y 360 é o meio do display).
+- Crédito "© OpenStreetMap" no canto de baixo à direita da área (longe dos cartões e acima do
+  assistente de faixa); aviso "SIMULAÇÃO" no topo, no meio da área.
+- Modo de debug ligado: contorno rosa da área segura com as margens finais embaixo à esquerda (para
+  ajustar olhando o painel; captura em `docs/telas/8-painel-area-segura.png`).
+- Nada de relógio: a faixa de cima é da BYD.
 
 ## Preferências (`Prefs`)
 
@@ -154,15 +203,19 @@ Frações da altura `h` e largura `w` do display (1920×720 no Song Plus), dentr
 | `map_tilt` | `45` | inclinação do mapa do painel |
 | `max_fps` | `60` | limite andando (parado fica em 5) |
 | `auto_heal` | `true` | recriar a superfície do mapa se travar |
-| `inset_left/top/right/bottom` | `0` | margens extras no painel (px) |
+| `safe_area` | `songplus` | área segura do mapa no painel: `songplus` (230/90/230/230) ou `none` |
+| `inset_left/top/right/bottom` | `0` | ajuste fino da área segura (px, −400 a 400, somado ao padrão) |
 | `start_on_boot` | `true` | sobe o serviço no boot |
 | `nav_app` | `maps` | `maps` ou `waze` (busca, Casa/Trabalho) |
 | `car_photo` | — | URI da foto do carro (no lugar da ilustração) |
+| `panel_menu_follow` | `false` | seguir o menu de navegação do painel (issue #9, experimental) |
+| `debug_mode` | `false` | modo de debug (issue #9) |
+| `debug_actions` | — | ações de broadcast extras que o debug escuta |
 | internas | — | `projection_powered`, `panel_geometry`, `last_boot_at`, `autocontainer_service_name`, `original_home_component`, `place_home`, `place_work`, `place_recents` |
 
 ## Testes
 
-`app/src/test` tem **99 testes JVM** (41 da v0.3.0 + 32 da issue #1 + 26 das issues #7/#3/#4), sem carro, emulador,
+`app/src/test` tem **179 testes JVM** (117 até a v0.4.1 + 21 da issue #9 + 5 da issue #15 + os da rota nativa, da leitura do menu e da área segura), sem carro, emulador,
 rede ou espera de tempo real. Execute com JDK 17:
 
 ```bash
@@ -174,13 +227,17 @@ rede ou espera de tempo real. Execute com JDK 17:
 |---|---|
 | `NavParserTest` e `NavRegressionTest` | Maps/Waze: manobra (seta de reserva), distância, rua, instrução, resumo, chegada, texto expandido/repetido, prioridade do título, espaços Unicode, inglês/unidades imperiais e ruído |
 | `PanelAutomationTest` | modos `nav`/`always`/`manual`, painel já ativo, prazo exato, atraso zero/600 s, nova rota cancelando a devolução, novo prazo e cancelamento explícito |
-| `PrefsTest` | padrões, modos, Maps/Waze, valores ausentes/inválidos e limites de atraso, inclinação, fps e quatro margens; opções de boot e recuperação |
+| `PrefsTest` | padrões, modos, Maps/Waze, valores ausentes/inválidos e limites de atraso, inclinação, fps, padrão da área segura e ajuste fino (negativo, ±400); opções de boot e recuperação |
 | `PanelSizeTest` | escolha segura do código de tamanho e geometria |
+| `SafeAreaTest` | área segura do Song Plus (230/90/230/230 → x 230–1690, y 90–490), carro em 960×360, cartões e carro fora de todos os desenhos da BYD medidos, foco da câmera no carro, ajuste fino (negativo, limite), margens exageradas, outra resolução, `none`, conteúdo encolhido pelo menu "Pequeno" |
 | `PoseSmootherTest` | posição, rumo, limites de previsão e ruído de GPS |
 | `FreezeWatchTest` | vigia, orçamento de recuperação e convivência (`YieldPolicy`) |
 | `CockpitTest` | Photon, tema e códigos do tempo |
 | `HomeChoiceTest` | saída do `resolve-activity` (nosso, BYD, seletor, erro), launcher original, resultado do `set-home-activity`, próximo passo, restauração, estado do alias e quando ligá-lo, alias HOME **desligado** no manifesto e nenhum outro componente com `HOME` |
-| `DialerTest` | teclado, limite, limpeza de número colado, mínimo de 3 dígitos, `tel:` com `#`, formato brasileiro, ordem dos caminhos de chamada (inclusive "nenhum app"), pedido de permissão e escolha do app do carro |
+| `DialerTest` | teclado, limite, limpeza de número colado, mínimo de 3 dígitos, `tel:` com `#`, formato brasileiro, ordem dos caminhos de chamada (inclusive "nenhum app"), conta HFP primeiro e `ACTION_CALL` desviado só de reserva, caminhos diretos, conferência sem nova tentativa, escolha da conta Bluetooth, quem atende o `ACTION_CALL`, pedido de permissão e escolha do app do carro |
+| `PanelMenuReaderTest` | `Parcel` do carro (1–4, várias linhas, prévia ASCII, 0xffffd8e5, exceção, lixo), comando fixo só de leitura, SDK primeiro → ADB só com SecurityException e no Android 10, pausa do ADB após falha, `Follower` com leituras do ADB |
+| `PanelMenuTest` | valores do menu, constante do SDK x molde, desenho de cada modo, opcional/teste do debug, `Follower` (sem piscar, volta ao normal), só getters, nenhum código novo em `SAFE_COMMANDS` |
+| `DebugProbeTest` | registro desligado por padrão e limite, comando de coleta só leitura, seções, `settings`/`getprop`, diff, histórico de broadcasts, candidatos, linha de base e novidades, seções ausentes, esconder número/MAC |
 | `ForecastTest` | agora/horas/dias do Open-Meteo, buracos `null`, respostas ruins, rótulos em português, textos, URL com posição arredondada e limite de pedidos |
 
 `PanelAutomation` contém a decisão usada pelo `ClusterService`; as chamadas Android/ADB continuam
@@ -257,3 +314,136 @@ e `app/build/reports/lint-results-debug.html`. Ambiente JDK/SDK indicado pelo do
 cache/chave debug fora da área gravável, `GRADLE_USER_HOME=/tmp/painel-gradle` e
 `ANDROID_USER_HOME=/tmp/painel-cluster-android`, com `--no-daemon` no build/lint. APK debug usa chave
 temporária; nenhuma alteração em keystore/local.properties/configuração de assinatura release.
+
+## Rota nativa opcional — issue #14 (não lançado)
+
+`nav_app=native` acrescenta **Painel Livre** aos botões da aba Navegação e aos Ajustes;
+`maps` continua sendo o padrão e `waze` continua disponível. `Places.navigate/navigateText`
+encaminham o destino ao serviço por `ACTION_NATIVE_ROUTE`, sem abrir app externo.
+`nav/native/NativeNavigation` acompanha o GPS no escopo do `ClusterService`; não depende de
+Activity visível nem de acesso às notificações. A geometria fica em um `StateFlow` próprio;
+a orientação usa `NavRepository` com fonte `br.painellivre`. Notificações externas não substituem
+uma orientação nativa ativa. Abrir uma rota externa com sucesso encerra a sessão nativa.
+
+O cálculo usa a API HTTPS do OSRM público (`router.project-osrm.org`), perfil driving, `steps=true`,
+`geometries=geojson`, `overview=full`: envia **coordenadas precisas de origem e destino**, sem
+identificador pessoal/chave. Busca textual continua no Photon; se houver ambiguidade, é necessário
+escolher o resultado na busca. Serviço público, sem garantia de disponibilidade, trânsito ou rotas
+atualizadas. Para uso diário avaliar servidor próprio/provedor; não há modo offline nem voz.
+Referência do protocolo: https://project-osrm.org/docs/v5.24.0/api/ (Route/RouteStep/StepManeuver).
+Não usa Ferrostar nesta primeira implementação: o acompanhamento simples está em Kotlin puro.
+
+`NativeRoute.kt` contém parser, coordenadas validadas, manobras em português e `RouteTracker`.
+Projeta o GPS nos segmentos e calcula distância até a próxima manobra e restante. O avanço é
+monótono, limitado a uma janela de 1500 m à frente; fixes a mais de 60 m não avançam a orientação.
+Recálculo exige desvio contínuo por 8 s e pelo menos 30 s desde o último pedido; o recálculo não é disparado enquanto outro cálculo está ativo.
+Trocar destino cancela o Job e impede publicar resposta antiga; a conexão HTTP cancelada pode
+levar até o timeout para terminar. Fixes com mais de 60 s ou precisão pior que 50 m são ignorados. GPS preciso/fresco
+é exigido também para iniciar. Chegada: menos de 30 m ao longo da linha e 40 m do destino.
+São heurísticas, **não map matching completo**: cruzamentos, túneis, pistas paralelas e retornos
+precisam de validação. Tempo estimado vem das durações OSRM, proporcional ao trecho restante;
+a chegada usa o relógio local, sem trânsito em tempo real.
+
+`NativeRouteLayer` desenha a mesma linha azul no mapa da central e do painel, reaplicada após
+carregamento/troca do estilo. Os cartões existentes mostram a seta, distância, rua e chegada.
+A rota nativa ativa força conteúdo integrado mesmo com a opção experimental externa selecionada;
+`PanelContent` cobre essa prioridade. A abertura segue `ACTION_ROUTE_REQUEST` e respeita o modo
+manual; o serviço elimina ativação duplicada quando o estado e o pedido explícito chegam juntos.
+Nenhum comando AutoContainer novo. Rota nativa termina na chegada ou por toque no cartão de rota
+ativa na aba Navegação → Encerrar. A devolução mantém o prazo configurado. A sessão é só em memória:
+morte do processo/serviço exige escolher o destino novamente; recriar apenas a Activity preserva a rota.
+
+`RouteIntentActivity` recebe `ACTION_SEND text/plain` e `ACTION_VIEW geo:/google.navigation:`.
+Mostra destino e escolha nativo/Maps/Waze antes de abrir. Texto para o nativo abre a busca visível;
+coordenadas seguem diretamente após a escolha. Reconhece URLs longas de Maps/Waze com query de
+destino; **não expande links curtos** (Maps/Waze podem compartilhar só um link desses), não faz
+requisições a hosts arbitrários. Nesses casos orienta buscar/compartilhar coordenadas.
+
+Regressões em `NativeRouteTest`: entradas, URLs, coordenadas inválidas, OSRM, rotatória, próxima
+manobra, avanço/distância/chegada, desvio e prioridade nativo/externo no painel. O cálculo e as
+regras de projeção não envolvem SDK/CAN. #9 e #15 continuam no branch separado de comandos/debug.
+
+Validação final da #14: `testDebugUnitTest` **129 testes, 0 falhas** (12 novos), `lintRelease`
+**0 erros, 109 avisos**, `assembleDebug` concluído, JDK 17/SDK indicados pelo dono. Consulta pública
+OSRM de exemplo (Berlim, sem coordenadas do dono) retornou `Ok`. Sem emulador/carro; não comprova
+lifecycle, renderização, entrega de intents nem compatibilidade da firmware. Capturas pendentes.
+
+## Menu do painel e modo de debug — issue #9 (não lançado, 2026-10-23)
+
+**Seguir o menu** (`panel_menu_follow`, desligado). Enquanto a `ClusterActivity` está visível,
+`PanelMenuWatcher` lê a cada 1 s (`PanelMenuReader`, ver abaixo) primeiro `InstrumentSdk.naviType`: `BYDAutoInstrumentDevice.getInstance`,
+`getDevicetype()` (padrão 1007), a constante `BYDAutoFeatureIds$Instrument.INSTRUMENT_NAVI_TYPE` do
+próprio carro (se não for 0; senão 0x40C03032, medido pelo DiPlay na DiLink 5.0) e o getter genérico
+`get(int, int)`. O `Follower` só troca de modo depois de 2 leituras iguais e volta ao normal depois
+de 3 falhas seguidas. `PanelMenuFrame` envolve o conteúdo da tela (o `FrameLayout` com mapa e cartões):
+
+| Modo | Desenho |
+|---|---|
+| Cheio, desconhecido, erro, opção desligada | como sempre |
+| Pequeno | conteúdo com margens de 28% dos lados e 12% em cima/embaixo (hipótese: o painel mostra o meio) |
+| Simples | preto no lugar do mapa, cartões da manobra e da chegada, sem o carro |
+| OFF | tudo preto |
+
+O conteúdo muda de tamanho, então a própria tela recalcula cartões e câmera como numa mudança de
+display. O mapa continua desenhando por baixo do preto (o vigia não confunde com travamento). Nenhum
+comando vai ao AutoContainer: os códigos 17 (meia tela) e 39 (navegação simples) seguem fora de
+`SAFE_COMMANDS`.
+
+**Leitura pelo ADB local (v0.5.1).** No carro (DiLink 3.0, Android 10) o SDK recusa no processo do app
+(SecurityException: as `BYDAUTO_*_GET` não saem por `pm grant`). Então o `PanelMenuReader` (Kotlin puro)
+tenta o SDK uma vez e, só se ele recusar **por permissão** e o Android for o 10 (`PanelMenu.ADB_SDK_INT`),
+passa a ler pelo mesmo `SelfAdb` do `sendInfo` com um único comando fixo,
+`PanelMenu.ADB_READ_COMMAND` = `service call autoservice 5 i32 1007 i32 1086337074` (transação 5 =
+`getInt`, conferida no carro). `PanelMenu.parseParcel` lê `Result: Parcel(00000000 0000000N …)` (também
+no formato de várias linhas com endereço), ignora a prévia entre aspas, recusa exceção do Binder
+(primeira palavra ≠ 0) e trata 0xffffd8e5 como indisponível. Valores confirmados no carro: 1 OFF,
+2 Simples, 3 Pequeno, 4 Cheio. Se o ADB falhar, nova tentativa em 5 s. É a exceção documentada à regra
+"nunca `service call autoservice <n>`": só leitura, comando constante, nada de transação 6
+(`set`)/`INSTRUMENT_NAVI_TYPE_SET`. O modo de debug usa a mesma leitura (`PanelMenuWatcher.read`) e
+cada mudança vai ao `AppLog` e ao registro do debug como `ADB: bruto=2 (0x00000002) → Simples`.
+
+**Modo de debug** (`debug_mode`, desligado). `App.onCreate` e a chave em Ajustes chamam
+`DebugProbe.sync`. Ligado, a cada 3 s: getters candidatos do SDK do painel (`PanelMenu.DEBUG_GETTERS`,
+só `get…` sem parâmetro) e `INSTRUMENT_NAVI_TYPE`; pelo ADB local um comando só de leitura
+(`ProbeParse.COLLECT_COMMAND`: `settings list` ×3, `getprop`, resumo de `dumpsys activity broadcasts
+history`, `logcat -d` filtrado) cujo resultado passa pelo `ProbeTracker` (a primeira coleta vira linha
+de base; depois só o que mudou, com ★ nos candidatos). Receptores para as ações já documentadas
+(`AUTONAVI_STANDARD_BROADCAST_*`, `byd.intent.action.*`, `com.telenav.action.nav.status`) e as
+digitadas pelo motorista mostram os extras. Sem ADB, só o SDK continua e o ADB é tentado a cada 30 s;
+a coleta pelo ADB para em 30 min (Retomar na tela). Registro separado do `AppLog` (`DebugLog`), também
+usado pelo telefone (issue #15). A fotografia completa esconde números de telefone e MACs.
+
+### Revisão local da v0.5.1 (2026-10-23)
+
+`PanelMenu.parseParcel` exige fechamento do Parcel, aceita apenas palavras hexadecimais na parte de
+valores e ignora a prévia ASCII. Nunca procura o valor depois do fechamento. `PanelMenuReader` só usa
+saída de shell com exitCode 0 e aplica a pausa de 5 s a erros de conexão, shell, Binder e parser.
+Leituras fora de 1..4 produzem UNKNOWN; o Follower volta ao desenho normal após as falhas previstas.
+No leitor do menu, o único comando autoservice executável continua a constante de leitura da
+transação 5, após recusa por permissão do SDK e somente na API 29. A telemetria (#16) tem sua
+lista separada de leituras 5/7, com verificação da interface (docs/TELEMETRIA.md). Não há transação 6
+nem escrita CAN/SDK.
+
+`SafeArea.resolve` usa intermediários Long/Double para margens extremas e reserva ao menos um pixel
+em displays mínimos. `SafeArea.plan` limita a unidade dos cartões também pela largura segura, para
+que o mínimo do cartão não alcance o carro em áreas estreitas. O padrão 1920×720 não muda.
+As chaves antigas inset_* são intencionalmente reinterpretadas como ajuste aditivo, limitado a ±400;
+não há conversão de margens absolutas nem gravação automática das preferências antigas.
+
+## Carro 3D na tela inicial (não publicado)
+
+`SongCarView` substitui apenas `carArt` no hero da central e recebe o mesmo snapshot do cartão.
+`CarOverlay` é Kotlin puro: decide vista e mapeia estados e coordenadas em frações da imagem.
+Dois WebP locais (base 3/4 e superior horizontal) ficam em cache compartilhado; nenhum decode
+ocorre no desenho. Transição de 250 ms; pulso apenas durante carga; ocultar/desanexar para animações.
+`CarStatusView` pequeno e mapa do painel não mudam. Fotos pessoais continuam funcionando.
+`CarOverlayTest` cobre aberturas, vidros/teto, carga, trava, pressões e dados desconhecidos.
+Coordenadas, limites visuais, fontes e simulação: [TELEMETRIA.md](TELEMETRIA.md#carro-3d-na-tela-inicial-não-publicado).
+
+### Integração 0.5.2 (teste)
+
+O aviso de telemetria do painel usa `SafeArea.Plan.telemetryBounds`, no canto superior direito,
+com largura e altura limitadas pela área segura. Ícone e texto ficam dentro desse cartão;
+a largura restante do texto respeita ícone e preenchimento. Não aumenta a pilha manobra/chegada.
+O cálculo considera o modo Pequeno e os ajustes finos; regressão em `SafeAreaTest`.
+Mantidos foco/carro, crédito OSM, contorno debug e ajustes aditivos da 0.5.1.

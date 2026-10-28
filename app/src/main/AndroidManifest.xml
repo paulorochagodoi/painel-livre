@@ -14,6 +14,9 @@
     <!-- Discador interno (issue #3): ligar direto quando a central tiver o serviço de chamadas.
          Pedida só ao tocar em Ligar; sem ela o discador abre o app de telefone com o número. -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
+    <!-- Issue #15: achar a conta de chamada do Bluetooth (HFP) no Telecom e saber se a chamada
+         começou. Pedida junto com CALL_PHONE; o número e o estado não vão para o log. -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
     <!-- Leitura de dados do carro (bateria, autonomia, combustível, hodômetro) pelo SDK BYD.
          Mesmas permissões de leitura que o BYD Navigator (Telenav) declara. Só leitura. -->
@@ -49,6 +52,22 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".nav.native.RouteIntentActivity" android:exported="true"
+            android:excludeFromRecents="true" android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="geo" />
+                <data android:scheme="google.navigation" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
 
@@ -103,6 +122,12 @@
             android:exported="false"
             android:theme="@style/Theme.PainelLivre.WithBar"
             android:label="@string/settings_title" />
+
+        <activity
+            android:name=".ui.DebugActivity"
+            android:exported="false"
+            android:theme="@style/Theme.PainelLivre.WithBar"
+            android:label="@string/debug_title" />
 
         <activity
             android:name=".ui.DiagnosticsActivity"

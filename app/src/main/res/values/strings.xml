@@ -26,6 +26,7 @@
 
     <string name="settings_title">Configurações</string>
     <string name="diag_title">Diagnóstico</string>
+    <string name="debug_title">Modo de debug</string>
     <string name="simulate">Simular rota</string>
 
     <string name="address_missing">Cadastre o endereço em Configurações.</string>
@@ -74,6 +75,7 @@
     <string name="dial_type_number">Digite o número com DDD</string>
     <string name="dial_requested">Chamada pedida. Se não começar, use o telefone pelo volante ou pelo celular.</string>
     <string name="dial_in_car_app">Número copiado. Disque no %1$s.</string>
+    <string name="dial_not_confirmed">A central não confirmou a ligação. Se não começou, toque em App do carro.</string>
     <string name="dial_no_way">A central não deixou ligar daqui. Use o telefone pelo volante ou pelo celular.</string>
 
     <!-- Previsão do tempo (issue #4) -->
@@ -85,4 +87,5 @@
     <string name="weather_no_gps">Esperando a posição do GPS para buscar a previsão.</string>
     <string name="weather_unavailable">Previsão indisponível agora. Confira a internet e toque em Atualizar.</string>
     <string name="weather_credit">Dados: Open-Meteo</string>
+    <string name="open_native">Painel Livre</string>
 </resources>

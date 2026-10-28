@@ -37,7 +37,11 @@ import androidx.recyclerview.widget.RecyclerView
 import br.painellivre.R
 import br.painellivre.adb.SelfAdb
 import br.painellivre.adb.SystemSetup
+import br.painellivre.car.TelemetrySnapshot
+import br.painellivre.car.TelemetryText
 import br.painellivre.car.VehicleData
+import br.painellivre.car.VehicleTelemetry
+import br.painellivre.ui.cockpit.CarStatusView
 import br.painellivre.cluster.ClusterService
 import br.painellivre.cluster.ClusterStatus
 import br.painellivre.cluster.ManeuverView
@@ -49,7 +53,7 @@ import br.painellivre.nav.NavState
 import br.painellivre.nav.Place
 import br.painellivre.nav.Places
 import br.painellivre.ui.cockpit.BackdropDrawable
-import br.painellivre.ui.cockpit.CarArtDrawable
+import br.painellivre.ui.cockpit.SongCarView
 import br.painellivre.ui.cockpit.Palette
 import br.painellivre.ui.cockpit.WeatherIconDrawable
 import br.painellivre.util.Prefs
@@ -115,13 +119,18 @@ class LauncherActivity : AppCompatActivity() {
         }
         applyPalette(force = true)
         showPage(PAGE_HOME)
+        consumeRouteSearch()
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { NavRepository.state.collect { renderNav(it) } }
+                launch { br.painellivre.nav.native.NativeNavigation.route.collect {
+                    br.painellivre.nav.native.NativeRouteLayer.draw(navMapLibre?.style)
+                } }
                 launch { ClusterService.status.collect { renderCluster(it) } }
                 launch { MediaRepository.now.collect { renderMedia(it) } }
                 launch { WeatherRepository.weather.collect { renderWeather(it) } }
+                launch { VehicleTelemetry.observe(this@LauncherActivity).collect { renderTelemetry(it) } }
                 launch {
                     SelfAdb.ready.collect { if (it != null && it != adbOk) { adbOk = it; refreshSetup() } }
                 }
@@ -146,7 +155,15 @@ class LauncherActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        consumeRouteSearch()
         if (intent.hasCategory(Intent.CATEGORY_HOME) && page != PAGE_HOME) showPage(PAGE_HOME)
+    }
+
+    private fun consumeRouteSearch() {
+        val query = intent.getStringExtra("route_search") ?: return
+        intent.removeExtra("route_search")
+        showPage(PAGE_NAV)
+        findViewById<EditText>(R.id.navSearch).setText(query)
     }
 
     override fun onResume() {
@@ -188,24 +205,28 @@ class LauncherActivity : AppCompatActivity() {
         paletteApplied = true
         findViewById<ImageView>(R.id.backdrop).setImageDrawable(BackdropDrawable(p.dark))
         renderCarArt()
+        findViewById<CarStatusView>(R.id.carStatus)?.palette = p
         p.apply(findViewById(R.id.root), density)
         highlightTab()
         renderCluster(ClusterService.status.value)
         renderSegments()
-        navMapLibre?.setStyle(Style.Builder().fromUri(mapStyleUri()))
+        navMapLibre?.setStyle(Style.Builder().fromUri(mapStyleUri())) { br.painellivre.nav.native.NativeRouteLayer.draw(it) }
         navCar?.setImageDrawable(carArrow())
     }
 
     private fun renderCarArt() {
-        val iv = findViewById<ImageView>(R.id.carArt)
+        val iv = findViewById<SongCarView>(R.id.carArt)
+        iv.palette = palette
+        iv.modelEnabled = true
         val photo = prefs.carPhoto
         if (photo != null) {
             try {
-                contentResolver.openInputStream(Uri.parse(photo))?.use { iv.setImageDrawable(Drawable.createFromStream(it, "carro")) }
+                contentResolver.openInputStream(Uri.parse(photo))?.use { iv.modelEnabled = false; iv.setImageDrawable(Drawable.createFromStream(it, "carro")) }
                 return
             } catch (t: Throwable) { /* foto removida: volta à ilustração */ }
         }
-        iv.setImageDrawable(CarArtDrawable(palette.dark))
+        iv.setImageDrawable(null)
+        iv.invalidate()
     }
 
     private fun mapStyleUri() = "https://tiles.openfreemap.org/styles/" + if (palette.dark) "dark" else "positron"
@@ -226,7 +247,7 @@ class LauncherActivity : AppCompatActivity() {
         )
         applyPalette()
         renderStatusIcons()
-        lifecycleScope.launch { renderCar(withContext(Dispatchers.IO) { VehicleData.read(this@LauncherActivity) }) }
+        lifecycleScope.launch { renderCar(withContext(Dispatchers.IO) { VehicleData.read(this@LauncherActivity) }.also { lastSdk = it }) }
     }
 
     @SuppressLint("MissingPermission")
@@ -241,7 +262,14 @@ class LauncherActivity : AppCompatActivity() {
         findViewById<View>(R.id.statusGps).alpha = if (gps) 1f else 0.3f
     }
 
-    private fun renderCar(s: VehicleData.Snapshot) {
+    private fun renderCar(sdk: VehicleData.Snapshot) {
+        // Sem o SDK (permissão BYD recusada no uid do app), usa a leitura pelo ADB local (issue #16).
+        val t = VehicleTelemetry.state.value.takeIf { it.status == TelemetrySnapshot.Status.OK }
+        val s = sdk.copy(
+            batteryPercent = sdk.batteryPercent ?: t?.socPercent,
+            evRangeKm = sdk.evRangeKm ?: t?.evRangeKm,
+            fuelRangeKm = sdk.fuelRangeKm ?: t?.fuelRangeKm,
+        )
         val total = listOfNotNull(s.evRangeKm, s.fuelRangeKm).takeIf { it.isNotEmpty() }?.sum()
         // Sem dados do carro (ou fora de uma BYD): some a autonomia em vez de mostrar traços.
         findViewById<View>(R.id.rangeBlock).visibility = if (total == null) View.INVISIBLE else View.VISIBLE
@@ -259,8 +287,27 @@ class LauncherActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.batteryValue).text = pct?.toInt()?.toString() ?: getString(R.string.battery)
         findViewById<ProgressBar>(R.id.batteryBar).progress = pct?.toInt() ?: 0
         findViewById<TextView>(R.id.batterySub).text = when {
+            t != null && TelemetryText.charge(t) != null -> TelemetryText.charge(t)
             s.evRangeKm != null -> "Autonomia elétrica ${s.evRangeKm} km"
             else -> getString(R.string.car_data_unavailable)
+        }
+    }
+
+    private var lastSdk: VehicleData.Snapshot? = null
+
+    private fun renderTelemetry(t: TelemetrySnapshot) {
+        findViewById<SongCarView>(R.id.carArt).snapshot = t
+        val card = findViewById<View>(R.id.telemetryCard) ?: return
+        val show = t.status == TelemetrySnapshot.Status.OK && t.hasData
+        card.visibility = if (show) View.VISIBLE else View.GONE
+        lastSdk?.let(::renderCar)
+        if (!show) return
+        findViewById<CarStatusView>(R.id.carStatus).apply { palette = this@LauncherActivity.palette; snapshot = t }
+        findViewById<TextView>(R.id.telemetryTitle).text = TelemetryText.headline(t)
+        val lines = listOfNotNull(TelemetryText.charge(t).takeIf { t.openings.isNotEmpty() }) + TelemetryText.details(t)
+        findViewById<TextView>(R.id.telemetryLines).apply {
+            text = lines.joinToString("\n")
+            visibility = if (lines.isEmpty()) View.GONE else View.VISIBLE
         }
     }
 
@@ -383,6 +430,7 @@ class LauncherActivity : AppCompatActivity() {
         click(R.id.mediaNext) { MediaRepository.next() }
         click(R.id.mediaPlay) { if (MediaRepository.now.value == null) openMedia() else MediaRepository.playPause() }
         click(R.id.cardBattery) { startActivity(Intent(this, DiagnosticsActivity::class.java)) }
+        click(R.id.telemetryCard) { startActivity(Intent(this, DiagnosticsActivity::class.java)) }
         click(R.id.cardPanel) { toggleCluster() }
         click(R.id.panelToggle) { toggleCluster() }
         click(R.id.cardDest) { showPage(PAGE_NAV) }
@@ -390,13 +438,17 @@ class LauncherActivity : AppCompatActivity() {
         click(R.id.destWork) { goSaved("work") }
         click(R.id.destOpenApp) {
             val pkg = NavRepository.state.value.sourcePackage
+            if (pkg == "br.painellivre") { showPage(PAGE_NAV); return@click }
             val i = pkg?.let { packageManager.getLaunchIntentForPackage(it) }
             if (i != null) startSafely(i) else Places.openApp(this, prefs.navApp)
         }
         click(R.id.setupButton) { runSetup() }
         click(R.id.weatherCard) { startActivity(Intent(this, WeatherActivity::class.java)) } // issue #4
         click(R.id.dockPanel) { toggleCluster() }
-        click(R.id.dockNavApp) { if (!Places.openApp(this, prefs.navApp)) toast("App não instalado") }
+        click(R.id.dockNavApp) {
+            if (prefs.navApp == "native") showPage(PAGE_NAV)
+            else if (!Places.openApp(this, prefs.navApp)) toast("App não instalado")
+        }
     }
 
     private fun toggleCluster() {
@@ -470,23 +522,30 @@ class LauncherActivity : AppCompatActivity() {
             } else false
         }
         click(R.id.navClear) { search.setText("") }
+        click(R.id.appNative) { prefs.navApp = "native"; renderSegments() }
         click(R.id.appMaps) { prefs.navApp = "maps"; renderSegments() }
         click(R.id.appWaze) { prefs.navApp = "waze"; renderSegments() }
         click(R.id.navActive) {
             val pkg = NavRepository.state.value.sourcePackage
+            if (pkg == "br.painellivre") {
+                androidx.appcompat.app.AlertDialog.Builder(this).setMessage("Encerrar a rota no Painel Livre?")
+                    .setPositiveButton("Encerrar") { _, _ -> br.painellivre.nav.native.NativeNavigation.stop() }
+                    .setNegativeButton("Continuar", null).show()
+                return@click
+            }
             pkg?.let { packageManager.getLaunchIntentForPackage(it) }?.let { startSafely(it) }
         }
     }
 
     private fun renderSegments() {
         val waze = prefs.navApp == "waze"
-        listOf(R.id.appMaps to !waze, R.id.appWaze to waze).forEach { (id, on) ->
+        listOf(R.id.appNative to (prefs.navApp == "native"), R.id.appMaps to (prefs.navApp == "maps"), R.id.appWaze to waze).forEach { (id, on) ->
             val v = findViewById<TextView>(id)
             v.tag = if (on) "chip_on" else "chip"
             palette.apply(v, density)
             v.setTextColor(if (on) palette.onAccent else palette.text1)
         }
-        findViewById<TextView>(R.id.dockNavAppText)?.setText(if (waze) R.string.open_waze else R.string.open_maps)
+        findViewById<TextView>(R.id.dockNavAppText)?.setText(if (prefs.navApp == "native") R.string.open_native else if (waze) R.string.open_waze else R.string.open_maps)
     }
 
     private fun scheduleSearch(q: String, delayMs: Long) {
@@ -560,7 +619,7 @@ class LauncherActivity : AppCompatActivity() {
 
     private fun hasHome() = Places.home(this) != null || prefs.homeAddress.isNotBlank()
     private fun hasWork() = Places.work(this) != null || prefs.workAddress.isNotBlank()
-    private fun navAppName() = getString(if (prefs.navApp == "waze") R.string.open_waze else R.string.open_maps)
+    private fun navAppName() = getString(if (prefs.navApp == "native") R.string.open_native else if (prefs.navApp == "waze") R.string.open_waze else R.string.open_maps)
 
     private fun hideKeyboard() {
         getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(findViewById<View>(R.id.navSearch).windowToken, 0)
@@ -586,7 +645,10 @@ class LauncherActivity : AppCompatActivity() {
             m.uiSettings.isAttributionEnabled = false
             m.uiSettings.isLogoEnabled = false
             m.uiSettings.isCompassEnabled = false
-            m.setStyle(Style.Builder().fromUri(mapStyleUri())) { updateNavMap() }
+            m.setStyle(Style.Builder().fromUri(mapStyleUri())) {
+                br.painellivre.nav.native.NativeRouteLayer.draw(it)
+                updateNavMap()
+            }
         }
     }
 

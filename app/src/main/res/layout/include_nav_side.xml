@@ -67,6 +67,12 @@
         android:orientation="horizontal">
 
         <TextView
+            android:id="@+id/appNative"
+            style="@style/CcSegment"
+            android:layout_marginEnd="8dp"
+            android:text="@string/open_native" />
+
+        <TextView
             android:id="@+id/appMaps"
             style="@style/CcSegment"
             android:layout_marginEnd="10dp"

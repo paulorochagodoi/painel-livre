@@ -73,11 +73,31 @@
     </string-array>
 
     <string-array name="nav_app_entries">
+        <item>Painel Livre (mapa nativo)</item>
         <item>Google Maps</item>
         <item>Waze</item>
     </string-array>
     <string-array name="nav_app_values">
+        <item>native</item>
         <item>maps</item>
         <item>waze</item>
+    </string-array>
+    <string-array name="safe_area_entries">
+        <item>Song Plus (230, 90, 230, 230)</item>
+        <item>Tela inteira (sem margens)</item>
+    </string-array>
+    <string-array name="safe_area_values">
+        <item>songplus</item>
+        <item>none</item>
+    </string-array>
+    <string-array name="telemetry_interval_entries">
+        <item>A cada 5 segundos</item>
+        <item>A cada 10 segundos</item>
+        <item>A cada 30 segundos</item>
+    </string-array>
+    <string-array name="telemetry_interval_values">
+        <item>5</item>
+        <item>10</item>
+        <item>30</item>
     </string-array>
 </resources>

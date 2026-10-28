@@ -1,6 +1,7 @@
 package br.painellivre
 
 import android.content.SharedPreferences
+import br.painellivre.cluster.SafeArea
 import br.painellivre.util.Prefs
 import java.lang.reflect.Proxy
 import org.junit.Assert.*
@@ -38,6 +39,28 @@ class PrefsTest {
         assertNull(p.panelGeometry)
         assertNull(p.carPhoto)
         assertEquals(0L, p.lastBootAt)
+        // Issue #9: debug e seguir o menu do painel ficam desligados até o motorista ligar.
+        assertFalse(p.debugMode)
+        assertFalse(p.panelMenuFollow)
+    }
+
+    @Test fun telemetryIsOffByDefaultAndIntervalIsBounded() {
+        // Issue #16: a leitura pelo autoservice e o aviso no painel só ligam pelo motorista.
+        val p = prefs()
+        assertFalse(p.telemetryEnabled)
+        assertFalse(p.telemetryPanel)
+        assertEquals(10, p.telemetryIntervalSec)
+        assertTrue(prefs(Prefs.KEY_TELEMETRY to true).telemetryEnabled)
+        assertTrue(prefs(Prefs.KEY_TELEMETRY_PANEL to true).telemetryPanel)
+        assertEquals(5, prefs(Prefs.KEY_TELEMETRY_INTERVAL to "1").telemetryIntervalSec)
+        assertEquals(60, prefs(Prefs.KEY_TELEMETRY_INTERVAL to "999").telemetryIntervalSec)
+        assertEquals(10, prefs(Prefs.KEY_TELEMETRY_INTERVAL to "x").telemetryIntervalSec)
+        assertEquals(30, prefs(Prefs.KEY_TELEMETRY_INTERVAL to "30").telemetryIntervalSec)
+    }
+
+    @Test fun debugAndPanelMenuSwitchesAreReadFromStorage() {
+        assertTrue(prefs(Prefs.KEY_DEBUG_MODE to true).debugMode)
+        assertTrue(prefs(Prefs.KEY_PANEL_MENU_FOLLOW to true).panelMenuFollow)
     }
 
     @Test fun panelContentIsConfigurableAndNullFallsBack() {
@@ -72,13 +95,27 @@ class PrefsTest {
         }
     }
 
-    @Test fun allMarginsUseSameLimits() {
+    @Test fun safeAreaAdjustAcceptsNegativeAndClamps() {
         val keys = listOf(Prefs.KEY_INSET_LEFT, Prefs.KEY_INSET_TOP, Prefs.KEY_INSET_RIGHT, Prefs.KEY_INSET_BOTTOM)
-        for ((raw, expected) in listOf(null to 0, "abc" to 0, "-1" to 0, "1501" to 1500, "42" to 42)) {
+        for ((raw, expected) in listOf(null to 0, "abc" to 0, "-40" to -40, " 25 " to 25,
+            "-1501" to -400, "1501" to 400, "42" to 42)) {
             val p = prefs(*keys.map { it to raw }.toTypedArray())
-            assertEquals(listOf(expected, expected, expected, expected),
-                listOf(p.insetLeft, p.insetTop, p.insetRight, p.insetBottom))
+            assertEquals(SafeArea.Insets(expected, expected, expected, expected), p.insetAdjust)
         }
+    }
+
+    @Test fun oldMarginsRemainAdditiveAndMalformedAdjustmentsFallBack() {
+        val old = prefs(Prefs.KEY_INSET_LEFT to "1500", Prefs.KEY_INSET_TOP to "90",
+            Prefs.KEY_INSET_RIGHT to "999999999999", Prefs.KEY_INSET_BOTTOM to "")
+        assertEquals("songplus", old.safeArea)
+        assertEquals(SafeArea.Insets(400, 90, 0, 0), old.insetAdjust)
+        val resolved = SafeArea.resolve(1920, 720, SafeArea.preset(old.safeArea), old.insetAdjust)
+        assertEquals(SafeArea.Insets(630, 180, 230, 230), resolved)
+    }
+
+    @Test fun safeAreaPresetDefaultsToSongPlus() {
+        assertEquals("songplus", prefs().safeArea)
+        assertEquals("none", prefs(Prefs.KEY_SAFE_AREA to "none").safeArea)
     }
 
     @Test fun storedFlagsOverrideDefaults() {

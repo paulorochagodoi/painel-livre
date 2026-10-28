@@ -33,6 +33,10 @@ O que faz:
   ativação com limpeza de estado velho, código de tamanho do painel (só quando seguro) e pausas de
   1 s; tela aberta pelo shell em tela cheia; carro e câmera animados a cada quadro com limite de fps;
   vigia que redesenha/recria o mapa se travar; e convivência com outros apps no painel.
+- **Seguir o menu do painel** (Ajustes → Painel, experimental, desligado): quando você troca o menu
+  de navegação do painel pelos botões do volante, o mapa do Painel Livre acompanha — OFF esconde o
+  mapa, Simples mostra só a manobra, Pequeno fica no meio, Cheio é como sempre. Na DiLink 3 o app lê
+  essa opção pelo ADB local (só leitura, um comando fixo conferido no carro); nada é escrito no carro.
 - **Diagnóstico**: mostra se a central é dual-OS ou single-OS, versão do MCU do painel, displays,
   serviço AutoContainer, decisão do tamanho do painel, fps do mapa, GPS e dados do carro, com botão
   de copiar.
@@ -71,8 +75,9 @@ Primeiro uso, na central:
    (É o app conectando no ADB da própria central, como o DashCast faz.)
 2. Se aparecer o aviso "Falta permitir…" em cima do carro, toque em **Configurar** (localização,
    dados do carro, notificações do Maps/Waze e segundo plano, tudo pelo ADB).
-3. Em **Ajustes → Simular rota**, veja o painel funcionando parado. Ajuste as **margens** nos Ajustes
-   se os instrumentos da BYD cobrirem parte dos cartões.
+3. Em **Ajustes → Simular rota**, veja o painel funcionando parado. Se os instrumentos da BYD
+   cobrirem parte dos cartões, use **Ajustes → Área segura do mapa no painel → Ajuste fino** (com o
+   modo de debug ligado, o painel mostra o contorno da área).
 4. Inicie uma rota no Google Maps ou no Waze — o painel liga sozinho.
 5. Para subir junto com o carro: deixe **Iniciar junto com o carro** ligado e, se a BYD tiver uma
    lista de "autoiniciar" nas configurações, inclua o Painel Livre. O caminho mais garantido é
@@ -135,3 +140,31 @@ comportamento do DashCast. Nada escreve no CAN. Use por sua conta e risco; não 
   código, imagem, voz, chave ou servidor dele é usado.
 
 Licença: [MIT](LICENSE). Não é afiliado à BYD nem ao SealNav.
+
+### Rota nativa (em desenvolvimento, issue #14)
+
+Na aba Navegação escolha **Painel Livre**, busque o endereço e toque no resultado. Casa, Trabalho e
+recentes usam a mesma escolha. A linha da rota e a próxima manobra aparecem no mapa do painel;
+Maps e Waze continuam disponíveis. No modo manual, toque também em Mostrar no painel.
+Para encerrar, toque no cartão de rota ativa na aba Navegação e em **Encerrar**.
+
+O cálculo nativo usa o [OSRM público](https://project-osrm.org/) por HTTPS, sem chave. Envia ao
+`router.project-osrm.org` as **coordenadas precisas de origem e destino** (necessárias para calcular
+as ruas), sem nome, VIN ou identificador pessoal. Precisa de internet e GPS recente; o servidor
+público não garante disponibilidade. Não tem trânsito ao vivo, voz nem mapa/rota offline.
+A rota é independente da calculada pelo Maps/Waze. Para uso diário, avaliar instância própria.
+
+O app recebe compartilhamento de texto/coordenadas e intents `geo:`/`google.navigation:` e pede
+qual mapa usar. Endereço textual abre a busca para você conferir o resultado. Links curtos do Maps
+ou Waze ainda não são expandidos: nesse caso busque o endereço ou compartilhe coordenadas.
+Fechar só a tela mantém a orientação; encerrar o processo/serviço perde a rota atual.
+Esta função ainda precisa de validação no carro; veja o checklist em `docs/PLANO.md`.
+
+## Carro 3D na tela inicial (não publicado)
+
+O centro da tela mostra renders locais do Song Plus do dono: vista 3/4 normalmente e
+vista superior com indicações de portas, carga, pneus e vidros/teto quando há destaque.
+Layout, cartões e barra inferior permanecem iguais. Uma foto pessoal configurada continua
+tendo preferência. A simulação debug permite conferir cada destaque sem carro.
+Dados desconhecidos não são tratados como fechados. Limites visuais de pressão e posição
+provisória da tampa de carga estão documentados em [Telemetria](docs/TELEMETRIA.md#carro-3d-na-tela-inicial-não-publicado).

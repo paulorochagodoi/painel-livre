@@ -16,7 +16,11 @@ import br.painellivre.BuildConfig
 import br.painellivre.R
 import br.painellivre.adb.SelfAdb
 import br.painellivre.adb.SystemSetup
+import br.painellivre.car.TelemetryCatalog
+import br.painellivre.car.TelemetrySnapshot
+import br.painellivre.car.TelemetryText
 import br.painellivre.car.VehicleData
+import br.painellivre.car.VehicleTelemetry
 import br.painellivre.cluster.ClusterActivity
 import br.painellivre.cluster.ClusterController
 import br.painellivre.cluster.ClusterService
@@ -63,7 +67,7 @@ class DiagnosticsActivity : AppCompatActivity() {
         }
         button("Simular rota") { ClusterService.start(this, ClusterService.ACTION_SIMULATE); append("→ simulação alternada") }
         button("Conceder permissões") { runCatchingShow { SystemSetup.grantAll(this) } }
-        button("Dados do carro") { runCatchingShow { withContext(Dispatchers.IO) { VehicleData.read(this@DiagnosticsActivity).diagnosticText() } } }
+        button("Dados do carro") { runCatchingShow { withContext(Dispatchers.IO) { carText() } } }
         button("Navegação atual") { append(NavRepository.state.value.let { "ativa=${it.active} fonte=${it.sourceLabel}\n${it.nav}" }) }
         button("Log do app") { append(AppLog.dump()) }
         button("Copiar tudo") {
@@ -93,7 +97,7 @@ class DiagnosticsActivity : AppCompatActivity() {
         val boot = Prefs(this).lastBootAt
         sb.append("Último boot recebido pelo app: ${if (boot == 0L) "nunca (a BYD pode estar segurando o autoinício)" else java.text.DateFormat.getDateTimeInstance().format(java.util.Date(boot))}\n")
         sb.append("== Dados do carro (SDK no usuário do app, não pelo AutoContainer) ==\n")
-        sb.append(withContext(Dispatchers.IO) { VehicleData.read(this@DiagnosticsActivity).diagnosticText() }).append("\n")
+        sb.append(withContext(Dispatchers.IO) { carText() }).append("\n")
         sb.append("BYDAUTO_STATISTIC_GET: ${if (checkSelfPermission("android.permission.BYDAUTO_STATISTIC_GET") == android.content.pm.PackageManager.PERMISSION_GRANTED) "concedida" else "não concedida"}\n")
         sb.append("Conteúdo escolhido para o painel: ${Prefs(this).panelContent}\n")
         sb.append(panelSizeInfo()).append("\n\n")
@@ -124,6 +128,15 @@ class DiagnosticsActivity : AppCompatActivity() {
     }
 
     /** O que o app vai fazer com o código de tamanho do painel na próxima ativação, e por quê. */
+    /** SDK (uid do app) e, se ligada, a leitura pelo ADB local (issue #16, só leitura). */
+    private suspend fun carText(): String {
+        val sdk = VehicleData.read(this).diagnosticText()
+        val adb = if (Prefs(this).telemetryEnabled) {
+            TelemetryText.diagnostic(VehicleTelemetry.sweep(this, TelemetryCatalog.POLLED))
+        } else TelemetrySnapshot.Status.OFF.label
+        return "$sdk\n\nPelo ADB local:\n$adb"
+    }
+
     private fun panelSizeInfo(): String {
         val c = ClusterController(this)
         val p = Prefs(this)

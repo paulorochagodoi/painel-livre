@@ -59,6 +59,7 @@ class ClusterService : LifecycleService() {
         controller = ClusterController(this)
         startForeground(NOTIF_ID, buildNotification())
         LocationRepository.start(this)
+        br.painellivre.nav.native.NativeNavigation.attach(this)
         AppLog.i("Serviço iniciado (modo do painel: ${prefs.clusterMode})")
 
         // ADB local: no boot o adbd demora a subir — tenta por até 30 s (docs/SEALNAV_RE.md, achado A).
@@ -121,6 +122,7 @@ class ClusterService : LifecycleService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         when (intent?.action) {
+            ACTION_NATIVE_ROUTE -> intent.getStringExtra("destination")?.let { br.painellivre.nav.native.NativeNavigation.calculate(it) }
             ACTION_ROUTE_REQUEST -> lifecycleScope.launch {
                 if (PanelContent.showOnRouteRequest(prefs.clusterMode)) {
                     yieldPolicy.reset()
@@ -132,7 +134,10 @@ class ClusterService : LifecycleService() {
             ACTION_RESTORE -> lifecycleScope.launch { restore() }
             ACTION_LAUNCH_ONLY -> lifecycleScope.launch { yieldPolicy.reset(); launchOnly() }
             ACTION_RELAUNCH -> lifecycleScope.launch { relaunch() }
-            ACTION_SIMULATE -> NavSimulator.toggle(lifecycleScope)
+            ACTION_SIMULATE -> {
+                br.painellivre.nav.native.NativeNavigation.stop()
+                NavSimulator.toggle(lifecycleScope)
+            }
         }
         return START_STICKY
     }
@@ -146,6 +151,10 @@ class ClusterService : LifecycleService() {
     }
 
     private suspend fun show() = op.withLock {
+        val desiredPackage = PanelContent.externalPackage(prefs.panelContent, prefs.navApp,
+            br.painellivre.nav.native.NativeNavigation.route.value != null)
+        // O StateFlow e o pedido explícito podem chegar juntos; nunca ativar duas vezes.
+        if (_status.value is ClusterStatus.Active && externalPackage == desiredPackage) return@withLock
         _status.value = ClusterStatus.Working
         val target = controller.activate()
         if (target == null) {
@@ -153,7 +162,7 @@ class ClusterService : LifecycleService() {
             updateNotification()
             return@withLock
         }
-        externalPackage = PanelContent.externalPackage(prefs.panelContent, prefs.navApp)
+        externalPackage = desiredPackage
         val ok = externalPackage?.let { controller.launchNavigation(target, it) }
             ?: controller.launchClusterUi(target)
         _status.value = if (ok) ClusterStatus.Active(target.displayId)
@@ -211,11 +220,18 @@ class ClusterService : LifecycleService() {
     }
 
     override fun onDestroy() {
+        br.painellivre.nav.native.NativeNavigation.detach(this)
         LocationRepository.stop()
         super.onDestroy()
     }
 
     companion object {
+        const val ACTION_NATIVE_ROUTE = "br.painellivre.NATIVE_ROUTE"
+        fun startNativeRoute(ctx: Context, query: String) {
+            val i = intent(ctx, ACTION_NATIVE_ROUTE).putExtra("destination", query)
+            androidx.core.content.ContextCompat.startForegroundService(ctx, i)
+        }
+
         private const val NOTIF_ID = 42
         const val ACTION_ROUTE_REQUEST = "br.painellivre.ROUTE_REQUEST"
         const val ACTION_SHOW = "br.painellivre.SHOW"

@@ -1,6 +1,8 @@
 package br.painellivre.ui
 
 import android.Manifest
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothProfile
 import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -25,6 +27,10 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import br.painellivre.R
+import br.painellivre.debug.DebugLog
+import br.painellivre.debug.ProbeParse
+import br.painellivre.phone.CallAccounts
+import br.painellivre.phone.CallPaths
 import br.painellivre.phone.CallPlan
 import br.painellivre.phone.DialNumber
 import br.painellivre.phone.PhoneApps
@@ -33,6 +39,7 @@ import br.painellivre.ui.cockpit.Palette
 import br.painellivre.util.AppLog
 import br.painellivre.util.Prefs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -46,6 +53,8 @@ class DialerActivity : AppCompatActivity() {
     private var number = ""
     private var palette = Palette.DAY
     private var carPhone: PhoneApps.App? = null
+    private var hfp: CallPaths.Hfp? = null
+    private var hfpClient: Pair<BluetoothProfile, BluetoothDevice>? = null
     private val density get() = resources.displayMetrics.density
     private val store by lazy { getSharedPreferences("dialer", Context.MODE_PRIVATE) }
 
@@ -76,7 +85,15 @@ class DialerActivity : AppCompatActivity() {
             carPhone = withContext(Dispatchers.IO) { findCarPhoneApp() }
             findViewById<View>(R.id.dialPhoneApp).visibility = if (carPhone != null) View.VISIBLE else View.INVISIBLE
             AppLog.i("Telefone: app do carro = ${carPhone?.packageName ?: "nenhum"}")
+            hfpClient = CallPaths.hfpClient(this@DialerActivity)
+            if (isDestroyed) hfpClient?.let { CallPaths.closeHfp(it.first) }
+            AppLog.i("Telefone: cliente HFP ${if (hfpClient != null) "com celular conectado" else "indisponível"}")
         }
+    }
+
+    override fun onDestroy() {
+        hfpClient?.let { CallPaths.closeHfp(it.first) }
+        super.onDestroy()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -151,34 +168,69 @@ class DialerActivity : AppCompatActivity() {
 
     // ── Ligar ───────────────────────────────────────────────────────────────
 
-    private fun env(uri: Uri) = CallPlan.Env(
-        hasCallPermission = checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED,
-        callIntentResolves = Intent(Intent.ACTION_CALL, uri).resolveActivity(packageManager) != null,
-        dialIntentResolves = Intent(Intent.ACTION_DIAL, uri).resolveActivity(packageManager) != null,
-        telecomAvailable = packageManager.hasSystemFeature(PackageManager.FEATURE_CONNECTION_SERVICE) &&
-            getSystemService(TelecomManager::class.java) != null,
-        carPhoneApp = carPhone != null,
-    )
+    private fun env(uri: Uri): CallPlan.Env {
+        val callHandler = Intent(Intent.ACTION_CALL, uri).resolveActivity(packageManager)?.packageName
+        return CallPlan.Env(
+            hasCallPermission = checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED,
+            callIntentResolves = callHandler != null,
+            dialIntentResolves = Intent(Intent.ACTION_DIAL, uri).resolveActivity(packageManager) != null,
+            telecomAvailable = packageManager.hasSystemFeature(PackageManager.FEATURE_CONNECTION_SERVICE) &&
+                getSystemService(TelecomManager::class.java) != null,
+            carPhoneApp = carPhone != null,
+            hfpAccount = hfp != null,
+            callIntentIsApp = CallAccounts.callIntentIsApp(callHandler),
+            hfpDevice = hfpClient != null,
+        ).also {
+            debug("ACTION_CALL atendido por ${callHandler ?: "ninguém"}; ACTION_DIAL ${if (it.dialIntentResolves) "atendido" else "sem app"}; " +
+                "CALL_PHONE=${it.hasCallPermission} Telecom=${it.telecomAvailable} contaHFP=${hfp?.account?.let { a -> "${a.componentPackage}/${a.componentClass}" } ?: "nenhuma"} " +
+                "clienteHFP=${if (hfpClient != null) "celular conectado" else "nenhum"} appDoCarro=${carPhone?.packageName ?: "nenhum"}")
+        }
+    }
+
+    /** Contas de chamada de novo (a permissão pode ter chegado agora). */
+    private fun refreshAccounts() {
+        val (list, err) = CallPaths.accounts(this)
+        hfp = CallPaths.hfpAccount(list)
+        debug("contas do Telecom: " + (err?.let { "erro $it (READ_PHONE_STATE?)" }
+            ?: list.joinToString("; ") { "${it.second.componentPackage}/${it.second.componentClass}" }.ifEmpty { "nenhuma" }))
+    }
 
     private fun call() {
         if (!DialNumber.isDialable(number)) { status(getString(R.string.dial_type_number)); return }
         val uri = Uri.parse(DialNumber.telUri(number))
+        refreshAccounts()
         val e = env(uri)
         if (CallPlan.shouldAskPermission(e, store.getBoolean(KEY_ASKED, false))) {
             store.edit().putBoolean(KEY_ASKED, true).apply()
-            requestPermissions(arrayOf(Manifest.permission.CALL_PHONE), REQ_CALL)
+            // READ_PHONE_STATE junto: sem ela o Telecom não diz qual é a conta do Bluetooth.
+            requestPermissions(arrayOf(Manifest.permission.CALL_PHONE, Manifest.permission.READ_PHONE_STATE), REQ_CALL)
             return
         }
         val routes = CallPlan.routes(e)
+        debug("caminhos na ordem: $routes")
         for (r in routes) {
             if (tryRoute(r, uri)) {
                 AppLog.i("Telefone: chamada por $r (opções: $routes)")
+                debug("usado: $r")
                 store.edit().putString(KEY_LAST, number).apply()
+                if (r.direct) confirm(r)
                 return
             }
         }
         AppLog.w("Telefone: nenhum caminho para ligar (opções: $routes)")
+        debug("nenhum caminho funcionou")
         status(getString(R.string.dial_no_way))
+    }
+
+    /** Confere se a chamada começou. Não tenta outro caminho sozinho: ligaria duas vezes. */
+    private fun confirm(r: CallPlan.Route) {
+        lifecycleScope.launch {
+            delay(3_000)
+            val outcome = CallPlan.afterCheck(r, CallPaths.inCall(this@DialerActivity))
+            AppLog.i("Telefone: depois de $r → $outcome")
+            debug("resposta do sistema 3 s depois de $r: $outcome")
+            if (outcome == CallPlan.Outcome.NOT_CONFIRMED) status(getString(R.string.dial_not_confirmed))
+        }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -188,23 +240,40 @@ class DialerActivity : AppCompatActivity() {
 
     private fun tryRoute(r: CallPlan.Route, uri: Uri): Boolean = try {
         when (r) {
-            CallPlan.Route.CALL_INTENT -> startActivity(Intent(Intent.ACTION_CALL, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            CallPlan.Route.DIAL_INTENT -> startActivity(Intent(Intent.ACTION_DIAL, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            CallPlan.Route.PLACE_CALL_HFP -> {
+                val extras = Bundle().apply { putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, hfp!!.handle) }
+                @Suppress("MissingPermission")
+                getSystemService(TelecomManager::class.java)!!.placeCall(uri, extras)
+                status(getString(R.string.dial_requested))
+            }
+            CallPlan.Route.CALL_INTENT, CallPlan.Route.CALL_INTENT_APP ->
+                startActivity(Intent(Intent.ACTION_CALL, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            CallPlan.Route.HFP_DIAL -> {
+                val (proxy, device) = hfpClient!!
+                if (CallPaths.hfpDial(proxy, device, number) == null) throw IllegalStateException("dial recusado")
+                status(getString(R.string.dial_requested))
+            }
             CallPlan.Route.PLACE_CALL -> {
                 @Suppress("MissingPermission")
                 getSystemService(TelecomManager::class.java)!!.placeCall(uri, Bundle())
                 status(getString(R.string.dial_requested))
             }
+            CallPlan.Route.DIAL_INTENT -> startActivity(Intent(Intent.ACTION_DIAL, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             CallPlan.Route.CAR_PHONE_APP -> {
                 if (!openCarPhoneApp()) throw ActivityNotFoundException()
             }
         }
         true
     } catch (t: Throwable) {
-        // ActivityNotFound, SecurityException (a BYD pode bloquear) ou falha do Telecom: tenta o próximo.
-        AppLog.w("Telefone: $r falhou (${t.javaClass.simpleName})")
+        // ActivityNotFound, SecurityException (a BYD pode bloquear) ou falha do Telecom/HFP: tenta o próximo.
+        val cause = (t as? java.lang.reflect.InvocationTargetException)?.targetException ?: t
+        AppLog.w("Telefone: $r falhou (${cause.javaClass.simpleName})")
+        debug("$r falhou: ${cause.javaClass.simpleName}")
         false
     }
+
+    /** Linha no modo de debug (issue #15). Nunca leva o número. */
+    private fun debug(text: String) = DebugLog.add("telefone", ProbeParse.redactPersonal(text))
 
     /** Abre o app de telefone do carro e deixa o número copiado para colar lá. */
     private fun openCarPhoneApp(): Boolean {

@@ -89,34 +89,80 @@ Pendências: primeiro teste real, capturas das novas preferências no emulador, 
 apps externos, SDK real e ajudante uid 2000. Não houve acesso ao carro, escrita CAN/SDK, mudança de
 manifesto, launcher, telefone/clima, assinatura, versão ou publicação nesta etapa.
 
-## Issue #9 — estudo do menu nativo, sem implementação (2026-10-23)
+## Issue #9 — menu de navegação do painel e modo de debug (2026-10-23, não lançado)
 
-Relato e hipóteses em `ENGENHARIA_REVERSA.md`, §6. Não há vínculo confirmado do menu
-Simples/Pequeno/Cheio/OFF com property, setting, broadcast ou comando AutoContainer.
-Nenhuma mudança de código ou execução no carro nesta etapa; testes/build/lint não repetidos
-porque a alteração é apenas documental.
+Estudo em `ENGENHARIA_REVERSA.md`, §6; implementação em `ARQUITETURA.md`, "Menu do painel e modo de
+debug". Feito: **modo de debug** (desligado por padrão) e **seguir o menu** (experimental, desligado),
+que lê `INSTRUMENT_NAVI_TYPE` só pelo SDK (getter, por nome) e muda apenas o desenho da nossa tela.
+Validação: 138 testes JVM, `lintRelease` 0 erros, `assembleDebug`. Emulador `dilink3` (display
+simulado 1920×720): ligar o debug em Ajustes, linha de base, mudanças de settings e broadcasts com
+horário, fotografia completa, Salvar arquivo e os quatro "Testar desenho" no painel (Pequeno no
+centro, Simples sem mapa, OFF preto, volta ao normal) — captura em `docs/telas/7-modo-debug.png`. No
+emulador não há SDK BYD ("SDK BYD não encontrado", como esperado). **Nada testado no carro.**
 
-Roteiro futuro, pelo dono, com carro parado e acesso ao carro previamente combinado:
+Hipóteses que o carro decide: (a) a DiLink 3 tem o registrador e o app consegue lê-lo pelo uid
+dele; (b) 1 = OFF, 2 = Simples, 3 = Pequeno, 4 = Cheio; (c) no Pequeno o painel mostra o meio da
+imagem; (d) existe algum aviso (setting, propriedade, broadcast, log) quando a opção muda.
 
-1. Registrar a opção inicial, app/versão, `panel_content`, modo automático/manual e outros apps de
-   projeção ativos. Comparar as quatro opções primeiro sem projeção de terceiros ativa; ausência
-   de Amap compatível impede concluir se o menu funciona na integração OEM.
-2. Repetir separadamente com mapa integrado e navegador experimental, mantendo as demais condições.
-   Comparar mudar o menu antes de ativar e durante a projeção. Registrar imagem, horário e Log do app:
-   a ativação pode sobrepor uma escolha que funcionava antes. Ao fim, restaurar a opção inicial.
-3. Com coleta somente leitura autorizada, comparar `getprop sys.screen.current.mode`,
-   `settings list system`, `settings list secure`, `settings list global`, `dumpsys display`,
-   `dumpsys activity activities` e logcat nos mesmos instantes. Comparar localmente os settings e
-   compartilhar só diferenças relevantes, sem identificadores pessoais. Ausência de diferença não
-   descarta estado interno do Qt/MCU; correlacionar mudanças não prova sua função.
-4. Conferir qual pacote/Activity está retomado em cada display. Para investigar espelhamento, mudar
-   apenas a tela visível na central enquanto o painel está ativo e observar se o painel acompanha.
-   Separar cópia da tela, mapa próprio e tarefa do navegador movida; não assumir pelo visual parecido.
-   Registrar também o efeito de Painel original (18 → 0), sem inventar comandos de teste.
+Checklist no carro (carro parado, dono fazendo; só leitura):
 
-Não usar `setprop`, `settings put`, broadcasts adivinhados, escrita SDK/CAN ou novos códigos de
-AutoContainer. O objetivo é identificar o mecanismo e eventual interferência em #2/#5, não controlar
-o menu pela aplicação.
+1. Ajustes → Testes e ajuda → ligar **Modo de debug**; Conceder permissões pelo ADB (para o SDK do
+   painel e o ADB local). Abrir **Abrir o registro do debug**: deve aparecer "linha de base gravada".
+   Se aparecer "sem ADB", aceitar "Permitir depuração USB" e esperar 30 s.
+2. Tocar em **Fotografia completa** e conferir se aparecem `com.example.amapservice` ou outro pacote
+   Amap/AutoNavi, os serviços `autoservice`/instrument e quem escuta broadcasts de navegação.
+3. Sem projeção ativa: no painel (botões do volante), trocar a opção para **Simples**; na central,
+   tocar em **Simples** (marca no registro). Esperar ~6 s. Repetir para Pequeno, Cheio e OFF, e
+   voltar à opção inicial. Repetir tudo com o mapa do Painel Livre no painel (Simular rota).
+4. Ver o que apareceu entre as marcas: linha `[sdk] INSTRUMENT_NAVI_TYPE = …` (e se muda), `[sdk]`
+   de outros getters, `★` em settings/propriedades/broadcasts/logcat. Se o SDK der "permissão BYD
+   recusada", anotar (vai para o ajudante uid 2000). **Copiar** ou **Salvar arquivo** e mandar.
+5. Se um broadcast novo aparecer só com o nome, tocar em **Escutar ação…**, colar o nome e repetir o
+   passo 3 para ver os extras.
+6. Só se o passo 4 mostrar o `INSTRUMENT_NAVI_TYPE` mudando com 1/2/3/4: ligar **Seguir o menu de
+   navegação do painel**, ativar o painel e trocar as opções. Cheio = como sempre; Pequeno = mapa no
+   meio (conferir se fica visível ou se o painel corta outro pedaço — anotar qual); Simples = só os
+   cartões; OFF = preto. Os botões **Testar desenho** fazem o mesmo sem depender da leitura.
+7. Desligar o modo de debug no fim (ele para o ADB sozinho em 30 min, mas o SDK segue lendo).
+
+Não fazer: `service call autoservice …` à mão sem antes confirmar o número da transação na DiLink 3
+(pode ser um setter nesta firmware), `setprop`, `settings put`, broadcasts adivinhados, códigos 17/39
+no AutoContainer. Se o carro confirmar outro mapeamento, ajustar `PanelMenu.modeOf` e o teste.
+
+**Resultado no carro (2026-10-23, DiLink 3.0, Android 10).** (a) o registrador existe, mas o SDK
+recusa no uid do app ("permissão BYD recusada"); pelo ADB local (uid 2000)
+`service call autoservice 5 i32 1007 i32 1086337074` responde `Result: Parcel(00000000 0000000N …)`;
+(b) confirmado pelo dono trocando o menu: 1 = OFF, 2 = Simples, 3 = Pequeno, 4 = Cheio; erro aparece
+como 0xffffd8e5. **v0.5.1 (teste)**: o `PanelMenuReader` lê pelo ADB quando o SDK recusa (só esse
+comando, só leitura, só Android 10) a cada 1 s com o painel aberto e "Seguir o menu" ligado.
+Conferir no carro: ligar **Seguir o menu**, ativar o painel, trocar Simples/Pequeno/Cheio/OFF e ver
+no registro do debug `[menu] ADB: bruto=N … → modo` e o desenho mudar em ~2 s; (c) Pequeno no meio
+ainda é hipótese.
+
+## Issue #15 — discador liga direto pelo celular (2026-10-23, não lançado)
+
+No carro (v0.4.1) a ligação ia para o app de telefone da BYD. Agora os caminhos diretos vêm antes
+(conta HFP no Telecom → `ACTION_CALL` do Telecom → cliente HFP → `placeCall` padrão) e os que abrem app
+ficam de reserva (`ARQUITETURA.md`, "Telefone"). Validação: 143 testes JVM, lint 0 erros; emulador:
+primeiro Ligar pede a permissão "Telefone", depois `CALL_INTENT` → tela de chamada → `CALLING` em 3 s,
+registro do debug sem o número. O emulador não tem HFP: os caminhos 1 e 3 só o carro confirma.
+
+Hipóteses: (a) a DiLink 3 usa o `HfpClientConnectionService` do AOSP (ou outra conta "bluetooth") e o
+Telecom a lista; (b) na v0.4.1 o `ACTION_CALL` era atendido pelo app da BYD, ou faltava `CALL_PHONE` e
+caía no `ACTION_DIAL`; (c) mesmo ligando direto, a tela de chamada da BYD aparece (é o InCallService
+dela) — isso é esperado; o que muda é não precisar discar de novo.
+
+Checklist no carro (carro parado, celular pareado, número conhecido que não seja de emergência):
+
+1. Ajustes → Conceder permissões pelo ADB (deve mostrar ✓ em `CALL_PHONE` e `READ_PHONE_STATE`) e
+   ligar o Modo de debug.
+2. Telefone → digitar o número → Ligar. Se pedir permissão, Permitir. Anotar: a chamada começou sem
+   discar de novo? Saiu pelo som do carro? Apareceu a tela da BYD?
+3. Abrir o registro do debug e copiar as linhas `[telefone]`: quem atende o `ACTION_CALL`, contas do
+   Telecom, cliente HFP, ordem, caminho usado e "resposta do sistema 3 s depois".
+4. Fotografia completa → seção `# telecom` e `# serviços`: anotar a conta do Bluetooth e serviços de
+   telefone da BYD (pacotes com bt/phone). Se a conta não for reconhecida, ajustar `CallAccounts.isBluetooth`.
+5. Se a resposta for `NOT_CONFIRMED` sem ligar, tocar em App do carro (reserva) e mandar o registro.
 
 ## Fase 1 — Primeiro teste no carro
 
@@ -130,8 +176,10 @@ o menu pela aplicação.
    como Song Plus e o painel medir 1920×720, manda o 30 antes do 16/35, como o SealNav. Comparar as
    duas. Se o modelo não for reconhecido, escolher 12,3" (código 30) nas Configurações e repetir.
    Se algo parecer errado: **Painel original** e Configurações → Tamanho → "Não enviar".
-4. Conferir se os cartões do painel ficam livres dos instrumentos da BYD (faixas de cima e de baixo);
-   se não, ajustar as margens nos Ajustes. Conferir a tela central deitada e em pé, de dia e de noite.
+4. Conferir se os cartões do painel ficam livres dos instrumentos da BYD (faixas de cima e de baixo,
+   cantos curvos, avisos dos lados, assistente de faixa). Com o modo de debug ligado aparece o contorno
+   rosa da área segura (padrão Song Plus 230/90/230/230); se algo da BYD entrar nele, Ajustes → Área
+   segura → ajuste fino do lado (positivo afasta da borda) e mandar foto com os valores. Conferir a tela central deitada e em pé, de dia e de noite.
 5. Rota real no Google Maps: conferir seta/distância/rua (o parser foi testado com textos imitados).
 6. Conferir o mapa na GPU do carro (no emulador apareceram traços amarelos que parecem artefato do
    SwiftShader). Diagnóstico mostra os quadros/s do mapa: andando deve ficar perto do limite (60 ou 30);
@@ -151,8 +199,8 @@ o menu pela aplicação.
      do boot, a central abre direto no Painel Livre? Conferir se aparece o seletor de launcher sem
      pedir. "Voltar ao launcher da BYD" volta mesmo?
    - *Telefone*: com o celular pareado, discar um número conhecido (não emergência) com o carro
-     parado. Anotar qual caminho o Log do app mostra (`Telefone: chamada por …`) e se a ligação sai
-     pelo som do carro. O Diagnóstico lista `telefone:` (apps que respondem a `ACTION_DIAL`) e pacotes
+     parado. Anotar qual caminho o Log do app mostra (`Telefone: chamada por …` e `depois de … →`) e
+     se a ligação sai pelo som do carro (roteiro completo na seção da issue #15). O Diagnóstico lista `telefone:` (apps que respondem a `ACTION_DIAL`) e pacotes
      com `phone`/`bluetooth`; se a BYD tiver um app próprio que aceite o número por intent, levar o
      pacote para `PhoneApps`/`CallPlan`.
    - *Tempo*: tocar no tempo, conferir horas/dias e a leitura de dia e de noite, deitada e em pé.
@@ -256,8 +304,8 @@ sealnav.com (só olhadas; nada copiado — ver `SEALNAV_RE.md`, "Interface").
 Feito: central com barra de cima (saudação, hora, sinais, temperatura), carro (ilustração própria ou
 foto do motorista) com autonomia e tempo, cartões Mídia/Bateria/Painel/Destino, barra de baixo com
 abas e atalhos; aba Navegação com busca (Photon), Casa/Trabalho/recentes e mapa; temas dia/noite;
-tela em pé. Painel com cartão de manobra e de chegada em cima à esquerda, carro no centro a ~59% da
-altura, mapa claro/escuro, sem relógio (a BYD já mostra).
+tela em pé. Painel com cartão de manobra e de chegada em cima à esquerda da área segura (`SafeArea`,
+v0.5.1), carro no centro dela a y 360, mapa claro/escuro, sem relógio (a BYD já mostra).
 
 Diferenças que restam em relação ao SealNav:
 1. **Controles de conforto na barra de baixo** (clima de cada lado, bancos, vidros, porta-malas): aprovado
@@ -319,3 +367,84 @@ carro parado responde com o carro andando.
 ## Fase 5 — Extras
 
 Câmeras no painel ao dar seta, voz em português sem TTS da central, launcher com carro 3D (Filament).
+
+## Issue #14 — rota nativa opcional (não lançado)
+
+Implementada a primeira versão da Fase 3, item 7, com OSRM HTTPS + MapLibre e acompanhamento
+Kotlin, sem Ferrostar: escolha Painel Livre/Maps/Waze, busca/Casa/Trabalho/recentes, compartilhamento
+e intents `geo:`/`google.navigation:`, linha azul, próxima manobra, restante/chegada e recálculo.
+A decisão do dono em #14 amplia a meta anterior, mantendo os apps externos. Não lê a linha da rota
+do Maps/Waze: o percurso nativo é independente e pode ser diferente. Sem voz/trânsito/offline.
+O menu Simples/Pequeno/Cheio/OFF e seu debug (#9/#15) pertencem ao trabalho separado do Claude.
+
+Checklist adicional no carro (pelo dono, começando parado; sem acesso ADB do agente):
+
+- [ ] Instalar build desta etapa; em Navegação escolher **Painel Livre**, buscar um endereço e tocar
+  no resultado. Com localização permitida/GPS recente e internet, conferir cálculo, linha azul e
+  manobra no painel, sem precisar abrir Maps/Waze nem liberar suas notificações.
+- [ ] Repetir Casa, Trabalho e recente. Verificar modo Só com rota / Sempre; em Manual a rota fica
+  pronta mas só Mostrar no painel ativa. Com conteúdo experimental externo selecionado, a rota
+  nativa deve abrir o integrado. Conferir log sem ativação AutoContainer duplicada.
+- [ ] Compartilhar coordenadas e endereço; testar `geo:0,0?q=lat,lon`, `geo:lat,lon` e
+  `google.navigation:q=...`. Confirmar escolha entre as três fontes; texto deve permitir escolher
+  resultado correto. Link curto não resolvido deve avisar, sem abrir destino errado.
+- [ ] Com navegação real e observação segura, conferir manobra antes/depois da curva, rotatória,
+  distâncias, hora de chegada, linha e carro alinhados. Comparar cruzamentos, retornos e pistas
+  paralelas; não tratar a heurística simples como validada apenas pelos testes JVM.
+- [ ] Desvio seguro: após >8 s fora da linha e >30 s do cálculo anterior, conferir recálculo;
+  sem rede, aviso e instrução de fora da rota, sem repetir pedidos sem limite. Retomar internet.
+- [ ] Sem permissão/GPS antigo/impreciso: não iniciar orientação inventada. Sem rede/OSRM recusando:
+  erro visível; Maps/Waze permanecem selecionáveis. Novo destino deve cancelar cálculo anterior.
+- [ ] Abrir outro app na central e voltar: orientação continua. Recriar tela/trocar tema: linha volta.
+  Sumir display: Activity fecha se cair na central; vigia não envia AutoContainer novamente.
+- [ ] Notificação de Maps/Waze não deve tomar a orientação nativa. Abrir rota externa explicitamente
+  deve encerrar a nativa. Tocar na rota ativa da aba Navegação → Encerrar deve limpar linha/cartões
+  e devolver o painel após o prazo. Chegada deve encerrar automaticamente.
+- [ ] Matar processo/serviço e abrir: sessão anterior não é retomada automaticamente; selecionar
+  destino novamente. Conferir impacto de internet/GPU na central.
+
+Emulador/capturas pendentes: o AVD `dilink3` não iniciou neste ambiente (sem `/dev/kvm`).
+Nenhum teste no carro nesta etapa. Não alterados comandos seguros, CAN/SDK, versão ou assinatura.
+
+Validação da #14: 129 testes JVM passando (12 novos), `lintRelease` com 0 erros/109 avisos e
+`assembleDebug` concluído. Consulta OSRM com coordenadas públicas de exemplo retornou `Ok`.
+Entrega de intents, GPS/recálculo em execução e projeção precisam do roteiro Android/carro acima.
+
+### Regressão da revisão local v0.5.1 (2026-10-23)
+
+- Cobertos na JVM: ADB desconectado e recuperação, shell com saída não zero, serviço ausente,
+  Parcel truncado/inválido, valores fora de 1..4, preferências antigas aditivas e ajustes extremos.
+- Corrigidos overflow das margens e cartões que alcançavam o carro em áreas estreitas.
+- Pendente no emulador/carro: conferir cartões e carro com ajuste lateral +400 e no modo Pequeno,
+  e desligar/religar o ADB local observando o retorno ao desenho normal e a recuperação do menu.
+  O agente não acessou o carro; nenhum comando novo de carro foi adicionado.
+
+Validação local: 183 testes JVM, 0 falhas; lintDebug com 0 erros e 114 avisos; assembleDebug concluído.
+
+## Issue #16 — revisão local da telemetria (2026-10-23)
+
+- [x] Revisar b622959/99d7782 e concluir simulação debug e documentação.
+- [x] Lista restrita de leitura autoservice 5/7; teste recusa 6 para todos os sinais/protocolos.
+- [x] Regressões de Parcel hex/multilinha/ASCII e sentinela indisponível.
+- [x] testDebugUnitTest: 174 testes sem falhas; lintDebug: 0 erros, 112 avisos.
+- [ ] Validar cartão/animações e capturar telas no emulador.
+- [ ] Dono conferir IDs, escalas e formato da transação 7 na firmware do Song Plus.
+  Roteiro e tabela (itens **a confirmar**) em [TELEMETRIA.md](TELEMETRIA.md).
+  Nenhum acesso ao carro pelo agente nesta etapa; nenhuma escrita autorizada.
+
+### Carro 3D central (não publicado)
+
+Renders locais e overlays somente visuais; detalhes e coordenadas em TELEMETRIA.md.
+Conferir posição da tampa traseira direita e limites visuais de pneus com o dono, sem novos comandos.
+
+Validado no emulator-5580: padrão, porta aberta, carregando e pneu baixo.
+180 testes JVM; lintDebug 0 erros/114 avisos; assembleDebug concluído. Sem teste no carro.
+
+## Integração 0.5.2 (teste), versionCode 8
+
+Consolida menu ADB e área segura da 0.5.1 com telemetria só leitura e carro 3D.
+Aviso/estado de telemetria limitado à área segura, no canto superior direito; testes incluem
+modo Pequeno e ajustes extremos. Transação 6 continua bloqueada. Nenhuma mudança de assinatura.
+Validação conjunta local: 209 testes JVM sem falhas, lintDebug com 0 erros/116 avisos e
+assembleDebug concluído. Conferir visualmente navegação + aviso de telemetria,
+modo Pequeno, ajuste fino e contorno debug no emulador e depois com o dono no carro.

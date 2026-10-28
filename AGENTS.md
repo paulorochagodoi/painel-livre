@@ -31,6 +31,11 @@ Brasil**, frases simples, sem jargão desnecessário.
   travamento, convivência com outros apps, diagnóstico; discador interno e previsão do tempo (JVM).
 - Histórico em `CHANGELOG.md`. Telas em `docs/telas/`.
 
+- **Não lançado (branch `feat/comandos-painel-debug`)**: issue #9 — modo de debug (Ajustes, desligado por
+  padrão) e "Seguir o menu de navegação do painel" (experimental, desligado); issue #15 — discador liga
+  direto pelo celular (conta HFP, `ACTION_CALL` do Telecom, cliente HFP; app do carro de reserva);
+  143 testes JVM. Checklists em `docs/PLANO.md`, issues #9 e #15.
+
 **Próximos passos, em ordem**:
 1. Fase 1 — primeiro teste no carro (checklist em `docs/PLANO.md`). Depende do dono.
 2. Fase 4b, passo 1 — extrair dos moldes do SDK BYD (dentro do APK do BYD Navigator) as constantes de
@@ -90,6 +95,12 @@ porque o GitHub recusou a execução por cobrança da conta; depois que o dono r
   na primeira vez e interruptor geral, uma função por vez testada no carro parado.
 - **Telefone**: o discador só liga quando o motorista toca em Ligar; nunca ligar sozinho nem para
   número que não foi digitado. O número não vai para o log.
+- **SDK/`autoservice` da BYD**: ler só por nome de getter (reflexão), nunca por `service call autoservice
+  <n>`: os números de transação mudam com a firmware e, na DiLink 3, podem cair num setter.
+  **Única exceção** (v0.5.1, conferida no carro): `PanelMenu.ADB_READ_COMMAND`
+  (`service call autoservice 5 i32 1007 i32 1086337074`, leitura do menu do painel), comando fixo,
+  só no Android 10 e só se o SDK recusar a permissão. Nunca a transação 6 (set) nem outro número. O modo de
+  debug só lê (`settings list`, `getprop`, `dumpsys`, `logcat -d`); nada de `settings put`/`setprop`.
 - Nunca mexer nas chaves ADB do sistema (o comando `adbkeys` do SealNav autoriza/apaga chaves sem aviso:
   **não adotar**).
 
@@ -149,8 +160,9 @@ porque o GitHub recusou a execução por cobrança da conta; depois que o dono r
 - Uid 2000 vem do ADB local (`127.0.0.1:5555`); a Activity do painel precisa ser `exported` e
   `allowEmbedded`; abrir com `am start --display N --windowingMode 1`.
 - No painel, os instrumentos da BYD são desenhados **por cima** da projeção: faixa de cima (hora, P,
-  ECO, temperatura), faixa de baixo (kW, bateria, autonomia, velocidade) e alertas à direita. Os cartões
-  ficam entre ~16% e ~62% da altura, à esquerda; o carro no centro a ~59%.
+  ECO, temperatura), faixa de baixo (kW, bateria, autonomia, velocidade), cantos curvos, avisos dos lados
+  e assistente de faixa. Tudo do app fica na área segura (`SafeArea`, padrão Song Plus 230/90/230/230 →
+  x 230–1690, y 90–490): cartões no canto de cima à esquerda dela, carro em x 960, y 360.
 - SDK BYD (`android.hardware.bydauto.*`): leitura de bateria/autonomia por `BYDAutoStatisticDevice`;
   assinaturas de conforto e registradores do HUD em `docs/ENGENHARIA_REVERSA.md`.
 - O SealNav identifica o modelo por `ro.product.name` + `Build.MODEL/PRODUCT/DEVICE/FINGERPRINT`.
@@ -177,6 +189,14 @@ porque o GitHub recusou a execução por cobrança da conta; depois que o dono r
   `cmd package resolve-activity` pode responder com o seletor (`ResolverActivity`), que não é um
   launcher para guardar/restaurar; o launcher original é lido antes de ligar o alias.
 - `ACTION_DIAL` pode não ter app na DiLink (issue #3): use o `DialerActivity`, nunca `ACTION_DIAL` cru.
+- `ACTION_CALL` pode ser atendido pelo app de telefone da BYD (só abre o app, issue #15): o `CallPlan`
+  prefere a conta HFP do Telecom e só usa o `ACTION_CALL` direto se quem atende for o Telecom do
+  Android. A tela de chamada da BYD aparecer é normal (InCallService). Sem confirmação em 3 s, o
+  discador só avisa — nunca tenta outro caminho sozinho (ligaria duas vezes).
+- Menu de navegação do painel (Simples/Pequeno/Cheio/OFF, issue #9): nenhum app de terceiros o segue;
+  o OFF não esconde a projeção 16/35. O Painel Livre só muda o próprio desenho (`PanelMenuFrame`) e só
+  com "Seguir o menu" ligado; mapeamento 1 OFF, 2 Simples, 3 Pequeno, 4 Cheio **confirmado na DiLink 3**
+  (2026-10-23). O SDK recusa no uid do app; a leitura real vem do ADB (`PanelMenuReader`).
 - O MapLibre só desenha quando algo muda: carro parado sem quadros é normal (o vigia sabe disso).
 
 ## 10. Trabalhando com o dono
@@ -206,3 +226,13 @@ Validação local desta etapa: 87 testes JVM (14 novos), `assembleDebug` conclu�
 `lintDebug` com 0 erros e 105 avisos. Sandbox exigiu `GRADLE_USER_HOME=/tmp/painel-gradle`
 e `ANDROID_USER_HOME=/tmp/painel-cluster-android` (chave debug temporária, sem alterar a assinatura
 release). Captura das preferências e testes Android/carro continuam pendentes.
+
+## Continuação — issue #14 (não lançado)
+
+Pedido explícito do dono em #14 amplia a meta de rota apenas Maps/Waze: agora existe opção
+`nav_app=native`, com OSRM HTTPS independente, linha MapLibre e orientação simples em Kotlin.
+Código em `nav/native`; não confundir com mover Maps/Waze ao painel. OSRM recebe origem/destino
+precisos (README). Links curtos não são resolvidos. Sessão em memória, sem voz/trânsito/offline.
+A rota nativa ativa força integrado e ignora notificações externas; modo manual segue respeitado.
+Não há comando novo de painel nem implementação do menu nativo (#9/#15 ficam com Claude).
+O AVD não iniciou neste ambiente por falta de `/dev/kvm`: capturas e teste real pendentes.

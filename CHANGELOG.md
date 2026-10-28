@@ -2,7 +2,121 @@
 
 Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre, O=Uso pessoal, C=BR`,
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
-Nenhuma versão foi testada no carro ainda: todos os testes foram no emulador (`docs/AMBIENTE.md`).
+A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
+
+## 0.5.2 (teste) — 2026-10-23 — área segura, menu do painel, telemetria e carro 3D
+
+versionCode 8. Não lançada; consolida a 0.5.1, telemetria só leitura (#16) e carro 3D.
+Validação conjunta local: 209 testes JVM, sem falhas; `lintDebug` com 0 erros e 116 avisos;
+`assembleDebug` concluído. Validação visual conjunta no emulador e teste no carro pendentes.
+
+- Aviso de telemetria limitado ao canto superior direito da área segura, inclusive no modo Pequeno
+  e com ajuste fino. Cartões, carro, crédito OSM e contorno debug preservados.
+
+- Revisão local dos commits `bac5aa0` e `05c289c`: rejeita Parcel truncado, palavras inválidas e
+  valor fora do Parcel; confere o código de saída do shell e pausa também após falhas do serviço/parser.
+  Valores fora de 1..4 continuam sem escolher modo; nenhum setter ou novo comando do carro.
+- Área segura: cálculo sem overflow com margens extremas, ao menos um pixel livre em displays mínimos
+  e redução dos cartões também pela largura para não invadirem o carro com ajustes laterais grandes.
+  Preferências antigas continuam como ajuste somado ao padrão (decisão da v0.5.1), cobertas por regressão.
+- Validação da revisão: 183 testes JVM, 0 falhas; `lintDebug` com 0 erros e 114 avisos;
+  `assembleDebug` concluído. Sem validação visual nova no emulador ou teste no carro.
+
+- **Correção (issue #9)**: no carro (DiLink 3.0, Android 10) o SDK BYD recusava a leitura do menu no
+  processo do app ("permissão BYD recusada … ajudante uid 2000 pendente"), então "Seguir o menu" nunca
+  mudava nada. Agora, quando o SDK recusa por permissão, o app lê `INSTRUMENT_NAVI_TYPE` pelo ADB local
+  (uid 2000, o mesmo canal do `sendInfo`) com um único comando fixo,
+  `service call autoservice 5 i32 1007 i32 1086337074`, conferido no carro. Só leitura: nada de
+  transação 6 nem `INSTRUMENT_NAVI_TYPE_SET`; o ADB só é usado no Android 10.
+- Leitura a cada 1 s, só com a tela do painel aberta e a opção ligada. OFF esconde mapa e cartões
+  (tela preta), Simples mostra só os cartões, Pequeno vai para o meio, Cheio é como sempre.
+- Mapeamento **confirmado no carro** pelo dono: 1 = OFF, 2 = Simples, 3 = Pequeno, 4 = Cheio;
+  0xffffd8e5 = indisponível (fica como sempre).
+- Modo de debug: cada mudança lida vai ao registro com valor bruto, hex, modo e origem
+  (`[menu] ADB: bruto=2 (0x00000002) → Simples`). A tela do debug e a fotografia usam a mesma leitura.
+- Testes: `PanelMenuReaderTest` (parser do `Parcel`, comando, SDK → ADB, pausa após falha) —
+  167 no total, 0 falhas; `lintRelease` com 0 erros.
+- **Área segura do mapa no painel** (foto do painel do Song Plus): os cartões, o carro, o foco do mapa e
+  o crédito do OpenStreetMap ficam dentro do retângulo que os desenhos da BYD não cobrem (faixas de
+  cima e de baixo, cantos curvos, avisos dos lados, assistente de faixa). Padrão Song Plus: esquerda
+  230, topo 90, direita 230, base 230 (pixels de 1920×720, escalam com o painel). Manobra colada no
+  topo da área, chegada logo abaixo, carro em x 960, y 360, crédito no canto de baixo à direita da área.
+- Ajustes → **Área segura do mapa no painel**: padrão (Song Plus ou tela inteira) e ajuste fino por
+  lado (as antigas "Margens", agora somadas ao padrão e aceitando negativo, ±400). Com o modo de debug
+  ligado, o painel mostra o contorno da área segura e as margens finais.
+- Testes: `SafeAreaTest` (11) e `PrefsTest` atualizado — 179 no total, 0 falhas; `lintRelease` com 0 erros.
+  Conferido no emulador (pré-visualização 1920×720 com rota simulada, `docs/telas/1` e `8`); falta o carro.
+
+### Carro 3D na tela inicial
+
+- Renders locais do Song Plus em 3/4 e vista superior com transição suave e overlays
+  de portas, capô, porta-malas, carga, vidros/teto/cortina e pressão dos pneus.
+- Cadeado discreto, cache dos bitmaps e simulação debug por cenário.
+- Layout da central, cartões e barra inferior preservados; assinatura sem alteração.
+- Testes de regressão da decisão de vista e mapeamento dos estados. Sem acesso ao carro.
+- Validação: 180 testes JVM, lintDebug sem erros (114 avisos), assembleDebug; capturas
+  de padrão/porta/carga/pneu no emulator-5580 em docs/telas/carro-3d-*.png.
+
+### Telemetria só leitura (issue #16)
+
+- Revisados os commits b622959 e 99d7782: telemetria restrita às leituras autoservice 5/7;
+  teste adicional recusa código 6 para todos os endereços/protocolos e lotes.
+- Leituras parciais não afirmam que todas as portas/vidros estão fechados.
+- Concluída a simulação debug; desligar apaga os dados fictícios imediatamente.
+- Parser Parcel ignora ASCII por linha e preserva payload multilinha; regressão da sentinela
+  0xffffd8e5 em todos os sinais. Documentação e roteiro em docs/TELEMETRIA.md.
+- Validação: 174 testes JVM passando; lintDebug com 0 erros e 112 avisos.
+- Validação visual conjunta e confirmação dos IDs no carro pendentes; nenhuma escrita no carro.
+
+## 0.5.0 — 2026-10-23 — rota nativa, menu do painel, modo de debug e discador (pré-release de teste)
+
+APK `PainelLivre-v0.5.0-release.apk` (versionCode 6), SHA-256 `1fb15b4ddfe371b4443f1f072a5701996884e0d84140ae4a6853a9e62f2fca06`.
+Junta as issues #14, #9 e #15: 155 testes, `lintRelease` com 0 erros. Falta validar no carro.
+
+### Issue #14 — rota no mapa nativo
+
+- Opção **Painel Livre** ao lado de Maps/Waze; destinos por busca, guardados, recentes,
+  compartilhamento e intents geo/google.navigation, com confirmação da fonte na entrada externa.
+- Rota independente por OSRM HTTPS, linha no mapa da central/painel, próxima manobra, distância,
+  restante/chegada e recálculo por desvio. Serviço acompanha GPS sem depender das notificações.
+- Prioridade para o integrado ao navegar nativamente, sessão encerrável na aba Navegação e proteção
+  contra ativação duplicada. Notificações externas não sobrescrevem a orientação nativa.
+- Novo serviço externo documentado no README: OSRM recebe origem/destino precisos. Requer rede;
+  sem voz/trânsito/offline; links curtos não são expandidos. Sessão não persiste ao matar o processo.
+- Validação: 129 testes JVM (12 novos), zero falhas; `lintRelease` com 0 erros/109 avisos;
+  `assembleDebug` concluído. Roteiro do carro em `docs/PLANO.md`. Emulador indisponível
+  por falta de `/dev/kvm`; capturas e validação real pendentes. Sem mudança de versão/publicação.
+
+### Menu de navegação do painel e modo de debug (issue #9)
+
+- **Modo de debug** (Ajustes → Testes e ajuda, **desligado por padrão**): com ele ligado, o app
+  registra com horário e valores o que muda em `settings` (system/global/secure), `getprop`, histórico de
+  broadcasts (`dumpsys activity broadcasts history`), logcat filtrado, getters candidatos do SDK do
+  painel e broadcasts conhecidos com os extras. Tudo só leitura; a coleta pelo ADB para sozinha em
+  30 min. A tela "Abrir o registro do debug" marca a opção escolhida no painel (Simples/Pequeno/Cheio/OFF),
+  tira uma fotografia completa (pacotes, serviços, receptores, propriedades, telecom, telas por display),
+  escuta ações digitadas, testa o desenho de cada opção e copia, compartilha ou salva o registro.
+- **Seguir o menu do painel** (Ajustes → Painel, **experimental, desligado**): lê `INSTRUMENT_NAVI_TYPE`
+  pelo SDK BYD (getter genérico, por nome; device 1007, feature 0x40C03032 do DiPlay) e ajusta a nossa
+  tela: Pequeno = mapa e cartões no centro, Simples = só os cartões, OFF = tela preta, Cheio = como
+  sempre. Sem leitura ou valor estranho, fica como sempre; um modo novo só vale depois de 2 leituras
+  iguais. Nenhum comando novo ao AutoContainer (17 e 39 continuam fora), nada de `service call` cru.
+- Testes: `PanelMenuTest`, `DebugProbeTest` e `PrefsTest` — 138 no total.
+- Validação: `testDebugUnitTest` 138/138, `lintRelease` com 0 erros, `assembleDebug` concluído;
+  emulador: coleta, fotografia, salvar e os quatro desenhos de teste (`docs/telas/7-modo-debug.png`).
+  Sem carro; o mapeamento dos valores e a leitura na DiLink 3 são hipóteses (`docs/PLANO.md`, issue #9).
+
+### Discador liga direto pelo celular (issue #15)
+
+- **Problema (no carro, v0.4.1)**: a ligação do discador ia para o app de telefone da BYD.
+- **Mudança**: ordem nova do `CallPlan` — `placeCall` com a conta Bluetooth/HFP do Telecom →
+  `ACTION_CALL` só se quem atende for o Telecom do Android → `BluetoothHeadsetClient.dial` (reflexão)
+  → `placeCall` padrão → `ACTION_CALL` atendido por app → `ACTION_DIAL` → app do carro (comportamento
+  antigo como reserva). Confere a chamada em 3 s (`isInCall`) e só avisa; nunca liga duas vezes.
+- `READ_PHONE_STATE` nova (pedida junto com `CALL_PHONE`; as duas no Conceder pelo ADB).
+- Modo de debug registra o caminho usado e a resposta do sistema, sem o número.
+- Testes: `DialerTest` — 143 no total. Validação: `testDebugUnitTest` 143/143, `lintRelease` 0 erros;
+  emulador: `CALL_INTENT` → chamada confirmada. HFP só no carro (`docs/PLANO.md`, issue #15).
 
 ## 0.4.1 — 2026-10-23 — APK volta a instalar no carro (pré-release de teste)
 

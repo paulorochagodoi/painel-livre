@@ -79,6 +79,12 @@
             app:useSimpleSummaryProvider="true"
             app:iconSpaceReserved="false" />
         <SwitchPreferenceCompat
+            app:key="panel_menu_follow"
+            app:title="Seguir o menu de navegação do painel (experimental)"
+            app:summary="Lê a opção Simples, Pequeno, Cheio ou OFF do painel e ajusta o mapa. Sem leitura, fica como sempre. Ainda não testado no carro."
+            app:defaultValue="false"
+            app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat
             app:key="auto_heal"
             app:title="Recuperar o mapa se ele travar"
             app:summary="Redesenha e, se preciso, recria a imagem do mapa (no máximo 3 vezes a cada 10 min)."
@@ -87,13 +93,52 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        app:title="Margens no painel (pixels do painel)"
-        app:summary="Use se os instrumentos da BYD cobrirem parte do mapa."
+        app:title="Área segura do mapa no painel"
+        app:summary="Onde o mapa, o carro e os cartões ficam, longe dos desenhos da BYD por cima do painel."
         app:iconSpaceReserved="false">
+        <ListPreference
+            app:key="safe_area"
+            app:title="Padrão"
+            app:defaultValue="songplus"
+            app:entries="@array/safe_area_entries"
+            app:entryValues="@array/safe_area_values"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <Preference
+            app:key="safe_area_help"
+            app:title="Ajuste fino (pixels do painel)"
+            app:summary="Some ou tire pixels de cada lado do padrão: positivo afasta da borda, negativo aproxima. Com o modo de debug ligado, o painel mostra o contorno da área."
+            app:selectable="false"
+            app:iconSpaceReserved="false" />
         <EditTextPreference app:key="inset_left" app:title="Esquerda" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
         <EditTextPreference app:key="inset_top" app:title="Topo" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
         <EditTextPreference app:key="inset_right" app:title="Direita" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
         <EditTextPreference app:key="inset_bottom" app:title="Base" app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Dados do carro" app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat
+            app:key="telemetry"
+            app:title="Ler dados do carro (experimental)"
+            app:summary="Portas, trava, carga, bateria, clima, bancos, vidros e pneus, pelo ADB da central. Só leitura: o app não muda nada no carro. Ainda não testado no carro."
+            app:defaultValue="false"
+            app:iconSpaceReserved="false" />
+        <ListPreference
+            app:key="telemetry_interval"
+            app:title="Frequência da leitura"
+            app:defaultValue="10"
+            app:entries="@array/telemetry_interval_entries"
+            app:entryValues="@array/telemetry_interval_values"
+            app:dependency="telemetry"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat
+            app:key="telemetry_panel"
+            app:title="Aviso no painel"
+            app:summary="Mostra no painel, junto do mapa, porta aberta, tampa do carregador aberta ou carregando."
+            app:defaultValue="false"
+            app:dependency="telemetry"
+            app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Navegação" app:iconSpaceReserved="false">
@@ -116,7 +161,18 @@
         <Preference
             app:key="grant_all"
             app:title="Conceder permissões pelo ADB"
-            app:summary="Localização, notificações do Maps/Waze, dados do carro e segundo plano."
+            app:summary="Localização, notificações do Maps/Waze, dados do carro, telefone e segundo plano."
+            app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat
+            app:key="debug_mode"
+            app:title="Modo de debug"
+            app:summary="Registra o que a central avisa (settings, propriedades, broadcasts, telefone) para descobrir o menu do painel. Deixe desligado no dia a dia."
+            app:defaultValue="false"
+            app:iconSpaceReserved="false" />
+        <Preference
+            app:key="debug_open"
+            app:title="Abrir o registro do debug"
+            app:summary="Marcar a opção escolhida no painel, testar o desenho, copiar e salvar."
             app:iconSpaceReserved="false" />
         <Preference
             app:key="diagnostics"

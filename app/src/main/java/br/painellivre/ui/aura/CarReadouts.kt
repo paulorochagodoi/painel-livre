@@ -1,5 +1,6 @@
 package br.painellivre.ui.aura
 
+import br.painellivre.car.CarCommands
 import br.painellivre.car.TelemetrySnapshot
 import br.painellivre.car.VehicleData
 import br.painellivre.ui.cockpit.CarOverlay
@@ -141,7 +142,14 @@ object CarReadouts {
 
     fun climate(snapshot: TelemetrySnapshot?): Climate? {
         val s = usable(snapshot) ?: return null
-        fun flag(key: String): Boolean? = s.value(key)?.let { if (it == 1.0) true else if (it == 0.0) false else null }
+        // O carro responde o valor cru do fio (ex.: AUTO manda 1=desliga/2=liga); decodificar com o
+        // mesmo onWire de CarCommands antes de interpretar como ligado/desligado (bug visto no carro em 29/10).
+        fun flag(key: String): Boolean? {
+            val raw = s.value(key) ?: return null
+            val spec = CarCommands.CATALOG.firstOrNull { it.key == key }
+            val decoded = if (spec != null) CarCommands.fromWire(spec, raw) else raw
+            return if (decoded == 1.0) true else if (decoded == 0.0) false else null
+        }
         fun seat(key: String): Int? = s.value(key)?.toInt()?.let { (it - 1).coerceAtLeast(0) }
         val c = Climate(
             driverC = s.value("ac_temp_driver"),

@@ -126,11 +126,13 @@
     <string name="charge_unknown">Sem dado da carga</string>
     <string name="no_data">Sem dado</string>
     <string name="read_only">Só leitura</string>
-    <string name="climate_readonly">Temperatura: toque para escolher. Modos e ventilação: toque único.</string>
+    <string name="climate_readonly">Temperatura, modos, ventilação e bancos: toque direto, sem lista.</string>
     <string name="fan_level">Ventilação · nível %1$d</string>
     <string name="fan_unknown">Ventilação · sem leitura</string>
     <string name="fan_down">Diminuir ventilação</string>
     <string name="fan_up">Aumentar ventilação</string>
+    <string name="temp_down">Diminuir temperatura</string>
+    <string name="temp_up">Aumentar temperatura</string>
     <string name="temp_inside">Interna %1$s</string>
     <string name="temp_outside">Externa %1$s</string>
     <string name="mode_auto">AUTO</string>

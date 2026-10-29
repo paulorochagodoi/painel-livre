@@ -30,7 +30,7 @@ class CommandFeedbackTest {
     @Test fun launcherUsesFeedbackPolicyAndKeepsMediaOutOfClimateStatus() {
         val path = "src/main/java/br/painellivre/ui/LauncherActivity.kt"
         val src = listOf(File(path), File("app/$path")).first { it.exists() }.readText()
-        val command = src.substringAfter("private fun command(key:").substringBefore("private fun chooseCommand")
+        val command = src.substringAfter("private fun command(key:").substringBefore("private fun climateFlag")
         assertTrue(command.contains("CommandFeedback.showMessage(key, message)"))
         assertTrue(command.contains("val media = br.painellivre.ui.aura.CommandFeedback.isMedia(key)"))
         val climateWrites = command.lines().filter { it.contains("popClimateState") }

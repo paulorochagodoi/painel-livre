@@ -4,6 +4,60 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
+## Não lançado — 0.5.6 (versionCode 12), achados do teste no carro da 0.5.5 (29/10/2026)
+
+Branch `fix/ac-audio-tela-cheia`, PR #23 (sem merge). Teste da v0.5.5-teste no carro de Paulo em
+29/10 (DiLink 3.0, 15:07–15:10) confirmou que os diálogos sumiram e o fan +/- funciona
+("confirmado pelo estado relido"), mas achou três problemas novos, corrigidos aqui.
+
+- **Bug AUTO nunca confirmava:** `Spec("ac_auto", onWire=mapOf(0 to 1, 1 to 2))` manda 1=desliga/
+  2=liga no fio, mas o readback (`CarReadouts.climate`/`CarCommandRuntime`) comparava o valor **cru**
+  do fio com o valor **lógico** do toggle — nunca batiam, então a UI mostrava AUTO sempre ligado (Paulo
+  confirmou na tela nativa que estava desligado) e a confirmação do runtime sempre dizia "Não
+  confirmado". Novo par puro e testável `CarCommands.toWire`/`CarCommands.fromWire` decodifica o
+  onWire nos dois sentidos; `CarReadouts.climate.flag` e a confirmação em `CarCommands.execute` agora
+  comparam o valor decodificado. `ac_auto` e `ac_recirc` (que já batia no carro, só faltava marcar)
+  ganharam `readbackKnown=true`. Os outros sinais de clima (`ac_on`, `ac_compressor`, `ac_defrost`)
+  não têm `onWire` porque `docs/COMANDOS.md` já documentava raw=lógico para eles (0 desliga/1 liga) —
+  não foi inventado nenhum mapa novo sem evidência.
+- **Toques rápidos eram rejeitados:** Paulo pediu para nunca mais ver "aguarde o comando anterior".
+  `LauncherActivity.command` não rejeita mais: toggles (AUTO/A-C/recirculação/desembaçador/energia/
+  banco/porta-malas) entram numa fila de 1 (`pendingCommand`, o último desejo vence e sai assim que o
+  envio em voo terminar); ventilação, temperatura e bancos somam no alvo pendente e só saem ~350 ms
+  depois do último toque (`stepCommand`/`pendingStepTarget`/`stepDebounceJobs`), para não perder
+  passos no limite de 1 envio/s do `CarCommands`.
+- **Mais três controles ainda abriam diálogo** (achado extra, varredura completa de
+  `AlertDialog`/`setItems`/`chooseCommand` nos comandos do carro):
+  - **Temperatura** (motorista/passageiro): a lista de 15 valores (16…30°) virou botões inline
+    `tempDown`/`tempUp` dentro do cartão da Climatização (`stepTemp`, passo de 1° do próprio `Spec`,
+    com o mesmo coalesce/debounce da ventilação). Os atalhos de temperatura no dock não abrem mais
+    nada: só mostram a leitura e tocar abre a Climatização (como o comentário de `aura_dock.xml` já
+    dizia, mas o código ainda chamava a lista).
+  - **Aquecimento/ventilação dos bancos** (`seat_heat_driver`, `seat_vent_driver`, `seat_heat_pass`,
+    `seat_vent_pass`): o toque abria o Toast "Comando ainda não confirmado; controle bloqueado" vindo
+    de `chooseCommand`. Virou `toggleSeat`: um toque alterna entre desligado e nível 1, sem Toast
+    disparado pela UI. Os Specs continuam hipótese (sem `dev`/`fid`, `confirmed=false`): o `CarCommands`
+    bloqueia o envio por segurança até ter evidência no carro, igual antes — só a UI deixou de
+    "perguntar" antes de tentar. Ainda é um toggle liga/desliga de 1 nível, não os 3 níveis do Spec;
+    se o Paulo quiser os 3 níveis quando os bancos forem confirmados, é um pedido novo.
+  - **Porta-malas:** o chip do carro 3D chamava `chooseCommand("trunk")`, que só mostrava o mesmo
+    Toast de bloqueio (Spec hipótese, `moves=true`). Virou `toggleTrunk` (toque direto, sem Toast da
+    UI); o `CarCommands` continua bloqueando por não ter evidência e por exigir P.
+  - `chooseCommand` (e todo `AlertDialog.setItems` de comando) foi removido do arquivo; os únicos
+    `AlertDialog` que sobraram são de navegação (encerrar rota) e diagnóstico (Config. inicial), não
+    de comando ao carro.
+- Testes novos/alterados: `CarCommandsTest.toWireAndFromWireAreInversesAndIdentityWithoutOnWire`,
+  `.stepValueUsaOsLimitesEOPassoDoProprioSpec`, `.recircReadbackNowConfirmsLikeSeenOnTheCar`,
+  `.autoEncodingSendsWireValueAndDecodesReadbackBeforeConfirming` (comportamento corrigido),
+  `.temperaturaEBancosTambemViramToqueDiretoSemListaNemDialogo`,
+  `.nenhumDialogoOuListaDeEscolhaSobrouParaComandosDoCarro`,
+  `.toquesRapidosNuncaMostramRejeicaoEFicamEmFilaOuDebounce`; `AuraTest.climateIsReadOnlyAndOnlyWhatWasRead`
+  cobre o AUTO decodificado. 271 testes JVM no total (9 a mais que a 0.5.5).
+- Validação local: `./gradlew testDebugUnitTest lintDebug`, zero falhas, lint zero erros (80 avisos).
+  Build release assinada e instalada no carro desta vez (ver abaixo); comportamento de toggle/step
+  dos bancos e porta-malas segue bloqueado (hipótese) e não pôde ser verificado no carro além do
+  Toast não aparecer mais.
+
 ## Não lançado — 0.5.5 (versionCode 11), issues #20 #21 #22 (29/10/2026)
 
 Branch `fix/ac-audio-tela-cheia`: Claude Code (#20 clima + #22 tela cheia) + Codex (#21 toast de áudio),

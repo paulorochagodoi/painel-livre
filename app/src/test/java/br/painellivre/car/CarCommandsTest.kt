@@ -82,10 +82,27 @@ class CarCommandsTest {
         assertEquals(1,p.sends.size); assertEquals(1,p.reads)
         assertTrue(p.logs.any { it.contains("inconclusiva") })
     }
-    @Test fun autoEncodingAndFeedbackUseWireState() = runBlocking {
+    @Test fun autoEncodingSendsWireValueAndDecodesReadbackBeforeConfirming() = runBlocking {
+        // Bug visto no carro em 29/10: o readback é o valor cru do fio (1=desliga, 2=liga para AUTO);
+        // decodificar antes de comparar ao alvo lógico, senão nunca confirma.
         val p = Fake(); p.actual = 2.0
-        assertTrue(CarCommands(p).execute("ac_auto",1.0).startsWith("Não confirmado"))
+        assertEquals("Confirmado pelo estado relido", CarCommands(p).execute("ac_auto",1.0))
         assertTrue(p.sends.single().endsWith("501219352 i32 2"))
+        val p2 = Fake(); p2.actual = 1.0
+        assertTrue(CarCommands(p2).execute("ac_auto",1.0).startsWith("Não confirmado"))
+    }
+    @Test fun recircReadbackNowConfirmsLikeSeenOnTheCar() = runBlocking {
+        val p = Fake(); p.actual = 1.0
+        assertEquals("Confirmado pelo estado relido", CarCommands(p).execute("ac_recirc",1.0))
+        p.clock += 1000; p.actual = 0.0
+        assertEquals("Confirmado pelo estado relido", CarCommands(p).execute("ac_recirc",0.0))
+    }
+    @Test fun toWireAndFromWireAreInversesAndIdentityWithoutOnWire() {
+        val auto = CarCommands.CATALOG.first { it.key == "ac_auto" }
+        assertEquals(1, CarCommands.toWire(auto, 0.0)); assertEquals(2, CarCommands.toWire(auto, 1.0))
+        assertEquals(0.0, CarCommands.fromWire(auto, 1.0), 0.0); assertEquals(1.0, CarCommands.fromWire(auto, 2.0), 0.0)
+        val recirc = CarCommands.CATALOG.first { it.key == "ac_recirc" }
+        assertEquals(1, CarCommands.toWire(recirc, 1.0)); assertEquals(1.0, CarCommands.fromWire(recirc, 1.0), 0.0)
     }
     @Test fun withdrawnPermissionWhileReadingEnvironmentBlocksSend() = runBlocking {
         val p = Fake(); p.withdrawOnEnvironment = true
@@ -107,7 +124,6 @@ class CarCommandsTest {
         val root = listOf(File("src/main/java"), File("app/src/main/java")).first { it.exists() }
         val ui = File(root, "br/painellivre/ui/LauncherActivity.kt").readText()
         assertFalse(ui.contains("Enviar ao carro?"))
-        assertTrue(ui.contains("command(key, values[index])"))
         assertTrue(ui.contains("CarCommandRuntime.execute"))
         val runtime = File(root, "br/painellivre/car/CarCommandRuntime.kt").readText()
         assertTrue(runtime.contains("commands.execute(key, value)"))
@@ -123,6 +139,18 @@ class CarCommandsTest {
         assertEquals(7.0, CarCommands.fanStep(7, up = true), 0.0) // não passa do máximo
         assertEquals(0.0, CarCommands.fanStep(0, up = false), 0.0) // não passa do mínimo
     }
+    @Test fun stepValueUsaOsLimitesEOPassoDoProprioSpec() {
+        // Achado extra do teste no carro de 29/10: temperatura e bancos também viram toque direto.
+        val temp = CarCommands.CATALOG.first { it.key == "ac_temp_driver" }
+        assertEquals(23.0, CarCommands.stepValue(temp, 22.0, up = true), 0.0)
+        assertEquals(21.0, CarCommands.stepValue(temp, 22.0, up = false), 0.0)
+        assertEquals(30.0, CarCommands.stepValue(temp, 30.0, up = true), 0.0) // não passa do máximo
+        assertEquals(16.0, CarCommands.stepValue(temp, 16.0, up = false), 0.0) // não passa do mínimo
+        assertEquals(16.0, CarCommands.stepValue(temp, null, up = false), 0.0) // sem leitura: parte do mínimo
+        val seat = CarCommands.CATALOG.first { it.key == "seat_heat_driver" }
+        assertEquals(1.0, CarCommands.stepValue(seat, 0.0, up = true), 0.0)
+        assertEquals(3.0, CarCommands.stepValue(seat, 3.0, up = true), 0.0) // não passa do máximo
+    }
     @Test fun modosDeArEVentilacaoViramToqueUnicoSemDialogoDeEscolha() {
         // issue #20: AUTO/A-C/recirculação/desembaçador/energia viram toggle; ventilação vira +/-.
         val root = listOf(File("src/main/java"), File("app/src/main/java")).first { it.exists() }
@@ -132,11 +160,43 @@ class CarCommandsTest {
         assertTrue(ui.contains("R.id.fanDown).setOnClickListener { stepFan(up = false) }"))
         assertTrue(ui.contains("R.id.fanUp).setOnClickListener { stepFan(up = true) }"))
         assertTrue(ui.contains("R.id.popClimateState).setOnClickListener { toggleClimate(\"ac_on\") }"))
-        assertFalse(ui.contains("chooseCommand(\"ac_auto\")"))
-        assertFalse(ui.contains("chooseCommand(\"ac_on\")"))
-        assertFalse(ui.contains("chooseCommand(\"ac_fan\")"))
-        // Temperatura (16..30°) ainda é lista: não dá para virar toggle nem +/- de 1 passo.
-        assertTrue(ui.contains("R.id.popClimateDriver to \"ac_temp_driver\""))
+    }
+    @Test fun temperaturaEBancosTambemViramToqueDiretoSemListaNemDialogo() {
+        // Achado extra do teste no carro de 29/10: a lista 16..30° e o diálogo dos bancos ainda abriam.
+        val root = listOf(File("src/main/java"), File("app/src/main/java")).first { it.exists() }
+        val ui = File(root, "br/painellivre/ui/LauncherActivity.kt").readText()
+        assertTrue(ui.contains("card.findViewById<View>(R.id.tempDown).setOnClickListener { stepTemp(key, up = false) }"))
+        assertTrue(ui.contains("card.findViewById<View>(R.id.tempUp).setOnClickListener { stepTemp(key, up = true) }"))
+        assertTrue(ui.contains("setOnClickListener { toggleSeat(\"seat_heat_\$side\") }"))
+        assertTrue(ui.contains("setOnClickListener { toggleSeat(\"seat_vent_\$side\") }"))
+        assertTrue(ui.contains("if (chip.id == \"trunk\") v.setOnClickListener { toggleTrunk() }"))
+        // Os atalhos do dock de temperatura só mostram leitura; tocar abre a Climatização (sem lista).
+        assertTrue(ui.contains("click(R.id.dockTempDriver) { togglePopover(PopoverState.Id.CLIMATE) }"))
+        assertTrue(ui.contains("click(R.id.dockTempPassenger) { togglePopover(PopoverState.Id.CLIMATE) }"))
+    }
+    @Test fun nenhumDialogoOuListaDeEscolhaSobrouParaComandosDoCarro() {
+        // Extra 3 do teste no carro de 29/10: varredura total. Os únicos AlertDialog que sobram no
+        // arquivo são de navegação/diagnóstico (route_end_question, setup_title), não de comando.
+        val root = listOf(File("src/main/java"), File("app/src/main/java")).first { it.exists() }
+        val ui = File(root, "br/painellivre/ui/LauncherActivity.kt").readText()
+        assertFalse(ui.contains("chooseCommand"))
+        assertFalse(ui.contains(".setItems("))
+        assertFalse(ui.contains("Comando ainda não confirmado; controle bloqueado"))
+    }
+    @Test fun toquesRapidosNuncaMostramRejeicaoEFicamEmFilaOuDebounce() {
+        // Pedido do Paulo no teste no carro de 29/10: toque durante um comando em andamento nunca é
+        // rejeitado. Toggle entra numa fila de 1 (o último desejo vence); ventilação/temperatura
+        // acumulam o alvo e só saem ~350 ms depois do último toque.
+        val root = listOf(File("src/main/java"), File("app/src/main/java")).first { it.exists() }
+        val ui = File(root, "br/painellivre/ui/LauncherActivity.kt").readText()
+        assertFalse(ui.contains("Aguarde o comando anterior"))
+        assertFalse(ui.contains("rejeitado, outro comando em andamento"))
+        assertTrue(ui.contains("private var pendingCommand: Pair<String, Double>? = null"))
+        assertTrue(ui.contains("if (commandBusy) { pendingCommand = key to value; return }"))
+        assertTrue(ui.contains("pendingCommand?.let { (k, v) -> pendingCommand = null; command(k, v) }"))
+        assertTrue(ui.contains("private val pendingStepTarget = mutableMapOf<String, Double>()"))
+        assertTrue(ui.contains("stepDebounceJobs[key]?.cancel()"))
+        assertTrue(ui.contains("delay(350)"))
     }
     @Test fun todasAsHipotesesContinuamBloqueadasMesmoComChavesLigadas() = runBlocking {
         val p = Fake(); val c = CarCommands(p)

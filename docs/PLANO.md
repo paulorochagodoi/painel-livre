@@ -566,14 +566,13 @@ A issue #21 (toast de áudio/rádio, mesma rodada de fotos) é do Codex, branch 
 
 - **#20**: AUTO/A-C/recirculação/desembaçador/energia viram toggle de um toque
   (`CarCommands.toggleValue`); ventilação ganhou +/- (`CarCommands.fanStep`) em vez da lista
-  0…7. Temperatura continua por lista (16…30°, fora do pedido da issue).
+  0…7. Temperatura continuava por lista nesta rodada (16…30°, fora do pedido original da issue;
+  virou toque direto na 0.5.6, ver seção abaixo).
 - **#22**: `Theme.PainelLivre.Aura` ganhou `android:windowFullscreen=true` (`values/aura.xml`);
   a barra de status do Android deixa de ser reservada e a Home passa a ocupar essa altura. A
   barra nativa inferior do carro não é afetada (fora da nossa janela).
 - Validação local: `./gradlew testDebugUnitTest lintDebug assembleDebug`, 261 testes JVM
-  (3 novos), zero falhas, lint zero erros. **Sem acesso ao carro nesta etapa** — conferir no
-  próximo teste físico: toque único em AUTO/A/C/recirc/desemb./energia sem diálogo, +/- da
-  ventilação, e a Home ocupando a tela toda acima da barra nativa do carro.
+  (3 novos), zero falhas, lint zero erros. Testado no carro em 29/10 (ver seção 0.5.6 abaixo).
 
 ## Correção #21 — áudio sem mensagens rotineiras (29/10/2026)
 
@@ -585,3 +584,27 @@ A issue #21 (toast de áudio/rádio, mesma rodada de fotos) é do Codex, branch 
   com o estado visual atualizado quando houver sessão. Testar também rádio BYD sem sessão Android.
 
 Escopo apenas #21; #20 e #22 seguem em outro branch. Versão mantida em 0.5.4 / código 10.
+
+## 0.5.6 — achados do primeiro teste no carro da climatização (2026-10-29, branch `fix/ac-audio-tela-cheia`)
+
+Teste da v0.5.5-teste no carro de Paulo, DiLink 3.0, `adb` em `172.26.89.229:5555`, 29/10 ~15:07–15:10.
+
+- [x] **Confirmado no carro:** diálogos sumiram (#20); `ac_fan` +/- "confirmado pelo estado relido".
+- [x] **Bug AUTO** (raw do fio ≠ lógico do toggle, nunca confirmava e a UI ficava sempre "ligado"):
+  decodificado com `CarCommands.toWire`/`fromWire`; `ac_auto` e `ac_recirc` ganharam
+  `readbackKnown=true`. Detalhe em `docs/COMANDOS.md`.
+- [x] **Toques rápidos não são mais rejeitados**: fila de 1 para toggles, debounce de 350 ms com
+  soma de alvo para ventilação/temperatura/bancos.
+- [x] **Temperatura, bancos e porta-malas também viram toque direto**, sem lista nem Toast de
+  bloqueio ao abrir (varredura completa de `AlertDialog`/`setItems`/`chooseCommand` nos comandos do
+  carro — `chooseCommand` foi removido). Bancos e porta-malas continuam bloqueados pelo
+  `CarCommands` (hipótese, sem evidência) — só a UI deixou de perguntar antes.
+- [x] Validação local: `./gradlew testDebugUnitTest lintDebug`, 271 testes JVM, zero falhas, lint
+  zero erros (80 avisos).
+- [ ] **Próximo teste no carro** (pendente, depende do Paulo): AUTO mostrando o estado real depois
+  de ligar/desligar pelo app e pelo painel nativo; recirculação com o aviso "confirmado" (antes
+  dizia "não confirmado" apesar de funcionar); toques rápidos em sequência no fan/temperatura sem
+  nenhuma mensagem de "aguarde"; botões −/+ de temperatura motorista/passageiro; toque nos botões de
+  banco/porta-malas (esperado: nenhum Toast de bloqueio, nenhum efeito real no carro, já que
+  continuam hipótese); atalho de temperatura no dock abrindo a Climatização em vez de lista.
+- [ ] Issue #24 (Waze no painel) é diagnóstico separado, não faz parte desta rodada.

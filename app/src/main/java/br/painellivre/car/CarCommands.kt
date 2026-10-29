@@ -47,26 +47,36 @@ class CarCommands(private val port: Port) {
         if (spec.moves && !parked(port.gear())) return result("Rejeitado: câmbio P não confirmado")
         lastSent = port.now()
         result("Enviando")
-        val sent = port.sendOnce("service call autoservice 6 i32 $dev i32 $fid i32 ${spec.onWire[value.toInt()] ?: value.toInt()}")
+        val sent = port.sendOnce("service call autoservice 6 i32 $dev i32 $fid i32 ${toWire(spec, value)}")
         if (!sent) result("Resposta do envio inconclusiva; não repetido")
         val actual = port.read(key)
-        return result(if (spec.readbackKnown && actual == value) "Confirmado pelo estado relido" else "Não confirmado pelo carro (${actual ?: "sem dado"})")
+        val actualDecoded = actual?.let { fromWire(spec, it) }
+        return result(if (spec.readbackKnown && actualDecoded == value) "Confirmado pelo estado relido" else "Não confirmado pelo carro (${actualDecoded ?: "sem dado"})")
     }
     companion object {
         fun parked(g: Gear) = g.real && g.fresh && g.value == 1
         fun valid(s: Spec, v: Double): Boolean = v.isFinite() && v >= s.min && v <= s.max &&
             kotlin.math.abs((v - s.min) / s.step - kotlin.math.round((v - s.min) / s.step)) < 0.000001
+        /** Valor lógico → valor no fio: aplica `onWire` quando definido (ex.: AUTO 0/1 → 1/2), senão identidade. */
+        fun toWire(spec: Spec, value: Double): Int = spec.onWire[value.toInt()] ?: value.toInt()
+        /** Valor no fio (lido de volta) → valor lógico: inverso de `onWire`, senão identidade. */
+        fun fromWire(spec: Spec, raw: Double): Double =
+            spec.onWire.entries.firstOrNull { it.value == raw.toInt() }?.key?.toDouble() ?: raw
         /** AUTO/A-C/recirculação/desembaçador/energia: um toque alterna, sem diálogo de escolha (issue #20). */
         fun toggleValue(current: Boolean?): Double = if (current == true) 0.0 else 1.0
         /** Ventilação sobe/desce um nível por toque, sem lista modal (issue #20). */
         fun fanStep(current: Int?, up: Boolean): Double = ((current ?: 0) + if (up) 1 else -1).coerceIn(0, 7).toDouble()
+        /** Qualquer controle numérico com passo e limites do próprio Spec (temperatura, bancos):
+         * sobe/desce um passo por toque, sem lista modal (issue #20, achado extra de 29/10). */
+        fun stepValue(spec: Spec, current: Double?, up: Boolean): Double =
+            ((current ?: spec.min) + if (up) spec.step else -spec.step).coerceIn(spec.min, spec.max)
         // IDs de leitura NÃO são reutilizados como setters. Pendências ficam sem endereço e bloqueadas.
         val CATALOG: List<Spec> = listOf(
             Spec("ac_temp_driver", "Temperatura motorista", 1000, 501219368, min=16.0, max=30.0, confirmed=true, readbackKnown=true),
             Spec("ac_temp_pass", "Temperatura passageiro", 1000, 501219376, min=16.0, max=30.0, confirmed=true, readbackKnown=true),
             Spec("ac_on", "Ar ligado", 1000, 501219364, confirmed=true), Spec("ac_fan", "Ventilação", 1000, 501219340, max=7.0, confirmed=true, readbackKnown=true),
-            Spec("ac_auto", "AUTO", 1000, 501219352, confirmed=true, onWire=mapOf(0 to 1, 1 to 2)), Spec("ac_compressor", "A/C", 1000, 501219344, confirmed=true),
-            Spec("ac_recirc", "Recirculação", 1000, 501219355, confirmed=true), Spec("ac_defrost", "Desembaçador", 1000, 501219362, confirmed=true),
+            Spec("ac_auto", "AUTO", 1000, 501219352, confirmed=true, onWire=mapOf(0 to 1, 1 to 2), readbackKnown=true), Spec("ac_compressor", "A/C", 1000, 501219344, confirmed=true),
+            Spec("ac_recirc", "Recirculação", 1000, 501219355, confirmed=true, readbackKnown=true), Spec("ac_defrost", "Desembaçador", 1000, 501219362, confirmed=true),
             Spec("seat_heat_driver", "Aquecer motorista", max=3.0),
             Spec("seat_vent_driver", "Ventilar motorista", max=3.0),
             Spec("seat_heat_pass", "Aquecer passageiro", max=3.0),

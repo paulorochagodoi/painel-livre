@@ -117,3 +117,28 @@ real e recente; bancos, vidros, teto, porta-malas e rádio BYD continuam bloquea
 Cada tentativa/envio/resultado entra no AppLog e o estado é relido sem repetir um envio inconclusivo.
 Os testes JVM cobrem migração e desligamento posterior, hipóteses, limites, P, frequência, log,
 releitura e o caminho da interface ao runtime. Emulador não comprova comportamento na firmware BYD.
+
+## Achados do teste no carro em 29/10 (0.5.6)
+
+Teste da v0.5.5-teste no carro de Paulo (DiLink 3.0, 15:07–15:10): diálogos sumiram e o fan +/-
+confirmou certo. Três problemas apareceram e foram corrigidos na 0.5.6.
+
+- **AUTO (raw ≠ lógico):** o fio manda 1=desliga/2=liga (tabela acima), mas a leitura comparava o
+  valor cru com o lógico do toggle e nunca batia — a UI ficava sempre "ligado" mesmo com Paulo
+  confirmando AUTO desligado na tela nativa. `CarCommands.toWire`/`fromWire` decodificam o `onWire`
+  nos dois sentidos; `CarReadouts.climate` e a confirmação de `CarCommands.execute` usam o valor
+  decodificado. `ac_auto` e `ac_recirc` (recirculação já batia no carro) ganharam `readbackKnown=true`.
+  `ac_on`, `ac_compressor` e `ac_defrost` continuam sem `onWire` (raw = lógico, 0/1, conforme a tabela
+  "Catálogo de interoperabilidade" acima) — nenhum mapa novo foi inventado sem evidência.
+- **Toque durante um envio em andamento não é mais rejeitado** (pedido do Paulo). Toggles (AUTO, A/C,
+  recirculação, desembaçador, energia, banco, porta-malas) ficam numa fila de 1 desejo
+  (`LauncherActivity.pendingCommand`); ventilação e temperatura somam no alvo e só saem ~350 ms depois
+  do último toque (`stepCommand`), respeitando o limite de 1 envio/s do `CarCommands`. Nunca aparece
+  Toast/log de "ocupado".
+- **Temperatura, bancos e porta-malas ainda abriam diálogo/Toast de bloqueio.** Temperatura
+  (`ac_temp_driver`/`ac_temp_pass`) ganhou botões `tempDown`/`tempUp` no cartão da Climatização
+  (`stepTemp`, passo de 1° do próprio `Spec`); o atalho de temperatura no dock só mostra a leitura e
+  abre a Climatização (não manda comando). Bancos (`seat_heat_*`, `seat_vent_*`) e porta-malas
+  (`trunk`) viraram toque direto (`toggleSeat`, `toggleTrunk`) — continuam bloqueados pelo
+  `CarCommands` por serem hipótese (sem `dev`/`fid` ou sem P), só a UI deixou de abrir diálogo/Toast
+  antes de tentar. `chooseCommand` e todo `AlertDialog.setItems` de comando foram removidos.

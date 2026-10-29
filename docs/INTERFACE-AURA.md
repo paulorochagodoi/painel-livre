@@ -366,3 +366,32 @@ concluído. Emulador Android 10 isolado (5590): volume 5 → 6 → 5, play sem s
 próxima/anterior desabilitados sem sessão. Captura: `docs/telas/aura-054-audio-sem-toast.png`.
 Uma captura estática não demonstra a ausência temporal de Toast; a política e sua ligação ao
 caminho da Activity são cobertas pelos testes JVM.
+
+## Achados extras do teste no carro — 0.5.6 (29/10/2026)
+
+Teste da v0.5.5-teste no carro de Paulo (DiLink 3.0, 15:07–15:10). Diálogos sumiram e o fan +/-
+confirmou certo; três problemas novos apareceram e foram corrigidos aqui (detalhe do sinal AUTO e
+do coalesce em `docs/COMANDOS.md`, "Achados do teste no carro em 29/10"):
+
+- **Temperatura também era lista.** O texto acima ("a temperatura continua por `chooseCommand`")
+  descrevia a 0.5.5, mas Paulo pediu o mesmo tratamento das issue #20 para ela. `pop_temp.xml`
+  ganhou os botões `tempDown`/`tempUp` (mesmo estilo de `fanDown`/`fanUp`) ao redor do valor;
+  `LauncherActivity.stepTemp` sobe/desce 1° usando `CarCommands.stepValue` (genérico: passo e
+  limites vêm do próprio `Spec`). Os atalhos de temperatura no dock (`dockTempDriver`/
+  `dockTempPassenger`) não chamam mais `chooseCommand`: abrem a janela Climatização, igual ao
+  comentário que já existia em `aura_dock.xml` ("tocar abre a Climatização") — o código é que
+  ainda não seguia isso.
+- **Bancos e porta-malas ainda mostravam Toast de bloqueio ao tocar** (`chooseCommand` checava
+  `spec.confirmed` e mostrava "Comando ainda não confirmado; controle bloqueado" antes de montar a
+  lista). Aquecimento/ventilação dos bancos virou `toggleSeat` (liga nível 1 / desliga, sem lista
+  de 4 níveis — se o Paulo quiser os 3 níveis quando os Specs forem confirmados, é um pedido novo);
+  o chip do porta-malas virou `toggleTrunk`. Os dois continuam bloqueados pelo `CarCommands`
+  (Specs hipótese, sem `dev`/`fid` ou sem P confirmado) — só a UI deixou de perguntar antes.
+- `chooseCommand` foi removido inteiro; não sobrou `AlertDialog.setItems` para nenhum comando do
+  carro (os `AlertDialog` restantes são de navegação/diagnóstico, sem relação com `CarCommands`).
+- Toques rápidos: `LauncherActivity.command` não rejeita mais com Toast "Aguarde o comando
+  anterior" — toggles ficam numa fila de 1 (`pendingCommand`) e ventilação/temperatura somam no
+  alvo com debounce de 350 ms (`stepCommand`), detalhado em `docs/COMANDOS.md`.
+- Validação local: 271 testes JVM, zero falhas; `lintDebug` zero erros (80 avisos). Sem novo
+  teste no carro desta rodada para bancos/porta-malas (continuam bloqueados por hipótese); o
+  comportamento de temperatura/AUTO/recirculação pede confirmação do Paulo na próxima instalação.

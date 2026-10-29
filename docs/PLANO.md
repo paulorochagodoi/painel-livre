@@ -556,3 +556,21 @@ não houve teste no carro nesta rodada.
   seletor manual em Ajustes; obter AppLog com bruto/origem/erro e desenhos aplicados.
 - Comandos enviam ao tocar; chaves com evidência ligadas por migração única. Conferir uma função
   por vez no carro parado; hipóteses continuam bloqueadas. Não houve acesso ao carro nesta etapa.
+
+## Issues #20 e #22 — diálogo da climatização e tela cheia (2026-10-29, branch `fix/ac-audio-tela-cheia`)
+
+Fotos do Paulo no carro, feitas depois da 0.5.4. Causa raiz e correção de cada uma em
+`docs/INTERFACE-AURA.md` ("Correções 29/10/2026"); detalhe do fio em `docs/COMANDOS.md`.
+A issue #21 (toast de áudio/rádio, mesma rodada de fotos) é do Codex, branch `fix/audio-toast`
+— não mexida aqui.
+
+- **#20**: AUTO/A-C/recirculação/desembaçador/energia viram toggle de um toque
+  (`CarCommands.toggleValue`); ventilação ganhou +/- (`CarCommands.fanStep`) em vez da lista
+  0…7. Temperatura continua por lista (16…30°, fora do pedido da issue).
+- **#22**: `Theme.PainelLivre.Aura` ganhou `android:windowFullscreen=true` (`values/aura.xml`);
+  a barra de status do Android deixa de ser reservada e a Home passa a ocupar essa altura. A
+  barra nativa inferior do carro não é afetada (fora da nossa janela).
+- Validação local: `./gradlew testDebugUnitTest lintDebug assembleDebug`, 261 testes JVM
+  (3 novos), zero falhas, lint zero erros. **Sem acesso ao carro nesta etapa** — conferir no
+  próximo teste físico: toque único em AUTO/A/C/recirc/desemb./energia sem diálogo, +/- da
+  ventilação, e a Home ocupando a tela toda acima da barra nativa do carro.

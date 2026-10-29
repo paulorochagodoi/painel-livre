@@ -515,13 +515,16 @@ class LauncherActivity : AppCompatActivity() {
         clim.findViewById<View>(R.id.seatPassenger).findViewById<TextView>(R.id.seatLabel).setText(R.string.seat_passenger)
         clim.findViewById<LevelBars>(R.id.popClimateFan).apply { count = 7; rising = true }
 
-        listOf(R.id.popClimateDriver to "ac_temp_driver", R.id.popClimatePassenger to "ac_temp_pass",
-            R.id.popClimateFan to "ac_fan", R.id.modeAuto to "ac_auto", R.id.modeAc to "ac_compressor",
-            R.id.modeRecirc to "ac_recirc", R.id.modeDefrost to "ac_defrost").forEach { (id, key) ->
+        // Temperatura (16..30°) continua por lista; o resto é toque único, sem diálogo (issue #20).
+        listOf(R.id.popClimateDriver to "ac_temp_driver", R.id.popClimatePassenger to "ac_temp_pass").forEach { (id, key) ->
             clim.findViewById<View>(id).setOnClickListener { chooseCommand(key) }
         }
+        mapOf(R.id.modeAuto to "ac_auto", R.id.modeAc to "ac_compressor", R.id.modeRecirc to "ac_recirc", R.id.modeDefrost to "ac_defrost")
+            .forEach { (id, key) -> clim.findViewById<View>(id).setOnClickListener { toggleClimate(key) } }
+        clim.findViewById<View>(R.id.fanDown).setOnClickListener { stepFan(up = false) }
+        clim.findViewById<View>(R.id.fanUp).setOnClickListener { stepFan(up = true) }
         clim.findViewById<TextView>(R.id.popClimateState).text = "Ligar / desligar"
-        clim.findViewById<View>(R.id.popClimateState).setOnClickListener { chooseCommand("ac_on") }
+        clim.findViewById<View>(R.id.popClimateState).setOnClickListener { toggleClimate("ac_on") }
         listOf(R.id.seatDriver to "driver", R.id.seatPassenger to "pass").forEach { (id, side) ->
             clim.findViewById<View>(id).findViewById<View>(R.id.seatHeat).setOnClickListener { chooseCommand("seat_heat_$side") }
             clim.findViewById<View>(id).findViewById<View>(R.id.seatVent).setOnClickListener { chooseCommand("seat_vent_$side") }
@@ -754,7 +757,7 @@ class LauncherActivity : AppCompatActivity() {
         pop.findViewById<View>(R.id.popClimateEmpty).visibility = if (c == null) View.VISIBLE else View.GONE
         pop.findViewById<TextView>(R.id.popClimateEmpty).text = carDataHint()
         pop.findViewById<View>(R.id.popClimateBody).visibility = View.VISIBLE
-        val shown = c ?: CarReadouts.Climate(null, null, null, null, null, null, null, null, null,
+        val shown = c ?: CarReadouts.Climate(null, null, null, null, null, null, null, null, null, null,
             CarReadouts.Seat(null, null), CarReadouts.Seat(null, null))
         pop.findViewById<View>(R.id.popClimateDriver).findViewById<TextView>(R.id.tempValue).text = AuraFormat.temp(shown.driverC)
         pop.findViewById<View>(R.id.popClimatePassenger).findViewById<TextView>(R.id.tempValue).text = AuraFormat.temp(shown.passengerC)
@@ -839,6 +842,29 @@ class LauncherActivity : AppCompatActivity() {
                 renderVolume()
             } finally { commandBusy = false }
         }
+    }
+
+    /** Estado atual lido do carro para os modos liga/desliga da climatização (null = sem leitura). */
+    private fun climateFlag(key: String): Boolean? {
+        val c = CarReadouts.climate(lastTelemetry) ?: return null
+        return when (key) {
+            "ac_auto" -> c.auto
+            "ac_compressor" -> c.ac
+            "ac_recirc" -> c.recirc
+            "ac_defrost" -> c.defrost
+            "ac_on" -> c.on
+            else -> null
+        }
+    }
+
+    /** AUTO/A-C/recirculação/desembaçador/energia: um toque alterna ligado/desligado, sem diálogo (issue #20). */
+    private fun toggleClimate(key: String) {
+        command(key, br.painellivre.car.CarCommands.toggleValue(climateFlag(key)))
+    }
+
+    /** Ventilação sobe ou desce um nível por toque, sem lista modal (issue #20). */
+    private fun stepFan(up: Boolean) {
+        command("ac_fan", br.painellivre.car.CarCommands.fanStep(CarReadouts.climate(lastTelemetry)?.fan, up))
     }
 
     private fun chooseCommand(key: String) {

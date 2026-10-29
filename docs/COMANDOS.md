@@ -106,7 +106,11 @@ de carregar Ajustes e antes de executar comandos/abrir a lista de funções no D
 Depois dela, desligar uma chave é respeitado nas próximas aberturas. Hipóteses recebem false e
 não podem ser habilitadas pelo runtime, mesmo que alguém altere a preferência externamente.
 
-A escolha do valor na climatização permanece; o diálogo “Enviar ao carro?” foi removido.
+A escolha do valor na climatização permanece só para a temperatura (16…30°, 15 valores);
+o diálogo “Enviar ao carro?” foi removido em 24/10 e, em 29/10 (issue #20, foto no carro), a lista
+de valores saiu também de AUTO, A/C, recirculação, desembaçador e energia geral — viram toggle
+de um toque (`CarCommands.toggleValue`, lê o estado atual em `CarReadouts.climate` e manda o
+oposto) — e a ventilação ganhou botões +/- (`CarCommands.fanStep`) em vez da lista 0…7.
 O toque passa por `CarCommandRuntime` (fila única) e `CarCommands`: whitelist, limites inteiros,
 intervalo mínimo de 1000 ms, ambiente e chaves conferidos antes do envio. Partes móveis exigem P
 real e recente; bancos, vidros, teto, porta-malas e rádio BYD continuam bloqueados.

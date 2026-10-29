@@ -123,10 +123,12 @@ object CarReadouts {
         val ac: Boolean?,
         val recirc: Boolean?,
         val defrost: Boolean?,
+        /** Energia geral do ar (issue #20: toggle sem diálogo). */
+        val on: Boolean?,
         val driverSeat: Seat,
         val passengerSeat: Seat,
     ) {
-        val hasAny get() = listOf(driverC, passengerC, fan, insideC, outsideC, auto, ac, recirc, defrost,
+        val hasAny get() = listOf(driverC, passengerC, fan, insideC, outsideC, auto, ac, recirc, defrost, on,
             driverSeat.heat, driverSeat.vent, passengerSeat.heat, passengerSeat.vent).any { it != null }
 
         /** Linha do atalho: "Automático · Ventilação 3 · A/C", só com o que foi lido. */
@@ -151,6 +153,7 @@ object CarReadouts {
             ac = flag("ac_compressor"),
             recirc = flag("ac_recirc"),
             defrost = flag("ac_defrost"),
+            on = flag("ac_on"),
             driverSeat = Seat(seat("seat_heat_driver"), seat("seat_vent_driver")),
             passengerSeat = Seat(seat("seat_heat_pass"), seat("seat_vent_pass")),
         )

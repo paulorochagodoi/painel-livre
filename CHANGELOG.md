@@ -4,6 +4,35 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
+## Não lançado — branch `fix/ac-audio-tela-cheia`, issues #20 e #22 (29/10/2026)
+
+Correções pedidas pelo Paulo depois da foto no carro da 0.5.4; versão ainda em 0.5.4
+(`versionCode` 10) — o bump para 0.5.5/11 fica para depois do merge com a correção do Codex
+(issue #21, áudio/rádio, branch separada).
+
+- **Issue #20 — climatização sem diálogo:** a causa raiz não era o flag de confirmação (já
+  removido em 24/10, ver 0.5.4 abaixo) e sim `chooseCommand`, a função chamada por **todos** os
+  controles de clima: ela sempre abre um `AlertDialog.setItems` com a lista de valores possíveis,
+  mesmo quando a lista tem só dois itens (Ligar/Desligar). AUTO, A/C, recirculação, desembaçador e
+  a energia geral (`ac_on`) agora chamam `toggleClimate`: um toque lê o estado atual
+  (`CarReadouts.climate`) e manda o oposto, sem diálogo. A ventilação (`ac_fan`) ganhou botões
+  +/- (`fanDown`/`fanUp` em `pop_climate.xml`) que chamam `stepFan`, subindo/descendo um nível
+  (0–7) sem a lista modal. A temperatura (16–30°, 15 valores) continua pela lista: não é um
+  liga/desliga nem cabe num único passo, e não estava nos critérios de aceite da issue.
+  Lógica pura nova e testável na JVM: `CarCommands.toggleValue`/`CarCommands.fanStep`.
+- **Issue #22 — tela cheia:** `Theme.PainelLivre.Aura` não tinha `android:windowFullscreen`,
+  então o Android reservava a barra de status para o sistema e a Home não ocupava a tela toda da
+  central. Acrescentado `windowFullscreen=true` (mesma técnica já usada no painel,
+  `Theme.PainelLivre.Cluster`): a barra nativa inferior do carro (fora da nossa janela) continua
+  aparecendo, só a faixa de cima (que era do sistema) passa a ser nossa. Afeta também
+  `DialerActivity`/`WeatherActivity`, que usam o mesmo tema.
+- Testes novos: `CarCommandsTest.toggleAndFanStepArePureAndClamped`,
+  `CarCommandsTest.modosDeArEVentilacaoViramToqueUnicoSemDialogoDeEscolha`,
+  `AuraTest.homeThemeReclaimsTheStatusBarToFillTheScreen` (261 testes no total, de 258 na 0.5.4).
+- Nenhum acesso ao carro nesta etapa; validação só local (`./gradlew testDebugUnitTest lintDebug
+  assembleDebug`, zero falhas, lint zero erros). Teste físico de ambas as correções continua
+  pendente — ver `docs/PLANO.md`.
+
 ## [0.5.4] — 2026-10-24 (teste)
 
 - Painel: cartões compactos na coluna x 170–760/y 185–520 (referência 1920×720),

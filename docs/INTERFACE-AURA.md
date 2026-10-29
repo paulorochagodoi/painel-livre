@@ -293,3 +293,57 @@ simulação de navegação; escolha manual persistente exercita o mesmo layout d
 Cópias em `/tmp/aura-054-prints/`. O sandbox não permite escrever em
 `/home/paulo/Documentos/REA-BYD/prints/aura/`; por isso a cópia nesse destino ficou pendente.
 Preferências do emulador usadas para os quatro modos foram restauradas após as capturas.
+
+## Correções 29/10/2026 — issues #20 e #22, fotos no carro
+
+Branch `fix/ac-audio-tela-cheia` (base 0.5.4/`versionCode` 10; versão não muda nesta etapa).
+
+### Issue #20 — diálogo da climatização
+
+A foto `docs/issues/ac-auto-dialogo.jpg` mostrou um `AlertDialog` "AUTO" com `Ligar`/`Desligar`/
+`CANCELAR`; `docs/issues/ac-ventilacao-dialogo.jpg` mostrou "Ventilação" com a lista `0`…`7`.
+Causa raiz (não era a hipótese do flag de confirmação, já removido em 24/10 — ver `docs/COMANDOS.md`):
+**todo** controle de clima na janela Climatização chamava `chooseCommand(key)`
+(`LauncherActivity.kt`), e essa função sempre monta `AlertDialog.Builder().setItems(...)` com a
+lista de valores do `Spec` — para um `max=1.0` (toggle) a lista vira exatamente `Ligar`/`Desligar`;
+para `ac_fan` (`max=7.0`) vira a lista `0`…`7`. Não existia um caminho de toggle nem de passo
+direto; só o seletor genérico.
+
+Correção: AUTO (`ac_auto`), A/C (`ac_compressor`), recirculação (`ac_recirc`), desembaçador
+(`ac_defrost`) e a energia geral (`ac_on`, o botão "Ligar/desligar" da janela) passam a chamar
+`toggleClimate(key)`, que lê o estado atual em `CarReadouts.climate(lastTelemetry)` e manda o
+oposto com `CarCommands.toggleValue` — um toque, sem diálogo. A ventilação ganhou dois botões
+(`fanDown`/`fanUp`, estilo igual ao +/- de volume de `pop_media.xml`) chamando `stepFan(up)`, que
+usa `CarCommands.fanStep` para subir/descer um nível (0–7) sem lista modal. A temperatura
+(16…30°, 15 valores) continua por `chooseCommand`: não é liga/desliga nem cabe num passo só, e a
+issue não pediu mudar isso.
+`toggleValue`/`fanStep` são Kotlin puro em `CarCommands` (sem import Android), testados na JVM.
+
+### Issue #22 — tela não preenche
+
+A foto `docs/issues/tela-principal-nao-preenche.jpg` mostra a Home Aura com a barra de sistema do
+Android (ícones do carro: localização/Bluetooth/4G/sino/perfil) ainda visível acima da nossa barra
+de status, e a barra nativa do carro (voltar/início/clima rápido/ajustes) abaixo do nosso dock —
+ou seja, o Android reservava a faixa de status para o sistema em vez de dar essa altura para a
+janela do app, porque `Theme.PainelLivre.Aura` (usado por `LauncherActivity`, `DialerActivity` e
+`WeatherActivity`) não declarava `android:windowFullscreen`. `AuraScale.densityDpi` já lida bem
+com um `heightPx` menor que o físico (teste `screenScalesToTheBaseDrawing`, caso 1920×1024), mas
+isso só reescala o desenho para o espaço recebido — não devolve a faixa do sistema para o app.
+
+Correção: `android:windowFullscreen=true` em `Theme.PainelLivre.Aura` (`values/aura.xml`), a mesma
+técnica já usada no painel (`Theme.PainelLivre.Cluster`). Isso esconde a barra de status do
+Android e devolve essa altura à janela do app; a barra nativa inferior do carro não faz parte da
+nossa janela e continua aparecendo, como o critério de aceite pede. Não muda layout, margens nem
+paddings dentro de `activity_launcher.xml` — o problema era só a janela receber menos altura do
+que o display físico.
+
+### Validação
+
+`./gradlew testDebugUnitTest lintDebug assembleDebug` (sandbox com `GRADLE_USER_HOME=/tmp/painel-gradle`,
+`ANDROID_HOME=/home/paulo/Android/Sdk`): 261 testes JVM (258 da 0.5.4 + 3 novos:
+`CarCommandsTest.toggleAndFanStepArePureAndClamped`,
+`CarCommandsTest.modosDeArEVentilacaoViramToqueUnicoSemDialogoDeEscolha`,
+`AuraTest.homeThemeReclaimsTheStatusBarToFillTheScreen`), zero falhas; lint zero erros;
+`assembleDebug` concluído. Nenhum teste no carro nesta etapa (sem acesso); o AVD deste ambiente
+não tem `/dev/kvm`, então as capturas visuais das duas correções ficam pendentes para o Paulo
+conferir no carro ou num emulador com aceleração.

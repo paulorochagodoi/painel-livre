@@ -56,6 +56,10 @@ class CarCommands(private val port: Port) {
         fun parked(g: Gear) = g.real && g.fresh && g.value == 1
         fun valid(s: Spec, v: Double): Boolean = v.isFinite() && v >= s.min && v <= s.max &&
             kotlin.math.abs((v - s.min) / s.step - kotlin.math.round((v - s.min) / s.step)) < 0.000001
+        /** AUTO/A-C/recirculação/desembaçador/energia: um toque alterna, sem diálogo de escolha (issue #20). */
+        fun toggleValue(current: Boolean?): Double = if (current == true) 0.0 else 1.0
+        /** Ventilação sobe/desce um nível por toque, sem lista modal (issue #20). */
+        fun fanStep(current: Int?, up: Boolean): Double = ((current ?: 0) + if (up) 1 else -1).coerceIn(0, 7).toDouble()
         // IDs de leitura NÃO são reutilizados como setters. Pendências ficam sem endereço e bloqueadas.
         val CATALOG: List<Spec> = listOf(
             Spec("ac_temp_driver", "Temperatura motorista", 1000, 501219368, min=16.0, max=30.0, confirmed=true, readbackKnown=true),

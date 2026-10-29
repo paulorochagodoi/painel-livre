@@ -236,6 +236,16 @@ class AuraTest {
         assertEquals(40, PopoverAnchor.place(30, 400, 1280, 24, 40).caretX) // seta longe do canto redondo
     }
 
+    @Test fun homeThemeReclaimsTheStatusBarToFillTheScreen() {
+        // issue #22: sem windowFullscreen o Android reserva a barra de status e a Home não
+        // preenche a tela inteira; a barra nativa inferior do carro não é nossa, então não entra aqui.
+        val root = listOf(File("src/main/res"), File("app/src/main/res")).first { it.exists() }
+        val aura = File(root, "values/aura.xml").readText()
+        val style = Regex("(?s)<style name=\"Theme\\.PainelLivre\\.Aura\"[^>]*>.*?</style>").find(aura)
+            ?: error("Theme.PainelLivre.Aura não achado")
+        assertTrue(style.value.contains("<item name=\"android:windowFullscreen\">true</item>"))
+    }
+
     @Test fun screenScalesToTheBaseDrawing() {
         assertEquals(240, AuraScale.densityDpi(1920, 1080))
         assertEquals(160, AuraScale.densityDpi(1280, 720))

@@ -113,6 +113,31 @@ class CarCommandsTest {
         assertTrue(runtime.contains("commands.execute(key, value)"))
         assertTrue(runtime.contains("AppLog.i(\"Comando"))
     }
+    @Test fun toggleAndFanStepArePureAndClamped() {
+        assertEquals(1.0, CarCommands.toggleValue(null), 0.0)
+        assertEquals(1.0, CarCommands.toggleValue(false), 0.0)
+        assertEquals(0.0, CarCommands.toggleValue(true), 0.0)
+        assertEquals(1.0, CarCommands.fanStep(null, up = true), 0.0)
+        assertEquals(1.0, CarCommands.fanStep(0, up = true), 0.0)
+        assertEquals(3.0, CarCommands.fanStep(4, up = false), 0.0)
+        assertEquals(7.0, CarCommands.fanStep(7, up = true), 0.0) // não passa do máximo
+        assertEquals(0.0, CarCommands.fanStep(0, up = false), 0.0) // não passa do mínimo
+    }
+    @Test fun modosDeArEVentilacaoViramToqueUnicoSemDialogoDeEscolha() {
+        // issue #20: AUTO/A-C/recirculação/desembaçador/energia viram toggle; ventilação vira +/-.
+        val root = listOf(File("src/main/java"), File("app/src/main/java")).first { it.exists() }
+        val ui = File(root, "br/painellivre/ui/LauncherActivity.kt").readText()
+        assertTrue(ui.contains("mapOf(R.id.modeAuto to \"ac_auto\", R.id.modeAc to \"ac_compressor\", R.id.modeRecirc to \"ac_recirc\", R.id.modeDefrost to \"ac_defrost\")"))
+        assertTrue(ui.contains("setOnClickListener { toggleClimate(key) } }"))
+        assertTrue(ui.contains("R.id.fanDown).setOnClickListener { stepFan(up = false) }"))
+        assertTrue(ui.contains("R.id.fanUp).setOnClickListener { stepFan(up = true) }"))
+        assertTrue(ui.contains("R.id.popClimateState).setOnClickListener { toggleClimate(\"ac_on\") }"))
+        assertFalse(ui.contains("chooseCommand(\"ac_auto\")"))
+        assertFalse(ui.contains("chooseCommand(\"ac_on\")"))
+        assertFalse(ui.contains("chooseCommand(\"ac_fan\")"))
+        // Temperatura (16..30°) ainda é lista: não dá para virar toggle nem +/- de 1 passo.
+        assertTrue(ui.contains("R.id.popClimateDriver to \"ac_temp_driver\""))
+    }
     @Test fun todasAsHipotesesContinuamBloqueadasMesmoComChavesLigadas() = runBlocking {
         val p = Fake(); val c = CarCommands(p)
         for (spec in CarCommands.CATALOG.filter { !it.confirmed }) {

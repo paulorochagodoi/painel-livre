@@ -4,6 +4,26 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
+## 0.5.7 (versionCode 13), comandos instantâneos + bancos/porta-malas confirmados (29/10/2026)
+
+Branch `fix/ac-audio-tela-cheia`, PR #23 (sem merge). Paulo ainda sentia ~1 s entre toques na 0.5.6.
+
+- **Envio instantâneo:** `CarCommands.send`/`confirm` separados; `CarCommandRuntime` manda na hora e
+  confirma em background (sem esperar readback). Removido o rate limit de 1 s e o debounce 350 ms.
+  UI otimista em clima/bancos/temperatura/fan.
+- **Bancos confirmados no carro (P, ~16:00):** SET `1001` / `1125122068|2064|2076|2072`, fio
+  `1=off, 2=nível1, 3=nível2` (só 2 níveis; SET 0 erro). `onWire` 0→1,1→2,2→3; `max=2`;
+  `confirmed`+`readbackKnown`. Passageiro aquecer manda prep `6` antes do nível. GET Setting `1023`.
+- **Porta-malas OPEN confirmado:** SET `1001/1125122080=1` (GET `1001/0x2940001A`); só em P.
+  Fechar e vidros: sem contrato — bloqueados.
+- **Media play/pause:** confirmado via MediaSession (`com.byd.mediacenter`).
+- Captura: `~/Documentos/REA-BYD/logs/captura-bancos-1558.txt`.
+- **Prefs migração 2:** libera `car_command_seat_*` e `car_command_trunk` que a migração 1 gravou
+  como false (ainda eram hipótese); desligamentos de chaves já confirmadas (ex.: `ac_on`) preservados.
+- Fora deste pacote (próximo): #22 barra SystemUI immersive; Pequeno compacto; PanelMenuReader ADB
+  fallback; Units #25 (psi padrão).
+
+
 ## Não lançado — 0.5.6 (versionCode 12), achados do teste no carro da 0.5.5 (29/10/2026)
 
 Branch `fix/ac-audio-tela-cheia`, PR #23 (sem merge). Teste da v0.5.5-teste no carro de Paulo em

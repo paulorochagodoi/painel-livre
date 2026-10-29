@@ -35,15 +35,15 @@ Paulo; “hipótese” não pode ser habilitada até resolver a evidência. Os v
 | AUTO | 1000 | 501219352 / `0x1DE00018` | 1 desliga, 2 liga | confirmado na fonte E1/E2 |
 | Recirculação | 1000 | 501219355 / `0x1DE0001B` | 0 desliga, 1 liga | confirmado na fonte E2 |
 | Desembaçador dianteiro | 1000 | 501219362 / `0x1DE00022` | 0 desliga, 1 liga | confirmado na fonte E2 |
-| Aquecimento motorista | 1001 | 1125122068 / `0x43100014` | 2/3 níveis 1/2; desligar usa 1 e 0 | **hipótese operacional**, sequência E4 não validada |
-| Ventilação motorista | 1001 | 1125122064 / `0x43100010` | idem | **hipótese operacional**, E4 |
-| Aquecimento passageiro | 1001 | 1125122076 / `0x4310001C` | idem, precedido de 6 no fluxo observado | **hipótese operacional**, E4 |
-| Ventilação passageiro | 1001 | 1125122072 / `0x43100018` | 2/3 níveis 1/2; desligar usa 1 e 0 | **hipótese operacional**, E4 |
-| Porta-malas | 1001 | 1125122080 / `0x43100020` | booleano → 1 ou 3; sentido ainda sem corroboração suficiente | **hipótese**, E5; bloqueado |
+| Aquecimento motorista | 1001 | 1125122068 / `0x43100014` | lógico 0/1/2 → fio 1/2/3 (off/nível1/nível2); SET 0 erro | **confirmado no carro 29/10** (P); GET 1023/`0x4FA0000B` |
+| Ventilação motorista | 1001 | 1125122064 / `0x43100010` | idem | **confirmado no carro 29/10**; GET 1023/`0x4FA00008` |
+| Aquecimento passageiro | 1001 | 1125122076 / `0x4310001C` | idem + prep 6 antes do nível | **confirmado no carro 29/10**; GET 1023/`0x4FA00013` |
+| Ventilação passageiro | 1001 | 1125122072 / `0x43100018` | idem | **confirmado no carro 29/10**; GET 1023/`0x4FA00010` |
+| Porta-malas OPEN | 1001 | 1125122080 / `0x43100020` | `1` abre (GET 1001/`0x2940001A` 0→1); fechar desconhecido | **OPEN confirmado no carro 29/10 em P**; fechar bloqueado |
 | Vidros/teto | — | sem contrato de escrita validado para este carro | não definido | **hipótese**, bloqueado |
 | Bateria/carga | — | sem contrato validado; há setters de referência sem confirmação suficiente | não definido | **hipótese**, bloqueado |
 | Rádio FM/AM BYD | — | nenhum intent/API de sintonia confirmado nesta investigação | não definido | **hipótese**, bloqueado |
-| Reprodução Android | — | MediaSession / MediaController | play, pause, anterior, próxima conforme sessão | API Android, sem feature BYD; depende de sessão e permissão |
+| Reprodução Android | — | MediaSession / MediaController | play, pause, anterior, próxima conforme sessão | **confirmado no carro 29/10** (`com.byd.mediacenter`, KEYCODE_MEDIA_PLAY_PAUSE) |
 | Volume Android | — | AudioManager, STREAM_MUSIC | 0…máximo informado pela plataforma | API Android; não prova controle do amplificador/radio BYD |
 
 Passos de 0,5 °C são um requisito desejado, mas o setter encontrado recebe graus inteiros. **Não**
@@ -112,11 +112,13 @@ de valores saiu também de AUTO, A/C, recirculação, desembaçador e energia ge
 de um toque (`CarCommands.toggleValue`, lê o estado atual em `CarReadouts.climate` e manda o
 oposto) — e a ventilação ganhou botões +/- (`CarCommands.fanStep`) em vez da lista 0…7.
 O toque passa por `CarCommandRuntime` (fila única) e `CarCommands`: whitelist, limites inteiros,
-intervalo mínimo de 1000 ms, ambiente e chaves conferidos antes do envio. Partes móveis exigem P
-real e recente; bancos, vidros, teto, porta-malas e rádio BYD continuam bloqueados.
+ambiente e chaves conferidos antes do envio. Desde a 0.5.7 o envio é instantâneo (`send` na hora,
+`confirm` em background; sem rate limit de 1 s nem debounce 350 ms). Partes móveis exigem P real
+e recente. Bancos (aquecer/ventilar, 2 níveis, onWire 0→1/1→2/2→3) e porta-malas OPEN estão
+confirmados no carro (29/10); vidros, teto, fechar porta-malas e rádio BYD continuam bloqueados.
 Cada tentativa/envio/resultado entra no AppLog e o estado é relido sem repetir um envio inconclusivo.
-Os testes JVM cobrem migração e desligamento posterior, hipóteses, limites, P, frequência, log,
-releitura e o caminho da interface ao runtime. Emulador não comprova comportamento na firmware BYD.
+Os testes JVM cobrem migração e desligamento posterior, hipóteses, limites, P, log, releitura e o
+caminho da interface ao runtime. Emulador não comprova comportamento na firmware BYD.
 
 ## Achados do teste no carro em 29/10 (0.5.6)
 
@@ -130,15 +132,24 @@ confirmou certo. Três problemas apareceram e foram corrigidos na 0.5.6.
   decodificado. `ac_auto` e `ac_recirc` (recirculação já batia no carro) ganharam `readbackKnown=true`.
   `ac_on`, `ac_compressor` e `ac_defrost` continuam sem `onWire` (raw = lógico, 0/1, conforme a tabela
   "Catálogo de interoperabilidade" acima) — nenhum mapa novo foi inventado sem evidência.
-- **Toque durante um envio em andamento não é mais rejeitado** (pedido do Paulo). Toggles (AUTO, A/C,
-  recirculação, desembaçador, energia, banco, porta-malas) ficam numa fila de 1 desejo
-  (`LauncherActivity.pendingCommand`); ventilação e temperatura somam no alvo e só saem ~350 ms depois
-  do último toque (`stepCommand`), respeitando o limite de 1 envio/s do `CarCommands`. Nunca aparece
-  Toast/log de "ocupado".
-- **Temperatura, bancos e porta-malas ainda abriam diálogo/Toast de bloqueio.** Temperatura
-  (`ac_temp_driver`/`ac_temp_pass`) ganhou botões `tempDown`/`tempUp` no cartão da Climatização
-  (`stepTemp`, passo de 1° do próprio `Spec`); o atalho de temperatura no dock só mostra a leitura e
-  abre a Climatização (não manda comando). Bancos (`seat_heat_*`, `seat_vent_*`) e porta-malas
-  (`trunk`) viraram toque direto (`toggleSeat`, `toggleTrunk`) — continuam bloqueados pelo
-  `CarCommands` por serem hipótese (sem `dev`/`fid` ou sem P), só a UI deixou de abrir diálogo/Toast
-  antes de tentar. `chooseCommand` e todo `AlertDialog.setItems` de comando foram removidos.
+- **Toque durante um envio em andamento não é mais rejeitado** (pedido do Paulo). Na 0.5.6 a UI
+  enfileirava e a ventilação/temperatura debouncavam ~350 ms; na 0.5.7 o envio sai na hora
+  (`CarCommands.send` + `confirm` async), com fila de 1 só se já houver envio em voo, UI otimista e
+  sem rate limit de 1 s. Nunca aparece Toast/log de "ocupado".
+- **Temperatura, bancos e porta-malas** deixaram de abrir diálogo/Toast. Temperatura ganhou
+  `tempDown`/`tempUp`; bancos e porta-malas viraram `toggleSeat`/`toggleTrunk`. Na 0.5.7 os Specs
+  de bancos e porta-malas OPEN estão `confirmed=true` (evidência no carro 29/10); vidros e fechar
+  porta-malas seguem bloqueados. `chooseCommand` e todo `AlertDialog.setItems` de comando foram
+  removidos.
+
+## Achados do teste no carro em 29/10 (~16:00, 0.5.7)
+
+Confirmação guiada com Paulo assistindo (`~/Documentos/REA-BYD/logs/captura-bancos-1558.txt`):
+
+- Bancos: SET `1001`/`1125122068|2064|2076|2072`; fio `1=off, 2=nível1, 3=nível2` (só 2 níveis;
+  SET 0 → erro `ffffd8e2`). Readback GET Setting `1023` / `0x4FA0000B|08|13|10`. Passageiro aquecer:
+  prep `6` antes do nível.
+- Porta-malas OPEN: SET `1001/1125122080=1` (GET `1001/0x2940001A` 0→1); só em P
+  (`gear` `1011/555745336 == 1`). Fechar: desconhecido — não implementar.
+- Vidros: readback only (`1001/0x38800018` posição, `0x38800038` estado); sem escrita.
+- Media play/pause: `KEYCODE_MEDIA_PLAY_PAUSE` em `com.byd.mediacenter` confirmado.

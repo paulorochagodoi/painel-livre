@@ -60,14 +60,28 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
         sp.edit().putBoolean(KEY_PANEL_MENU_FOLLOW, true).putInt("panel_menu_migration", 1).commit()
     }
 
-    /** Migração única autorizada na 0.5.4. Desligamentos posteriores são preservados. */
+    /** Migração 1 (0.5.4): liga o mestre e grava cada chave conforme confirmed na época.
+     * Migração 2 (0.5.7): bancos/porta-malas confirmados no carro — a migração 1 tinha
+     * gravado false neles por serem hipótese; ninguém pôde desligá-los depois (Diagnóstico
+     * só habilita confirmed), então é seguro liberar. Desligamentos de chaves já confirmadas
+     * (ac_*, media_*) continuam preservados. */
     internal fun migrateCommands() {
-        if (sp.getInt("car_commands_migration", 0) >= 1) return
-        val e = sp.edit().putBoolean("car_commands_enabled", true)
-        br.painellivre.car.CarCommands.CATALOG.forEach {
-            e.putBoolean("car_command_${it.key}", it.confirmed)
+        val ver = sp.getInt("car_commands_migration", 0)
+        if (ver < 1) {
+            val e = sp.edit().putBoolean("car_commands_enabled", true)
+            br.painellivre.car.CarCommands.CATALOG.forEach {
+                e.putBoolean("car_command_${it.key}", it.confirmed)
+            }
+            e.putInt("car_commands_migration", 1).commit()
         }
-        e.putInt("car_commands_migration", 1).commit()
+        if (sp.getInt("car_commands_migration", 0) < 2) {
+            val newly = listOf(
+                "seat_heat_driver", "seat_vent_driver", "seat_heat_pass", "seat_vent_pass", "trunk",
+            )
+            val e = sp.edit()
+            newly.forEach { e.putBoolean("car_command_$it", true) }
+            e.putInt("car_commands_migration", 2).commit()
+        }
     }
     val carCommandsEnabled: Boolean get() = sp.getBoolean("car_commands_enabled", true)
     fun carCommandAllowed(key: String): Boolean =

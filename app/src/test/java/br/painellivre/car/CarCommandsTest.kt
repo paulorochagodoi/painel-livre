@@ -46,23 +46,24 @@ class CarCommandsTest {
         val temp = CarCommands.CATALOG.first { it.key == "ac_temp_driver" }
         assertTrue(CarCommands.valid(temp, 16.0)); assertTrue(CarCommands.valid(temp, 30.0))
     }
-    @Test fun sendsOnlyWhitelistedAddressReadsBackAndRateLimits() = runBlocking {
+    @Test fun sendsOnlyWhitelistedAddressReadsBackWithoutRateLimit() = runBlocking {
+        // 0.5.7: sem limite de 1 envio/s — dois sends seguidos devem ir (confirm separado).
         val p = Fake(); val c = CarCommands(p)
         assertEquals("Confirmado pelo estado relido", c.execute("ac_temp_driver", 22.0))
         assertEquals(listOf("service call autoservice 6 i32 1000 i32 501219368 i32 22"), p.sends)
         assertEquals(1, p.reads)
-        assertTrue(c.execute("ac_temp_pass", 23.0).contains("aguarde"))
-        p.clock += 1000; p.actual = null
+        p.actual = null
         assertTrue(c.execute("ac_temp_pass", 23.0).contains("Não confirmado"))
         assertEquals(2, p.sends.size)
+        assertFalse(p.logs.any { it.contains("aguarde") })
     }
     @Test fun rejectsUnknownEnvironmentAndHypotheses() = runBlocking {
         val p = Fake(); val c = CarCommands(p)
         p.environment = false; c.execute("ac_temp_driver", 22.0)
-        p.environment = true; c.execute("seat_heat_driver", 2.0)
+        p.environment = true; c.execute("win_fl", 10.0) // vidros: ainda sem escrita confirmada
         assertTrue(p.sends.isEmpty())
     }
-    @Test fun movementNeedsFreshRealParkAndStillBlocksUnprovenSetter() = runBlocking {
+    @Test fun movementNeedsFreshRealParkThenTrunkOpens() = runBlocking {
         val p = Fake(); val c = CarCommands(p)
         for (g in listOf(CarCommands.Gear(null,true,true), CarCommands.Gear(2,true,true),
             CarCommands.Gear(3,true,true), CarCommands.Gear(4,true,true),
@@ -71,16 +72,18 @@ class CarCommandsTest {
             assertFalse(CarCommands.parked(g))
             assertTrue(c.execute("trunk", 1.0).contains("P não confirmado"))
         }
-        p.gear = CarCommands.Gear(1,true,true)
-        assertTrue(CarCommands.parked(p.gear))
-        assertTrue(c.execute("trunk", 1.0).contains("ainda não confirmado"))
         assertTrue(p.sends.isEmpty())
+        p.gear = CarCommands.Gear(1,true,true); p.actual = 1.0
+        assertTrue(CarCommands.parked(p.gear))
+        assertEquals("Confirmado pelo estado relido", c.execute("trunk", 1.0))
+        assertEquals(listOf("service call autoservice 6 i32 1001 i32 1125122080 i32 1"), p.sends)
     }
-    @Test fun ambiguousSendIsNotRetriedAndReadbackStillRuns() = runBlocking {
+    @Test fun ambiguousSendIsNotRetriedAndSkipsConfirm() = runBlocking {
+        // 0.5.7: se o send falhou, não há confirm/readback — não inventar segundo envio.
         val p = Fake(); p.sent = false
-        CarCommands(p).execute("ac_temp_driver",22.0)
-        assertEquals(1,p.sends.size); assertEquals(1,p.reads)
-        assertTrue(p.logs.any { it.contains("inconclusiva") })
+        val msg = CarCommands(p).execute("ac_temp_driver",22.0)
+        assertEquals(1,p.sends.size); assertEquals(0,p.reads)
+        assertTrue(msg.contains("inconclusiva"))
     }
     @Test fun autoEncodingSendsWireValueAndDecodesReadbackBeforeConfirming() = runBlocking {
         // Bug visto no carro em 29/10: o readback é o valor cru do fio (1=desliga, 2=liga para AUTO);
@@ -126,7 +129,8 @@ class CarCommandsTest {
         assertFalse(ui.contains("Enviar ao carro?"))
         assertTrue(ui.contains("CarCommandRuntime.execute"))
         val runtime = File(root, "br/painellivre/car/CarCommandRuntime.kt").readText()
-        assertTrue(runtime.contains("commands.execute(key, value)"))
+        assertTrue(runtime.contains("commands.send(key, value)"))
+        assertTrue(runtime.contains("commands.confirm("))
         assertTrue(runtime.contains("AppLog.i(\"Comando"))
     }
     @Test fun toggleAndFanStepArePureAndClamped() {
@@ -149,7 +153,7 @@ class CarCommandsTest {
         assertEquals(16.0, CarCommands.stepValue(temp, null, up = false), 0.0) // sem leitura: parte do mínimo
         val seat = CarCommands.CATALOG.first { it.key == "seat_heat_driver" }
         assertEquals(1.0, CarCommands.stepValue(seat, 0.0, up = true), 0.0)
-        assertEquals(3.0, CarCommands.stepValue(seat, 3.0, up = true), 0.0) // não passa do máximo
+        assertEquals(2.0, CarCommands.stepValue(seat, 2.0, up = true), 0.0) // max=2 níveis no carro
     }
     @Test fun modosDeArEVentilacaoViramToqueUnicoSemDialogoDeEscolha() {
         // issue #20: AUTO/A-C/recirculação/desembaçador/energia viram toggle; ventilação vira +/-.
@@ -183,20 +187,60 @@ class CarCommandsTest {
         assertFalse(ui.contains(".setItems("))
         assertFalse(ui.contains("Comando ainda não confirmado; controle bloqueado"))
     }
-    @Test fun toquesRapidosNuncaMostramRejeicaoEFicamEmFilaOuDebounce() {
-        // Pedido do Paulo no teste no carro de 29/10: toque durante um comando em andamento nunca é
-        // rejeitado. Toggle entra numa fila de 1 (o último desejo vence); ventilação/temperatura
-        // acumulam o alvo e só saem ~350 ms depois do último toque.
+    @Test fun toquesRapidosNuncaMostramRejeicaoNemDebounceAntesDoEnvio() {
+        // 0.5.7: envio na hora; fila só se send in-flight; sem delay(350); UI otimista.
         val root = listOf(File("src/main/java"), File("app/src/main/java")).first { it.exists() }
         val ui = File(root, "br/painellivre/ui/LauncherActivity.kt").readText()
+        val runtime = File(root, "br/painellivre/car/CarCommandRuntime.kt").readText()
         assertFalse(ui.contains("Aguarde o comando anterior"))
         assertFalse(ui.contains("rejeitado, outro comando em andamento"))
+        assertFalse(ui.contains("delay(350)"))
+        assertFalse(ui.contains("pendingStepTarget"))
         assertTrue(ui.contains("private var pendingCommand: Pair<String, Double>? = null"))
-        assertTrue(ui.contains("if (commandBusy) { pendingCommand = key to value; return }"))
-        assertTrue(ui.contains("pendingCommand?.let { (k, v) -> pendingCommand = null; command(k, v) }"))
-        assertTrue(ui.contains("private val pendingStepTarget = mutableMapOf<String, Double>()"))
-        assertTrue(ui.contains("stepDebounceJobs[key]?.cancel()"))
-        assertTrue(ui.contains("delay(350)"))
+        assertTrue(ui.contains("optimisticClimate"))
+        assertTrue(runtime.contains("commands.send(key, value)"))
+        assertTrue(runtime.contains("commands.confirm("))
+        assertFalse(File(root, "br/painellivre/car/CarCommands.kt").readText().contains("aguarde um segundo"))
+    }
+
+    @Test fun seatOnWireMapsLogicalToWireAndPassengerHeatPrepsSix() = runBlocking {
+        // Confirmado no carro 29/10 ~16:00: fio 1=off, 2=nível1, 3=nível2; pass heat manda 6 antes.
+        val heat = CarCommands.CATALOG.first { it.key == "seat_heat_driver" }
+        assertEquals(1, CarCommands.toWire(heat, 0.0))
+        assertEquals(2, CarCommands.toWire(heat, 1.0))
+        assertEquals(3, CarCommands.toWire(heat, 2.0))
+        assertEquals(0.0, CarCommands.fromWire(heat, 1.0), 0.0)
+        assertEquals(1.0, CarCommands.fromWire(heat, 2.0), 0.0)
+        assertEquals(2.0, CarCommands.fromWire(heat, 3.0), 0.0)
+        assertEquals(2.0, heat.max, 0.0)
+        assertTrue(heat.confirmed && heat.readbackKnown)
+        val p = Fake(); p.actual = 2.0
+        val c = CarCommands(p)
+        assertEquals("Confirmado pelo estado relido", c.execute("seat_heat_driver", 1.0))
+        assertEquals(listOf("service call autoservice 6 i32 1001 i32 1125122068 i32 2"), p.sends)
+        p.sends.clear(); p.actual = 2.0
+        assertEquals("Confirmado pelo estado relido", c.execute("seat_heat_pass", 1.0))
+        assertEquals(
+            listOf(
+                "service call autoservice 6 i32 1001 i32 1125122076 i32 6",
+                "service call autoservice 6 i32 1001 i32 1125122076 i32 2",
+            ),
+            p.sends,
+        )
+    }
+
+    @Test fun trunkOpenOnlyInParkSendsOneAndWindowsStayBlocked() = runBlocking {
+        val p = Fake(); val c = CarCommands(p)
+        p.gear = CarCommands.Gear(4, true, true) // D
+        assertTrue(c.execute("trunk", 1.0).contains("câmbio P"))
+        assertTrue(p.sends.isEmpty())
+        p.gear = CarCommands.Gear(1, true, true); p.actual = 1.0
+        assertEquals("Confirmado pelo estado relido", c.execute("trunk", 1.0))
+        assertEquals(listOf("service call autoservice 6 i32 1001 i32 1125122080 i32 1"), p.sends)
+        p.sends.clear()
+        assertTrue(c.execute("trunk", 0.0).contains("fora dos limites")) // fechar sem contrato
+        assertTrue(c.execute("win_fl", 10.0).contains("ainda não confirmado"))
+        assertTrue(p.sends.isEmpty())
     }
     @Test fun todasAsHipotesesContinuamBloqueadasMesmoComChavesLigadas() = runBlocking {
         val p = Fake(); val c = CarCommands(p)

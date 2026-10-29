@@ -150,7 +150,13 @@ object CarReadouts {
             val decoded = if (spec != null) CarCommands.fromWire(spec, raw) else raw
             return if (decoded == 1.0) true else if (decoded == 0.0) false else null
         }
-        fun seat(key: String): Int? = s.value(key)?.toInt()?.let { (it - 1).coerceAtLeast(0) }
+        fun seat(key: String): Int? {
+            val raw = s.value(key) ?: return null
+            val spec = CarCommands.CATALOG.firstOrNull { it.key == key }
+            // Fio 1=off, 2=nível1, 3=nível2 → lógico 0/1/2 via onWire (confirmado no carro 29/10).
+            return if (spec != null && spec.onWire.isNotEmpty()) CarCommands.fromWire(spec, raw).toInt()
+            else raw.toInt().let { (it - 1).coerceAtLeast(0) }
+        }
         val c = Climate(
             driverC = s.value("ac_temp_driver"),
             passengerC = s.value("ac_temp_pass"),

@@ -4,7 +4,10 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
-## Não lançado — branch `fix/ac-audio-tela-cheia`, issues #20 e #22 (29/10/2026)
+## Não lançado — 0.5.5 (versionCode 11), issues #20 #21 #22 (29/10/2026)
+
+Branch `fix/ac-audio-tela-cheia`: Claude Code (#20 clima + #22 tela cheia) + Codex (#21 toast de áudio),
+com ai-memory nas duas sessões. Pré-release de teste; **não mesclar na main sem ok do Paulo**.
 
 Correções pedidas pelo Paulo depois da foto no carro da 0.5.4; versão ainda em 0.5.4
 (`versionCode` 10) — o bump para 0.5.5/11 fica para depois do merge com a correção do Codex
@@ -32,6 +35,19 @@ Correções pedidas pelo Paulo depois da foto no carro da 0.5.4; versão ainda e
 - Nenhum acesso ao carro nesta etapa; validação só local (`./gradlew testDebugUnitTest lintDebug
   assembleDebug`, zero falhas, lint zero erros). Teste físico de ambas as correções continua
   pendente — ver `docs/PLANO.md`.
+
+- Aura, mídia/rádio: removidos os Toasts de releitura de sessão/volume e de ausência de
+  confirmação de sessão após tocar/pausar, próxima, anterior e volume. Ícones e volume continuam
+  atualizados. Rejeições e falhas reais continuam visíveis e registradas no Log do app.
+- Comandos de mídia não alteram mais o texto de estado da janela de climatização.
+- Regressão: `CommandFeedbackTest` cobre silêncio dos retornos rotineiros, preservação de erros,
+  comportamento de clima e integração da política na `LauncherActivity`.
+
+Regressão confirmada contra a Activity original (1 falha esperada em 4 testes direcionados).
+Validação: 262 testes JVM debug (4 novos), zero falhas; `lintRelease` sem erros (80 avisos);
+`assembleDebug` concluído. Emulador isolado: volume 5 → 6 → 5 e play sem sessão, sem Toast
+rotineiro; próxima/anterior ficam desabilitados sem sessão. Captura em
+`docs/telas/aura-054-audio-sem-toast.png`. Rádio BYD e sessão real pendentes no carro.
 
 ## [0.5.4] — 2026-10-24 (teste)
 

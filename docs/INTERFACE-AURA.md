@@ -347,3 +347,22 @@ que o display físico.
 `assembleDebug` concluído. Nenhum teste no carro nesta etapa (sem acesso); o AVD deste ambiente
 não tem `/dev/kvm`, então as capturas visuais das duas correções ficam pendentes para o Paulo
 conferir no carro ou num emulador com aceleração.
+
+## Correção #21 — retorno dos comandos de áudio (29/10/2026)
+
+`LauncherActivity.command` mostrava o retorno de `CarCommandRuntime.execute` em um Toast longo
+após cada comando, inclusive mídia, e também escrevia esse retorno em `popClimateState`.
+`CommandFeedback` agora suprime os retornos rotineiros de mídia (sessão relida, volume relido,
+sem confirmação de sessão Android). Tocar/pausar, próxima, anterior e volume continuam pelo
+mesmo caminho de execução, com releitura, limite de frequência e log preservados. Os ícones e
+o indicador de volume continuam refletindo o estado disponível. Falhas/rejeições mantêm aviso;
+comandos de mídia não escrevem no estado do clima. Sem API nova de rádio ou fonte.
+
+Regressão JVM: `CommandFeedbackTest`, incluindo integração com a Activity. Conferência de rádio
+BYD no carro ainda depende do dono.
+
+Validação local: 262 testes debug, zero falhas; lintRelease zero erros e 80 avisos; build debug
+concluído. Emulador Android 10 isolado (5590): volume 5 → 6 → 5, play sem sessão sem Toast;
+próxima/anterior desabilitados sem sessão. Captura: `docs/telas/aura-054-audio-sem-toast.png`.
+Uma captura estática não demonstra a ausência temporal de Toast; a política e sua ligação ao
+caminho da Activity são cobertas pelos testes JVM.

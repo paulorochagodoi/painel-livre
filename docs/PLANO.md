@@ -574,3 +574,14 @@ A issue #21 (toast de áudio/rádio, mesma rodada de fotos) é do Codex, branch 
   (3 novos), zero falhas, lint zero erros. **Sem acesso ao carro nesta etapa** — conferir no
   próximo teste físico: toque único em AUTO/A/C/recirc/desemb./energia sem diálogo, +/- da
   ventilação, e a Home ocupando a tela toda acima da barra nativa do carro.
+
+## Correção #21 — áudio sem mensagens rotineiras (29/10/2026)
+
+- [x] Suprimir Toast de releitura de mídia/volume e de sessão sem confirmação na Aura.
+- [x] Preservar ícones, volume, execução, log, bloqueios e avisos de falha/rejeição.
+- [x] Impedir que a mídia escreva seu retorno no estado da janela de climatização.
+- [x] Regressões JVM de feedback e integração com `LauncherActivity`.
+- [ ] Conferir no carro: tocar/pausar, próxima, anterior e volume sem mensagem rotineira,
+  com o estado visual atualizado quando houver sessão. Testar também rádio BYD sem sessão Android.
+
+Escopo apenas #21; #20 e #22 seguem em outro branch. Versão mantida em 0.5.4 / código 10.

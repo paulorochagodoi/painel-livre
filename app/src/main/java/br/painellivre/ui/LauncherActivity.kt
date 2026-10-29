@@ -830,12 +830,15 @@ class LauncherActivity : AppCompatActivity() {
             return
         }
         commandBusy = true
-        popViews[PopoverState.Id.CLIMATE]?.findViewById<TextView>(R.id.popClimateState)?.text = "Aguarde…"
+        val media = br.painellivre.ui.aura.CommandFeedback.isMedia(key)
+        if (!media) popViews[PopoverState.Id.CLIMATE]?.findViewById<TextView>(R.id.popClimateState)?.text = "Aguarde…"
         lifecycleScope.launch {
             try {
                 val message = br.painellivre.car.CarCommandRuntime.execute(this@LauncherActivity, key, value)
-                Toast.makeText(this@LauncherActivity, message, Toast.LENGTH_LONG).show()
-                popViews[PopoverState.Id.CLIMATE]?.findViewById<TextView>(R.id.popClimateState)?.text = message
+                if (br.painellivre.ui.aura.CommandFeedback.showMessage(key, message)) {
+                    Toast.makeText(this@LauncherActivity, message, Toast.LENGTH_LONG).show()
+                }
+                if (!media) popViews[PopoverState.Id.CLIMATE]?.findViewById<TextView>(R.id.popClimateState)?.text = message
                 renderVolume()
             } finally { commandBusy = false }
         }

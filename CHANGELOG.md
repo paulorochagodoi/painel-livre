@@ -4,6 +4,21 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
+## Não lançado — correção #21 (base 0.5.4, sem alterar versão)
+
+- Aura, mídia/rádio: removidos os Toasts de releitura de sessão/volume e de ausência de
+  confirmação de sessão após tocar/pausar, próxima, anterior e volume. Ícones e volume continuam
+  atualizados. Rejeições e falhas reais continuam visíveis e registradas no Log do app.
+- Comandos de mídia não alteram mais o texto de estado da janela de climatização.
+- Regressão: `CommandFeedbackTest` cobre silêncio dos retornos rotineiros, preservação de erros,
+  comportamento de clima e integração da política na `LauncherActivity`.
+
+Regressão confirmada contra a Activity original (1 falha esperada em 4 testes direcionados).
+Validação: 262 testes JVM debug (4 novos), zero falhas; `lintRelease` sem erros (80 avisos);
+`assembleDebug` concluído. Emulador isolado: volume 5 → 6 → 5 e play sem sessão, sem Toast
+rotineiro; próxima/anterior ficam desabilitados sem sessão. Captura em
+`docs/telas/aura-054-audio-sem-toast.png`. Rádio BYD e sessão real pendentes no carro.
+
 ## [0.5.4] — 2026-10-24 (teste)
 
 - Painel: cartões compactos na coluna x 170–760/y 185–520 (referência 1920×720),

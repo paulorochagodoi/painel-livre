@@ -556,3 +556,14 @@ não houve teste no carro nesta rodada.
   seletor manual em Ajustes; obter AppLog com bruto/origem/erro e desenhos aplicados.
 - Comandos enviam ao tocar; chaves com evidência ligadas por migração única. Conferir uma função
   por vez no carro parado; hipóteses continuam bloqueadas. Não houve acesso ao carro nesta etapa.
+
+## Correção #21 — áudio sem mensagens rotineiras (29/10/2026)
+
+- [x] Suprimir Toast de releitura de mídia/volume e de sessão sem confirmação na Aura.
+- [x] Preservar ícones, volume, execução, log, bloqueios e avisos de falha/rejeição.
+- [x] Impedir que a mídia escreva seu retorno no estado da janela de climatização.
+- [x] Regressões JVM de feedback e integração com `LauncherActivity`.
+- [ ] Conferir no carro: tocar/pausar, próxima, anterior e volume sem mensagem rotineira,
+  com o estado visual atualizado quando houver sessão. Testar também rádio BYD sem sessão Android.
+
+Escopo apenas #21; #20 e #22 seguem em outro branch. Versão mantida em 0.5.4 / código 10.

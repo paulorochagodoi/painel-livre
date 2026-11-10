@@ -1,5 +1,28 @@
 # Histórico de versões
 
+## Não lançado — issues #6, #16 e #24 (sem mudança de versão)
+
+Ainda `versionName` 0.5.7 / `versionCode` 13. Não mesclar sem o Paulo conferir no carro.
+
+- **Telemetria só leitura** pelo `autoservice` (transações 5 e 7), o mesmo canal do `sendInfo`.
+  Bateria, tanque, alcance e portas entram no cartão da central e, sem alerta, numa linha no painel.
+  Se o endereço principal vier `0xffffd8e5` ou outra sentinela, o valor fica indisponível — nunca zero
+  nem "fechado". O SOC ainda tenta o fid CAN e o BMS em décimos (`0x44700028`) só quando o principal
+  não tem valor. Porta, trava e tampa não têm endereço alternativo.
+- A leitura e o aviso no painel passam a vir ligados. A migração única liga também quem estava no
+  padrão antigo (desligado); desligar de novo permanece. O modo de debug aceita
+  `soc=1014:0x4A505038:7` (transação 6 é ignorada) e grava no log a linha
+  `Telemetria: bateria … · tanque … · portas …`.
+- **Rota no painel:** Maps e Waze ficam na central. O `ClusterActivity` desenha seta, distância e
+  próxima manobra a partir da notificação (`EXTRA_TEXT_LINES` inclusive). Mover o app para o display
+  sem toque só com o interruptor experimental, desligado por padrão.
+- Comandos da 0.5.7 (clima, bancos, porta-malas, `send` sem esperar releitura, `sendInfo` 0/16/18/35)
+  seguem iguais. Vidros e teto continuam sem escrita.
+- Testes JVM: 274 passando antes da mudança; 291 passando depois (0 falhas nos dois). APK debug
+  `PainelLivre-v0.5.7-debug.apk` compilado. Sem teste no carro.
+
+
+
 Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre, O=Uso pessoal, C=BR`,
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).

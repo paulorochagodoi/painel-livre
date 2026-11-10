@@ -92,6 +92,24 @@ class NavParserTest {
         assertNull(NavParser.parse("Waze", "Toque para abrir", null, null))
     }
 
+    @Test fun wazeTextLinesAndTightMeters() {
+        val p = NavParser.parse("Waze", null, null, null, listOf("Em 200m vire à esquerda na Rua da Consolação"))!!
+        assertEquals(Maneuver.LEFT, p.maneuver)
+        assertEquals(200, p.distanceMeters)
+        assertEquals("Rua da Consolação", p.street)
+    }
+
+    @Test fun commutePromptIsNotAManeuver() {
+        assertNull(NavParser.parse("Indo para o trabalho?", "11 min · Não", null, null))
+    }
+
+    @Test fun mapsDistanceAndStreetStillShowWithoutAVerb() {
+        val p = NavParser.parse("400 m", "Rua Augusta", null, null)!!
+        assertEquals(400, p.distanceMeters)
+        assertEquals("Rua Augusta", p.street)
+        assertEquals(Maneuver.UNKNOWN, p.maneuver)
+    }
+
     @Test fun thousandsSeparatorMeters() {
         assertEquals(1200, NavParser.toMeters("1.200", "m"))
         assertEquals(1500, NavParser.toMeters("1,5", "km"))

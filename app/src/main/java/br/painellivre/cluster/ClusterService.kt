@@ -152,7 +152,7 @@ class ClusterService : LifecycleService() {
 
     private suspend fun show() = op.withLock {
         val desiredPackage = PanelContent.externalPackage(prefs.panelContent, prefs.navApp,
-            br.painellivre.nav.native.NativeNavigation.route.value != null)
+            br.painellivre.nav.native.NativeNavigation.route.value != null, prefs.mirrorNavApp)
         // O StateFlow e o pedido explícito podem chegar juntos; nunca ativar duas vezes.
         if (_status.value is ClusterStatus.Active && externalPackage == desiredPackage) return@withLock
         _status.value = ClusterStatus.Working

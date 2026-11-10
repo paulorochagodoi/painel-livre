@@ -28,8 +28,13 @@ O diagnóstico anterior da issue local contém algumas respostas reais; isso nã
   classe. Sem nome conhecido: padrão CAN-FD (o mesmo que o SealNav usa neste carro) ou o alternativo CAN.
 - Uma varredura = um único comando de shell, com `echo @@PL<i>` antes de cada leitura (uma leitura que não
   imprime nada não desloca as outras). Intervalo 5/10/30 s (padrão 10), **só enquanto** a tela inicial ou o
-  aviso do painel está visível e a opção **Ajustes → Dados do carro → Ler dados do carro** está ligada
-  (desligada por padrão).
+  aviso do painel está visível. **Ajustes → Dados do carro → Ler dados do carro** vem ligada (migração única
+  também liga quem ainda estava no padrão antigo; desligar depois permanece).
+- Se o endereço principal não tem valor, o plano tenta o fid do outro protocolo (CAN ↔ CAN-FD) e, no SOC,
+  `1014/0x44700028` em décimos (0–100 direto, 101–1000 ÷ 10). Porta, trava e tampa não têm alternativa.
+- Modo de debug → **Endereços de leitura**: `chave=dispositivo:fid:transação`, só chaves do catálogo e só
+  transação 5 ou 7. Ex.: `soc=1014:0x4A505038:7`. Com o debug desligado o texto é ignorado. O log
+  (`Telemetria: bateria …`) muda só quando o resumo muda.
 
 ## Valores que não são dados
 
@@ -81,7 +86,7 @@ Portas dianteiras: o SealNav troca `0x29400008`/`0x2940000A` quando o carro é d
 
 | Chave | Dado | dev / fid | tx | Unidade | Confiança | Nome |
 |---|---|---|---|---|---|---|
-| `soc` | Bateria (SOC) | 1014 / `0x4A505038` (CAN: 1033543720) | 7 | % (float) | público + SealNav lê o mesmo | `Statistic.STATISTIC_ELEC_PERCENTAGE` |
+| `soc` | Bateria (SOC) | 1014 / `0x4A505038` (CAN: 1033543720; se falhar, BMS `0x44700028` em décimos) | 7 (BMS: 5) | % | público + SealNav lê o mesmo | `Statistic.STATISTIC_ELEC_PERCENTAGE` |
 | `ev_range` | Autonomia elétrica | 1014 / `0x4A50203E` (CAN: 1033203771) | 5 | km | público + SealNav | `Statistic.STATISTIC_ELEC_DRIVING_RANGE` |
 | `fuel_range` | Autonomia a combustível | 1014 / `0x4A504038` | 5 | km | público + SealNav | `Statistic.STATISTIC_FUEL_DRIVING_RANGE` |
 | `fuel_pct` | Combustível | 1014 / `0x4A507040` | 5 | % | público | `Statistic.STATISTIC_FUEL_PERCENTAGE` |

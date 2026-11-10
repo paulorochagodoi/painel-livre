@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="panel_content_entries">
-        <item>Mapa integrado (manobras, sem linha da rota)</item>
-        <item>App de navegação (experimental)</item>
+        <item>Mapa integrado (manobras do Maps e do Waze)</item>
+        <item>App de navegação no painel (experimental, sem toque)</item>
     </string-array>
     <string-array name="panel_content_values">
         <item>integrated</item>

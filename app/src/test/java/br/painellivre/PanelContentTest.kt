@@ -10,8 +10,11 @@ class PanelContentTest {
         assertNull(PanelContent.externalPackage("invalid", "waze"))
     }
     @Test fun onlyKnownNavigationPackages() {
-        assertEquals(PanelContent.WAZE, PanelContent.externalPackage("navigation", "waze"))
-        assertEquals(PanelContent.MAPS, PanelContent.externalPackage("navigation", "anything"))
+        // Issue #24: sem o interruptor, o Waze não vai para o display sem toque.
+        assertNull(PanelContent.externalPackage("navigation", "waze"))
+        assertNull(PanelContent.externalPackage("navigation", "maps"))
+        assertEquals(PanelContent.WAZE, PanelContent.externalPackage("navigation", "waze", mirrorNavApp = true))
+        assertEquals(PanelContent.MAPS, PanelContent.externalPackage("navigation", "anything", mirrorNavApp = true))
     }
     @Test fun explicitRouteRespectsManualMode() {
         assertTrue(PanelContent.showOnRouteRequest("nav"))

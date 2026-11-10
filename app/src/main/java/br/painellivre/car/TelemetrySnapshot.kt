@@ -26,7 +26,16 @@ data class TelemetrySnapshot(
         ERROR("Falha ao ler os dados do carro"),
     }
 
-    data class Reading(val signal: Signal, val fid: Int, val reply: Autoservice.Reply, val value: Double?) {
+    data class Reading(
+        val signal: Signal,
+        val fid: Int,
+        val reply: Autoservice.Reply,
+        val value: Double?,
+        val dev: Int = signal.dev,
+        val tx: Int = signal.tx,
+        /** true quando o valor veio de um endereço alternativo, não do principal. */
+        val alternate: Boolean = false,
+    ) {
         /** Texto para o registro do debug: endereço, resposta crua e valor. */
         fun debugLine(): String {
             val raw = when (reply) {
@@ -35,9 +44,12 @@ data class TelemetrySnapshot(
                 Autoservice.Reply.NoService -> "sem serviço"
                 is Autoservice.Reply.Garbled -> "sem resposta${if (reply.text.isNotBlank()) ": ${reply.text}" else ""}"
             }
-            val shown = value?.let { TelemetryText.format(signal.kind, it) } ?: "indisponível"
-            return "${signal.key} [${signal.dev}/${Autoservice.hex(fid)} tx${signal.tx}] ${signal.label}: $raw → $shown (${signal.confidence.label})"
+            val shown = value?.let { TelemetryText.format(if (alternate) kindUsed() else signal.kind, it) } ?: "indisponível"
+            val via = if (alternate) " · endereço alternativo" else ""
+            return "${signal.key} [$dev/${Autoservice.hex(fid)} tx$tx] ${signal.label}: $raw → $shown (${signal.confidence.label})$via"
         }
+
+        private fun kindUsed(): Kind = signal.alternates.firstOrNull { it.fid == fid && it.tx == tx }?.kind ?: signal.kind
     }
 
     fun value(key: String): Double? = readings[key]?.value
@@ -105,6 +117,7 @@ data class TelemetrySnapshot(
                 Kind.GUN -> v in 1..5
                 Kind.BMS -> v in 0..255
                 Kind.PERCENT -> v in 0..100
+                Kind.PERCENT_TENTHS -> v in 0..1000
                 Kind.KM -> v in 0..3000
                 Kind.TEMP -> v in -40..120
                 Kind.TEMP_SET -> v in 14..36
@@ -118,11 +131,23 @@ data class TelemetrySnapshot(
                 Kind.RAW -> true
                 Kind.PERCENT_FLOAT, Kind.KW_FLOAT, Kind.VOLT_FLOAT -> false
             }
-            return if (ok) v.toDouble() else null
+            if (!ok) return null
+            return if (kind == Kind.PERCENT_TENTHS && v > 100) v / 10.0 else v.toDouble()
         }
 
-        fun reading(signal: Signal, fid: Int, reply: Autoservice.Reply): Reading =
-            Reading(signal, fid, reply, (reply as? Autoservice.Reply.Value)?.let { decode(signal.kind, it.word) })
+        fun reading(
+            signal: Signal,
+            fid: Int,
+            reply: Autoservice.Reply,
+            dev: Int = signal.dev,
+            tx: Int = signal.tx,
+            kind: Kind = signal.kind,
+            alternate: Boolean = false,
+        ): Reading = Reading(
+            signal, fid, reply,
+            (reply as? Autoservice.Reply.Value)?.let { decode(kind, it.word) },
+            dev, tx, alternate,
+        )
     }
 }
 
@@ -135,7 +160,7 @@ object TelemetryText {
         Kind.LOCK -> if (v == 2.0) "trancado" else "destrancado"
         Kind.GUN -> when (v.toInt()) { 1 -> "sem cabo"; 2 -> "cabo AC"; 3 -> "cabo DC"; 4 -> "cabo AC+DC"; else -> "V2L" }
         Kind.BMS -> when (v.toInt()) { 1 -> "carregando"; 2 -> "carga completa"; 13 -> "pausada"; else -> "estado ${v.toInt()}" }
-        Kind.PERCENT_FLOAT, Kind.PERCENT -> "${v.toInt()} %"
+        Kind.PERCENT_FLOAT, Kind.PERCENT, Kind.PERCENT_TENTHS -> "${v.toInt()} %"
         Kind.KM -> "${v.toInt()} km"
         Kind.TEMP, Kind.TEMP_SET -> "${v.toInt()} °C"
         Kind.KPA -> String.format(BR, "%.1f bar", v / 100.0)
@@ -173,6 +198,34 @@ object TelemetryText {
     }
 
     private fun openingsKnown(s: TelemetrySnapshot) = TelemetrySnapshot.OPENING_KEYS.all { s.isOpen(it) == false }
+
+    /**
+     * Cartão do painel: aviso (porta, tampa, carga) ou, sem aviso, a linha de energia
+     * (bateria, alcance, tanque). O boolean diz se a borda é de alerta.
+     */
+    fun cluster(s: TelemetrySnapshot): Pair<String, Boolean>? {
+        panel(s)?.let { return it to true }
+        if (s.status != TelemetrySnapshot.Status.OK) return null
+        val energy = listOfNotNull(
+            s.socPercent?.let { "${it.toInt()}%" },
+            s.evRangeKm?.let { "$it km elétricos" },
+            s.fuelRangeKm?.let { "$it km combustível" },
+            s.value("fuel_pct")?.let { "tanque ${it.toInt()}%" },
+        )
+        if (energy.isEmpty()) return null
+        return energy.joinToString(" · ") to false
+    }
+
+    /** Uma linha para o log, só com o que a issue #6 pede. Sem dado não vira zero. */
+    fun digest(s: TelemetrySnapshot): String {
+        fun n(key: String) = s.value(key)?.let { if (it % 1.0 == 0.0) it.toInt().toString() else String.format(BR, "%.1f", it) } ?: "—"
+        val doors = when {
+            TelemetrySnapshot.OPENING_KEYS.all { s.isOpen(it) == false } -> "fechadas"
+            s.openings.isEmpty() -> "sem dado"
+            else -> s.openings.joinToString(", ")
+        }
+        return "bateria ${n("soc")}% · tanque ${n("fuel_pct")}% · elétrico ${n("ev_range")} km · combustível ${n("fuel_range")} km · portas $doors"
+    }
 
     /** Aviso compacto do painel (só o que importa ao motorista). */
     fun panel(s: TelemetrySnapshot): String? {

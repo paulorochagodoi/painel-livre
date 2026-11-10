@@ -191,13 +191,18 @@ class AuraTest {
         assertEquals(false, CarReadouts.climate(snapshot("ac_auto" to 1))!!.auto)
     }
 
-    @Test fun batteryPrefersSdkThenTelemetry() {
+    @Test fun batteryPrefersAutoserviceAndIgnoresSdkZero() {
         val sdk = VehicleData.Snapshot(batteryPercent = 70.0, evRangeKm = null, fuelPercent = null, fuelRangeKm = 500, odometerKm = null)
         val b = CarReadouts.battery(sdk, snapshot("soc" to float(43f), "ev_range" to 60, "fuel_pct" to 55))
-        assertEquals(70.0, b.soc!!, 0.0)
+        assertEquals(43.0, b.soc!!, 0.0)
         assertEquals(60, b.evKm)
         assertEquals(560, b.totalKm)
         assertEquals(55, b.fuelPercent)
+        val zero = VehicleData.Snapshot(batteryPercent = 0.0, evRangeKm = 0, fuelPercent = 0, fuelRangeKm = 0, odometerKm = null)
+        val fromAdb = CarReadouts.battery(zero, snapshot("soc" to float(43f)))
+        assertEquals(43.0, fromAdb.soc!!, 0.0)
+        assertNull(CarReadouts.battery(zero, null).soc)
+        assertEquals(70.0, CarReadouts.battery(sdk, null).soc!!, 0.0)
         val empty = CarReadouts.battery(null, null)
         assertFalse(empty.hasAny)
         assertNull(empty.totalKm)

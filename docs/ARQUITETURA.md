@@ -285,14 +285,13 @@ o listener continua sendo necessário para manobras e encerramento automático d
 Sem acesso às notificações, o motorista precisa devolver o painel pelo botão Painel original.
 `openApp` continua apenas abrindo o navegador, sem iniciar uma rota ou projeção.
 
-Nova preferência `panel_content`: `integrated` por padrão, `navigation` opcional. No integrado,
-`ClusterActivity` mostra mapa/GPS e cartões das notificações; **não há geometria da rota** nessas
-notificações. Na opção externa, o controlador resolve a Activity de entrada de Maps/Waze instalado
-(lista fechada de pacotes) e usa `am start --display N --windowingMode 1`, preservando a tarefa/rota
-já iniciada. Nunca escolhe display 0 como destino de projeção. `PanelContent`, Kotlin puro,
-confirma no `dumpsys activity activities` a Activity retomada no display esperado; retorno OK do
-shell sozinho não prova projeção. Dump desconhecido resulta em falha visível, sem afirmar sucesso.
-Essa opção é experimental: a firmware ou o app pode impedir a movimentação da tarefa.
+Nova preferência `panel_content`: `integrated` por padrão. O `ClusterActivity` mostra mapa/GPS e o
+cartão da notificação (seta, distância, próxima manobra, fonte Maps/Waze). **Não há geometria da rota**
+nessas notificações. Mover a Activity do Maps/Waze para o display do painel exige `mirror_nav_app`
+(desligado): o display `fission_bg_xdjaVirtualSurface` não tem toque (issue #24). Com o interruptor
+ligado, o controlador resolve a Activity de entrada (lista fechada) e usa `am start --display N
+--windowingMode 1`. Nunca escolhe display 0. `PanelContent` confirma no `dumpsys activity activities`
+a Activity retomada; retorno OK do shell sozinho não prova projeção.
 
 A escolha é aplicada na ativação; configure antes de ativar. Durante projeção externa, o vigia e os
 avisos de cobertura de `ClusterActivity` são ignorados para não abrir o mapa próprio sobre o navegador.

@@ -202,19 +202,29 @@ object CarReadouts {
         else -> null
     }
 
-    /** O SDK BYD vence; sem ele (permissão recusada no uid do app), vale a leitura pelo ADB local. */
+    /**
+     * A leitura pelo ADB local (autoservice) vence. O SDK do uid do app costuma falhar nesta DiLink;
+     * um zero só do SDK não esconde o valor do ADB nem vira "0%" sozinho.
+     */
     fun battery(sdk: VehicleData.Snapshot?, snapshot: TelemetrySnapshot?): Battery {
         val t = usable(snapshot)
         return Battery(
-            soc = sdk?.batteryPercent ?: t?.socPercent,
-            evKm = sdk?.evRangeKm ?: t?.evRangeKm,
-            fuelKm = sdk?.fuelRangeKm ?: t?.fuelRangeKm,
-            fuelPercent = sdk?.fuelPercent ?: t?.value("fuel_pct")?.toInt(),
+            soc = prefer(t?.socPercent, sdk?.batteryPercent),
+            evKm = prefer(t?.evRangeKm?.toDouble(), sdk?.evRangeKm?.toDouble())?.toInt(),
+            fuelKm = prefer(t?.fuelRangeKm?.toDouble(), sdk?.fuelRangeKm?.toDouble())?.toInt(),
+            fuelPercent = prefer(t?.value("fuel_pct"), sdk?.fuelPercent?.toDouble())?.toInt(),
             volt12 = t?.value("volt12"),
             charge = t?.let(::chargeLine),
             charging = t?.charging == true,
             plugged = t?.plugged,
             remainingMin = t?.chargeRemainingMin,
         )
+    }
+
+    /** Valor do ADB se houver; senão o do SDK, desde que seja maior que zero. */
+    fun prefer(adb: Double?, sdk: Double?): Double? = when {
+        adb != null -> adb
+        sdk != null && sdk > 0.0 -> sdk
+        else -> null
     }
 }

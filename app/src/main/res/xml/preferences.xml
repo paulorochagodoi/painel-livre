@@ -30,9 +30,15 @@
             app:entryValues="@array/panel_content_values"
             app:useSimpleSummaryProvider="true"
             app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat
+            app:key="mirror_nav_app"
+            app:title="Mover o app de navegação para o painel"
+            app:summary="Experimental e desligado. O painel não tem toque: o Waze pode travar num cartão. Desligado, a rota aparece como manobra no mapa integrado."
+            app:defaultValue="false"
+            app:iconSpaceReserved="false" />
         <Preference
             app:title="Sobre os mapas no painel"
-            app:summary="Mapa integrado: mapa próprio com manobras, sem linha da rota. App de navegação: leva Maps/Waze ao painel; compatibilidade depende da central. Escolha antes de ativar."
+            app:summary="O painel mostra seta, distância e próxima manobra da notificação. O Maps/Waze fica na central. Mover o app ao painel só com o interruptor acima."
             app:iconSpaceReserved="false" />
         <ListPreference
             app:key="cluster_mode"
@@ -132,9 +138,9 @@
     <PreferenceCategory app:title="Dados do carro" app:iconSpaceReserved="false">
         <SwitchPreferenceCompat
             app:key="telemetry"
-            app:title="Ler dados do carro (experimental)"
-            app:summary="Portas, trava, carga, bateria, clima, bancos, vidros e pneus, pelo ADB da central. Só leitura: o app não muda nada no carro. Ainda não testado no carro."
-            app:defaultValue="false"
+            app:title="Ler dados do carro"
+            app:summary="Portas, bateria, tanque, alcance, clima, bancos, pneus e carga, pelo ADB da central. Só leitura: o app não muda nada no carro. Valores ainda a confirmar no carro."
+            app:defaultValue="true"
             app:iconSpaceReserved="false" />
         <ListPreference
             app:key="telemetry_interval"
@@ -148,8 +154,8 @@
         <SwitchPreferenceCompat
             app:key="telemetry_panel"
             app:title="Aviso no painel"
-            app:summary="Mostra no painel, junto do mapa, porta aberta, tampa do carregador aberta ou carregando."
-            app:defaultValue="false"
+            app:summary="No mapa do painel: porta aberta, tampa ou carga. Sem alerta, mostra bateria, alcance e tanque."
+            app:defaultValue="true"
             app:dependency="telemetry"
             app:iconSpaceReserved="false" />
     </PreferenceCategory>
@@ -181,6 +187,12 @@
             app:title="Modo de debug"
             app:summary="Registra o que a central avisa (settings, propriedades, broadcasts, telefone) para descobrir o menu do painel. Deixe desligado no dia a dia."
             app:defaultValue="false"
+            app:iconSpaceReserved="false" />
+        <EditTextPreference
+            app:key="telemetry_overrides"
+            app:dependency="debug_mode"
+            app:title="Endereços de leitura (debug)"
+            app:summary="Só com o modo de debug. Ex.: soc=1014:0x4A505038:7. Transação 6 é ignorada. Chaves do catálogo, separadas por vírgula."
             app:iconSpaceReserved="false" />
         <Preference
             app:key="debug_open"

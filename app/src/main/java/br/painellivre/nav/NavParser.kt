@@ -52,12 +52,19 @@ object NavParser {
         "procurando gps", "buscando gps", "searching for gps", "sinal de gps", "gps signal",
     )
 
-    fun parse(title: String?, text: String?, bigText: String?, subText: String?): ParsedNav? {
+    fun parse(
+        title: String?,
+        text: String?,
+        bigText: String?,
+        subText: String?,
+        lines: List<String>? = null,
+    ): ParsedNav? {
         val t = clean(title)
         val x = clean(text)
         val b = clean(bigText)
         val s = clean(subText)
-        val primary = listOf(t, x, b).filter { it.isNotEmpty() }.distinct()
+        val extra = (lines ?: emptyList()).map(::clean).filter { it.isNotEmpty() }
+        val primary = (listOf(t, x, b) + extra).filter { it.isNotEmpty() }.distinct()
         if (primary.isEmpty()) return null
         val combined = primary.joinToString(" · ")
         val flat = fold(combined)

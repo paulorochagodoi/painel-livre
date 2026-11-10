@@ -6,6 +6,11 @@ import android.content.Intent
 import android.location.Location
 import android.net.Uri
 import androidx.preference.PreferenceManager
+import br.painellivre.nav.search.OpenPlaceSearch
+import br.painellivre.nav.search.PlaceCategory
+import br.painellivre.nav.search.PlaceProvider
+import br.painellivre.nav.search.PlaceQuery
+import br.painellivre.nav.search.PlaceSearchResult
 import br.painellivre.util.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -13,8 +18,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
-import java.net.URLEncoder
-import java.util.Locale
 
 /** Um lugar: resultado de busca, casa, trabalho ou recente. */
 data class Place(val name: String, val address: String, val lat: Double, val lon: Double) {
@@ -33,7 +36,9 @@ data class Place(val name: String, val address: String, val lat: Double, val lon
 }
 
 /**
- * Busca de endereços (Photon, sobre o OpenStreetMap — aberto, sem chave) e lugares guardados.
+ * Busca de endereços e lugares guardados. A busca passa por [PlaceProvider]:
+ * hoje [OpenPlaceSearch] (Photon, Overpass e Nominatim, sem chave). Um provedor HERE
+ * (issue #28) pode substituir [provider] sem mudar Casa/Trabalho nem a tela.
  * O destino pode ir ao mapa nativo ou aos apps externos.
  */
 object Places {
@@ -41,40 +46,29 @@ object Places {
     private const val KEY_WORK = "place_work"
     private const val KEY_RECENTS = "place_recents"
 
-    suspend fun search(query: String, near: Location?): List<Place> = withContext(Dispatchers.IO) {
-        val q = URLEncoder.encode(query.trim(), "UTF-8")
-        val bias = near?.let { String.format(Locale.ROOT, "&lat=%.2f&lon=%.2f", it.latitude, it.longitude) } ?: ""
-        val url = "https://photon.komoot.io/api/?q=$q&limit=8$bias"
-        try {
-            val body = (URL(url).openConnection() as HttpURLConnection).run {
-                connectTimeout = 8_000; readTimeout = 8_000
-                setRequestProperty("User-Agent", "PainelLivre (app aberto para BYD)")
-                inputStream.bufferedReader().use { it.readText() }.also { disconnect() }
-            }
-            parsePhoton(body)
-        } catch (t: Throwable) {
-            AppLog.w("Busca de endereço falhou: ${t.javaClass.simpleName}")
-            emptyList()
-        }
+    private val provider: PlaceProvider = OpenPlaceSearch(fetch = { url, agent -> httpGet(url, agent) })
+
+    suspend fun search(query: String, near: Location?, category: PlaceCategory? = null): PlaceSearchResult {
+        val result = provider.search(PlaceQuery(query, near?.latitude, near?.longitude, category))
+        if (result.status == PlaceSearchResult.Status.UNAVAILABLE) AppLog.w("Busca de endereço falhou")
+        return result
     }
 
-    fun parsePhoton(body: String): List<Place> {
-        val features = JSONObject(body).optJSONArray("features") ?: return emptyList()
-        return (0 until features.length()).mapNotNull { i ->
-            val f = features.getJSONObject(i)
-            val c = f.getJSONObject("geometry").getJSONArray("coordinates")
-            val p = f.getJSONObject("properties")
-            val street = listOfNotNull(p.optString("street").ifEmpty { null }, p.optString("housenumber").ifEmpty { null })
-                .joinToString(", ")
-            val name = p.optString("name").ifEmpty { street.ifEmpty { null } } ?: return@mapNotNull null
-            val area = listOfNotNull(
-                street.takeIf { it.isNotEmpty() && it != name },
-                p.optString("district").ifEmpty { null },
-                p.optString("city").ifEmpty { null },
-                p.optString("state").ifEmpty { null },
-            ).distinct().joinToString(" · ")
-            Place(name, area, c.getDouble(1), c.getDouble(0))
-        }.distinctBy { "${it.name}|${it.address}" }
+    fun parsePhoton(body: String): List<Place> = br.painellivre.nav.search.PhotonSearch.parse(body)
+
+    private suspend fun httpGet(url: String, agent: String): String = withContext(Dispatchers.IO) {
+        val conn = URL(url).openConnection() as HttpURLConnection
+        try {
+            conn.connectTimeout = 8_000
+            conn.readTimeout = 12_000
+            conn.setRequestProperty("User-Agent", agent)
+            conn.setRequestProperty("Accept", "application/json")
+            val code = conn.responseCode
+            if (code !in 200..299) error("HTTP $code")
+            conn.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            conn.disconnect()
+        }
     }
 
     // ── Guardados ───────────────────────────────────────────────────────────

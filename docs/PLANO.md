@@ -608,3 +608,24 @@ Teste da v0.5.5-teste no carro de Paulo, DiLink 3.0, `adb` em `172.26.89.229:555
   banco/porta-malas (esperado: nenhum Toast de bloqueio, nenhum efeito real no carro, já que
   continuam hipótese); atalho de temperatura no dock abrindo a Climatização em vez de lista.
 - [ ] Issue #24 (Waze no painel) é diagnóstico separado, não faz parte desta rodada.
+
+## Issue #26 — navegação na central sem painel e busca de lugares perto
+
+A rota nativa guia na central quando `cluster_mode` é `manual` ou quando a projeção não está ativa.
+A busca fica atrás de `PlaceProvider`. A implementação aberta não usa chave: Photon com viés,
+Overpass para Recarga/Combustível/Estacionamento (mais perto primeiro) e Nominatim só se o Photon
+falhar. Google Places e HERE ficam de fora; o HERE (issue #28) entra depois na mesma interface.
+
+Checklist no carro (pelo dono; sem acesso do agente):
+
+- [ ] Modo manual, app Painel Livre: calcular uma rota e ver na central a manobra, a distância, a rua,
+  a chegada e o mapa seguindo o carro. Arrastar o mapa para de seguir; Centralizar volta.
+- [ ] Home mostra a manobra no atalho; o toque volta ao mapa. O botão de rota do dock mostra a seta.
+- [ ] Modos só com rota e sempre, com o painel ligado: o mapa guia no painel; a central fica no resumo.
+- [ ] Maps e Waze, no modo manual, abrem na central (a rota não pede o painel).
+- [ ] Recarga, Combustível e Estacionamento listam lugares perto, do mais próximo ao mais longe.
+- [ ] Sem internet, a busca avisa em vez de ficar em branco.
+
+Validação nesta máquina, antes de qualquer edição: **274 testes JVM, 0 falhas**. Depois:
+**292 testes JVM, 0 falhas** (os 274 anteriores seguem passando; 18 novos) e `assembleDebug`.
+Sem emulador e sem teste no carro. `versionCode` permanece 13.

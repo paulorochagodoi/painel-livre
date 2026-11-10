@@ -17,6 +17,7 @@ class NativeRouteTest {
         assertEquals(Maneuver.LEFT, start.nav.maneuver)
         assertEquals("Rua B", start.nav.street)
         assertEquals(111, start.nav.distanceMeters)
+        assertEquals(listOf(Maneuver.DESTINATION), start.upcoming.map { it.maneuver })
         val moved = tracker.update(RoutePoint(0.0, .0005))
         assertTrue(moved.remaining < start.remaining)
         assertEquals(56, moved.nav.distanceMeters)

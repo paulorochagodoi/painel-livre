@@ -55,12 +55,17 @@ import br.painellivre.cluster.PanelSize
 import br.painellivre.info.MediaRepository
 import br.painellivre.info.WeatherRepository
 import br.painellivre.location.LocationRepository
+import br.painellivre.nav.CentralGuide
+import br.painellivre.nav.Maneuver
 import br.painellivre.nav.NavRepository
 import br.painellivre.nav.NavState
 import br.painellivre.nav.Place
 import br.painellivre.nav.Places
 import br.painellivre.nav.native.NativeNavigation
 import br.painellivre.nav.native.NativeRouteLayer
+import br.painellivre.nav.native.RouteProgress
+import br.painellivre.nav.search.PlaceCategory
+import br.painellivre.nav.search.PlaceSearchResult
 import br.painellivre.nav.MapLook
 import br.painellivre.nav.MapStyler
 import br.painellivre.ui.aura.AnchoredLayout
@@ -101,8 +106,8 @@ import java.util.Locale
  * Tela central no padrão visual **Aura** (docs/INTERFACE-AURA.md, desenho da designer em
  * docs/design/aura-launcher): barra de status; herói com relógio, carro 3D com os chips de estado e o
  * resumo; quatro atalhos (Navegação, Bateria, Climatização, Mídia) que abrem janelas ancoradas;
- * dock. A única diferença de propósito em relação ao SealNav continua: a rota é do Google Maps, do
- * Waze ou a nativa — a busca abre a rota no app escolhido.
+ * dock. A rota é do Google Maps, do Waze ou a nativa. Sem o mapa no painel, a rota nativa
+ * guia nesta tela (manobra, mapa e atalhos da Home e do dock).
  *
  * Comandos passam por CarCommands; sem liberação, só leitura: clima, bancos, vidros, porta-malas e trava aparecem como o carro
  * informa; nenhum controle daqui manda comando ao carro.
@@ -130,10 +135,15 @@ class LauncherActivity : AppCompatActivity() {
     // Navegação
     private lateinit var placesAdapter: PlacesAdapter
     private var searchJob: Job? = null
+    private var searchCategory: PlaceCategory? = null
     private var pickMode: String? = null // "home" / "work" enquanto escolhe o endereço
     private var navMap: MapView? = null
     private var navMapLibre: MapLibreMap? = null
     private var navCar: ImageView? = null
+    private var guiding = false
+    private var wasGuiding = false
+    private var guideFollow = true
+    private var lastProgress: RouteProgress? = null
 
     /** Desenho base 1280 × 720: 1 dp do layout = 1 px do desenho, em qualquer tela (AuraScale). */
     override fun attachBaseContext(newBase: Context) {
@@ -172,8 +182,19 @@ class LauncherActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { NavRepository.state.collect { renderNav(it) } }
-                launch { NativeNavigation.route.collect { NativeRouteLayer.draw(navMapLibre?.style, colors) } }
-                launch { ClusterService.status.collect { renderCluster(it) } }
+                launch {
+                    NativeNavigation.route.collect {
+                        NativeRouteLayer.draw(navMapLibre?.style, colors)
+                        syncGuide()
+                    }
+                }
+                launch {
+                    NativeNavigation.progress.collect {
+                        lastProgress = it
+                        renderGuideBanner()
+                    }
+                }
+                launch { ClusterService.status.collect { renderCluster(it); syncGuide() } }
                 launch { MediaRepository.now.collect { renderMedia(it) } }
                 launch { WeatherRepository.weather.collect { renderWeather(it) } }
                 launch { VehicleTelemetry.observe(this@LauncherActivity).collect { renderTelemetry(it) } }
@@ -430,7 +451,14 @@ class LauncherActivity : AppCompatActivity() {
     // ── Atalhos e janelas ───────────────────────────────────────────────────
 
     private fun setupHome() {
-        click(R.id.tileNav) { togglePopover(PopoverState.Id.NAV) }
+        click(R.id.tileNav) {
+            if (CentralGuide.homeOpensMap(guiding)) {
+                closePopover()
+                showPage(PAGE_NAV)
+                guideFollow = true
+                updateNavMap()
+            } else togglePopover(PopoverState.Id.NAV)
+        }
         click(R.id.tileBattery) { togglePopover(PopoverState.Id.BATTERY) }
         click(R.id.tileClimate) { togglePopover(PopoverState.Id.CLIMATE) }
         click(R.id.tileMedia) { togglePopover(PopoverState.Id.MEDIA) }
@@ -448,8 +476,10 @@ class LauncherActivity : AppCompatActivity() {
         click(R.id.dockPanel) { togglePopover(PopoverState.Id.PANEL) }
         click(R.id.dockNavApp) {
             closePopover()
-            if (prefs.navApp == "native") showPage(PAGE_NAV)
-            else if (!Places.openApp(this, prefs.navApp)) toast(getString(R.string.app_missing))
+            if (guiding || prefs.navApp == "native") {
+                showPage(PAGE_NAV)
+                if (guiding) { guideFollow = true; updateNavMap() }
+            } else if (!Places.openApp(this, prefs.navApp)) toast(getString(R.string.app_missing))
         }
         click(R.id.dockClimate) { togglePopover(PopoverState.Id.CLIMATE) }
         click(R.id.dockMedia) { togglePopover(PopoverState.Id.MEDIA) }
@@ -490,8 +520,11 @@ class LauncherActivity : AppCompatActivity() {
             setOnClickListener { closePopover(); goSaved("work") }
             setOnLongClickListener { closePopover(); showPage(PAGE_NAV); setPickMode("work"); true }
         }
-        mapOf(R.id.popCatCharge to R.string.cat_charge_query, R.id.popCatFuel to R.string.cat_fuel_query, R.id.popCatParking to R.string.cat_parking_query)
-            .forEach { (id, q) -> nav.findViewById<View>(id).setOnClickListener { closePopover(); searchCategory(getString(q)) } }
+        mapOf(
+            R.id.popCatCharge to PlaceCategory.CHARGING,
+            R.id.popCatFuel to PlaceCategory.FUEL,
+            R.id.popCatParking to PlaceCategory.PARKING,
+        ).forEach { (id, cat) -> nav.findViewById<View>(id).setOnClickListener { closePopover(); searchCategory(cat) } }
 
         val bat = popViews.getValue(PopoverState.Id.BATTERY)
         bat.findViewById<View>(R.id.popBatteryClose).setOnClickListener { closePopover() }
@@ -640,7 +673,10 @@ class LauncherActivity : AppCompatActivity() {
         fun db(id: Int, on: Boolean) = findViewById<View>(id)?.let { painter.set(it, if (on) "a_db_on" else "a_db") }
         db(R.id.dockHome, open == null && page == PAGE_HOME)
         db(R.id.dockPanel, panelOn)
-        db(R.id.dockNavApp, open == null && page == PAGE_NAV)
+        val navOn = open == null && page == PAGE_NAV
+        db(R.id.dockNavApp, navOn)
+        findViewById<ImageView>(R.id.dockNavIcon)?.imageTintList =
+            android.content.res.ColorStateList.valueOf(if (navOn) colors.accent else colors.ink)
         db(R.id.dockClimate, open == PopoverState.Id.CLIMATE)
         db(R.id.dockMedia, open == PopoverState.Id.MEDIA)
         db(R.id.tabApps, open == null && page == PAGE_APPS)
@@ -1039,6 +1075,7 @@ class LauncherActivity : AppCompatActivity() {
         pop.findViewById<View>(R.id.popNavCats).visibility = if (active) View.GONE else View.VISIBLE
         val box = findViewById<View>(R.id.navActive)
         box.visibility = if (active) View.VISIBLE else View.GONE
+        syncGuide()
         if (!active || nav == null) return
         val eta = listOfNotNull(nav.etaClock?.let { getString(R.string.arrival, it) }, nav.remainingDistanceText).joinToString(" · ")
         fun ManeuverView.show() { tint = true; color = colors.onAccent; bitmap = s.maneuverIcon; maneuver = nav.maneuver; roundaboutExit = nav.roundaboutExit }
@@ -1055,6 +1092,84 @@ class LauncherActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.navActiveDistance).text = nav.distanceText ?: ""
         findViewById<TextView>(R.id.navActiveStreet).text = nav.street ?: nav.instruction
         findViewById<TextView>(R.id.navActiveEta).text = listOfNotNull(eta.ifEmpty { null }, s.sourceLabel.ifEmpty { null }).joinToString(" · ")
+    }
+
+    /**
+     * Sem o mapa no painel, a rota nativa abre o guia na central uma vez.
+     * Home: o atalho continua com a manobra e, nesse caso, o toque volta ao mapa.
+     * Dock: a seta substitui o ícone de rota e o toque também volta ao mapa.
+     * Com o painel projetando (nav/always), a central fica no resumo.
+     */
+    private fun syncGuide() {
+        if (!::prefs.isInitialized) return
+        val native = NavRepository.state.value.let { it.active && it.sourcePackage == NativeNavigation.PACKAGE } &&
+            NativeNavigation.route.value != null
+        val now = CentralGuide.guidesOnCentral(
+            prefs.clusterMode,
+            ClusterService.status.value is ClusterStatus.Active,
+            native,
+        )
+        if (now && !wasGuiding) {
+            guideFollow = true
+            closePopover()
+            if (page != PAGE_NAV) showPage(PAGE_NAV)
+        }
+        if (!now) guideFollow = true
+        guiding = now
+        wasGuiding = now
+        renderGuideBanner()
+        renderDockManeuver()
+    }
+
+    private fun renderGuideBanner() {
+        val box = findViewById<View>(R.id.navGuide) ?: return
+        val s = NavRepository.state.value
+        val nav = s.nav
+        if (!guiding || !s.active || nav == null) {
+            box.visibility = View.GONE
+            return
+        }
+        box.visibility = View.VISIBLE
+        findViewById<ManeuverView>(R.id.navGuideManeuver).apply {
+            tint = true
+            color = colors.onAccent
+            bitmap = s.maneuverIcon
+            maneuver = nav.maneuver
+            roundaboutExit = nav.roundaboutExit
+        }
+        findViewById<TextView>(R.id.navGuideDistance).text = nav.distanceText ?: nav.instruction
+        findViewById<TextView>(R.id.navGuideStreet).text = nav.street ?: nav.instruction
+        val eta = listOfNotNull(nav.etaClock?.let { getString(R.string.arrival, it) }, nav.remainingDistanceText).joinToString(" · ")
+        findViewById<TextView>(R.id.navGuideEta).text = eta
+        val next = if (nav.maneuver == Maneuver.UNKNOWN) emptyList() else lastProgress?.upcoming.orEmpty()
+        val line = CentralGuide.nextLine(next)
+        findViewById<TextView>(R.id.navGuideNext).apply {
+            text = if (line.isBlank()) "" else getString(R.string.guide_next, line)
+            visibility = if (line.isBlank()) View.GONE else View.VISIBLE
+        }
+    }
+
+    private fun renderDockManeuver() {
+        val button = findViewById<View>(R.id.dockNavApp) ?: return
+        val show = CentralGuide.dockShowsManeuver(guiding)
+        findViewById<View>(R.id.dockNavIcon)?.visibility = if (show) View.GONE else View.VISIBLE
+        val man = findViewById<ManeuverView>(R.id.dockNavManeuver)
+        man?.visibility = if (show) View.VISIBLE else View.GONE
+        if (show) {
+            val s = NavRepository.state.value
+            val nav = s.nav
+            man?.apply {
+                tint = true
+                color = colors.accent
+                bitmap = s.maneuverIcon
+                maneuver = nav?.maneuver ?: Maneuver.UNKNOWN
+                roundaboutExit = nav?.roundaboutExit
+            }
+            button.contentDescription = getString(R.string.guide_return)
+        } else {
+            button.contentDescription = getString(R.string.open_app, navAppName())
+        }
+        button.tooltipText = button.contentDescription
     }
 
     /** Rota ativa: a nativa pergunta se encerra; a do Maps/Waze abre o app (como antes). */
@@ -1128,20 +1243,40 @@ class LauncherActivity : AppCompatActivity() {
         }
         click(R.id.navClear) { search.setText("") }
         click(R.id.navBack) { showPage(PAGE_HOME) }
-        click(R.id.navLocate) { updateNavMap() }
+        click(R.id.navLocate) { guideFollow = true; updateNavMap() }
         click(R.id.appNative) { prefs.navApp = "native"; renderSegments() }
         click(R.id.appMaps) { prefs.navApp = "maps"; renderSegments() }
         click(R.id.appWaze) { prefs.navApp = "waze"; renderSegments() }
         click(R.id.navActive) { activeRouteAction() }
-        click(R.id.catCharge) { searchCategory(getString(R.string.cat_charge_query)) }
-        click(R.id.catFuel) { searchCategory(getString(R.string.cat_fuel_query)) }
-        click(R.id.catParking) { searchCategory(getString(R.string.cat_parking_query)) }
+        click(R.id.navGuide) { activeRouteAction() }
+        click(R.id.catCharge) { searchCategory(PlaceCategory.CHARGING) }
+        click(R.id.catFuel) { searchCategory(PlaceCategory.FUEL) }
+        click(R.id.catParking) { searchCategory(PlaceCategory.PARKING) }
     }
 
-    /** Categoria = busca de verdade pelo termo, perto da posição (Photon). Nada de lista pronta. */
-    private fun searchCategory(query: String) {
+    /** Categoria = pontos OSM perto do carro (Overpass), não uma lista pronta. */
+    private fun searchCategory(category: PlaceCategory) {
+        searchCategory = category
         showPage(PAGE_NAV)
-        findViewById<EditText>(R.id.navSearch).setText(query)
+        val label = categoryLabel(category)
+        val search = findViewById<EditText>(R.id.navSearch)
+        if (search.text.toString() == label) scheduleSearch(label, 0) else search.setText(label)
+    }
+
+    private fun categoryLabel(category: PlaceCategory) = getString(when (category) {
+        PlaceCategory.CHARGING -> R.string.cat_charge_query
+        PlaceCategory.FUEL -> R.string.cat_fuel_query
+        PlaceCategory.PARKING -> R.string.cat_parking_query
+    })
+
+    /** A categoria vale só enquanto o campo mostra o rótulo dela. Texto livre volta ao Photon. */
+    private fun activeCategory(q: String): PlaceCategory? {
+        val cat = searchCategory ?: return null
+        if (!q.equals(categoryLabel(cat), ignoreCase = true)) {
+            searchCategory = null
+            return null
+        }
+        return cat
     }
 
     private fun focusSearch() {
@@ -1155,22 +1290,28 @@ class LauncherActivity : AppCompatActivity() {
         listOf(R.id.appNative to "native", R.id.appMaps to "maps", R.id.appWaze to "waze").forEach { (id, app) ->
             painter.set(findViewById(id), if (prefs.navApp == app) "a_seg_on" else "a_seg_off")
         }
-        findViewById<View>(R.id.dockNavApp)?.let {
-            it.contentDescription = getString(R.string.open_app, navAppName())
-            it.tooltipText = it.contentDescription
+        if (!CentralGuide.dockShowsManeuver(guiding)) {
+            findViewById<View>(R.id.dockNavApp)?.let {
+                it.contentDescription = getString(R.string.open_app, navAppName())
+                it.tooltipText = it.contentDescription
+            }
         }
         if (::popViews.isInitialized) popViews.getValue(PopoverState.Id.NAV).findViewById<TextView>(R.id.popNavApp).text = getString(R.string.route_by, navAppName())
     }
 
     private fun scheduleSearch(q: String, delayMs: Long) {
         searchJob?.cancel()
-        if (q.isBlank()) { renderPlaces(); return }
+        if (q.isBlank()) { searchCategory = null; renderPlaces(); return }
         searchJob = lifecycleScope.launch {
             delay(delayMs)
             findViewById<TextView>(R.id.navListTitle).setText(R.string.results)
-            val results = Places.search(q, LocationRepository.location.value)
-            val rows = results.map { PlaceRow("result", it, null) }.ifEmpty {
-                listOf(PlaceRow("text", Place(q, getString(R.string.search_in, navAppName()), 0.0, 0.0), null))
+            val outcome = Places.search(q, LocationRepository.location.value, activeCategory(q))
+            val rows = when (outcome.status) {
+                PlaceSearchResult.Status.UNAVAILABLE ->
+                    listOf(PlaceRow("error", Place(q, getString(R.string.search_failed), 0.0, 0.0), null))
+                PlaceSearchResult.Status.EMPTY ->
+                    listOf(PlaceRow("text", Place(q, getString(R.string.search_in, navAppName()), 0.0, 0.0), null))
+                PlaceSearchResult.Status.OK -> outcome.places.map { PlaceRow("result", it, null) }
             }
             placesAdapter.submit(rows, painter, LocationRepository.location.value)
         }
@@ -1200,6 +1341,7 @@ class LauncherActivity : AppCompatActivity() {
                 renderFavorites()
             }
             row.kind == "home" || row.kind == "work" -> goSaved(row.kind)
+            row.kind == "error" -> Unit
             row.kind == "text" && place != null -> {
                 if (!Places.navigateText(this, place.name, prefs.navApp)) toast(getString(R.string.app_not_installed, navAppName()))
             }
@@ -1259,6 +1401,9 @@ class LauncherActivity : AppCompatActivity() {
             m.uiSettings.isAttributionEnabled = false
             m.uiSettings.isLogoEnabled = false
             m.uiSettings.isCompassEnabled = false
+            m.addOnCameraMoveStartedListener { reason ->
+                if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) guideFollow = false
+            }
             m.setStyle(Style.Builder().fromUri(mapStyleUri())) {
                 MapStyler.widenRoads(it)
                 NativeRouteLayer.draw(it, colors)
@@ -1270,6 +1415,25 @@ class LauncherActivity : AppCompatActivity() {
     private fun updateNavMap() {
         val m = navMapLibre ?: return
         val loc = LocationRepository.location.value
+        if (loc != null && CentralGuide.followCamera(guiding, userPanned = !guideFollow)) {
+            val speed = if (loc.hasSpeed()) loc.speed.toDouble() else 0.0
+            val bearing = if (loc.hasBearing()) loc.bearing.toDouble() else 0.0
+            m.moveCamera(CameraUpdateFactory.newCameraPosition(
+                CameraPosition.Builder()
+                    .target(LatLng(loc.latitude, loc.longitude))
+                    .zoom(CentralGuide.zoomForSpeed(speed))
+                    .bearing(bearing)
+                    .tilt(CentralGuide.TILT)
+                    .build(),
+            ))
+            navCar?.visibility = View.VISIBLE
+            navCar?.rotation = 0f
+            return
+        }
+        if (guiding && !guideFollow) {
+            navCar?.visibility = View.INVISIBLE
+            return
+        }
         val target = loc?.let { LatLng(it.latitude, it.longitude) } ?: LatLng(-23.5505, -46.6333)
         m.moveCamera(CameraUpdateFactory.newCameraPosition(CameraPosition.Builder().target(target).zoom(if (loc != null) 15.5 else 11.0).build()))
         navCar?.visibility = if (loc != null) View.VISIBLE else View.INVISIBLE
@@ -1392,7 +1556,7 @@ class LauncherActivity : AppCompatActivity() {
                     "home" -> R.drawable.au_home
                     "work" -> R.drawable.au_work
                     "recent" -> R.drawable.au_clock
-                    "text" -> R.drawable.au_search
+                    "text", "error" -> R.drawable.au_search
                     else -> R.drawable.au_pin
                 },
             )
@@ -1401,7 +1565,7 @@ class LauncherActivity : AppCompatActivity() {
             h.name.text = row.label?.let { if (p != null) "$it · ${p.name}" else it } ?: p?.name.orEmpty()
             h.address.text = p?.address?.ifEmpty { null } ?: if (p == null) h.itemView.context.getString(R.string.fav_tap_to_pick) else ""
             h.address.visibility = if (h.address.text.isNullOrEmpty()) View.GONE else View.VISIBLE
-            val km = if (row.kind == "text") null else p?.distanceKm(from)
+            val km = if (row.kind == "text" || row.kind == "error") null else p?.distanceKm(from)
             h.distance.text = km?.let(AuraFormat::km) ?: ""
             h.itemView.setOnClickListener { onClick(row) }
             h.itemView.setOnLongClickListener { onLongClick(row) }

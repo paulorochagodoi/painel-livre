@@ -1,5 +1,18 @@
 # Histórico de versões
 
+## Não lançado — navegação na central sem painel e busca de lugares perto (issue #26)
+
+Sem mudança de `versionCode`/`versionName` (continua 0.5.7 / 13). Nada de API paga, chave ou billing.
+
+- **Guia na central** quando a rota é nativa e o mapa não está no painel (`cluster_mode=manual`, ou a projeção não subiu): a página de navegação abre com a manobra em destaque (seta, distância, rua, chegada e as duas manobras seguintes), o mapa segue o carro com o rumo para cima e a linha da rota. Arrastar o mapa pausa o acompanhamento; Centralizar volta a seguir.
+- **Home**: o atalho Navegação continua mostrando a próxima manobra no lugar de Casa/Trabalho. Com o guia na central, o toque abre o mapa. Com o painel projetando (`nav`/`always`), o toque continua abrindo a janela.
+- **Dock**: no guia, o botão de rota mostra a seta da próxima manobra e o toque volta ao mapa. Fora isso, o ícone e o comportamento de antes (Painel Livre abre a busca; Maps/Waze abrem o app).
+- **Busca** atrás de `PlaceProvider` (a tela não conhece o serviço). A implementação aberta (`id=open`) usa Photon com viés de 4 casas, `location_bias_scale` e bbox de 25 km (se o bbox não achar nada, tenta de novo sem ele), Overpass para Recarga/Combustível/Estacionamento num raio de 8 km, ordenado por distância, e Nominatim só se o Photon não responder. Overpass e Nominatim esperam 1,1 s entre pedidos. Falha de rede avisa; lista vazia continua oferecendo buscar no app escolhido. Um provedor HERE (issue #28) implementa a mesma interface; não foi ligado.
+- **Regressão JVM** (esta máquina, JDK 17, SDK 34): antes da mudança, **274 testes, 0 falhas, 0 erros**. Depois, **292 testes, 0 falhas, 0 erros**. Os 274 de antes continuam na lista; os 18 novos cobrem modo do painel × app (native/maps/waze), guia na central, e a busca (viés, distância, categoria, falha, reserva Nominatim, encaixe de outro provedor).
+- Validação: `./gradlew testDebugUnitTest` e `assembleDebug`. Sem teste no carro e sem emulador (`/dev/kvm` não está neste ambiente).
+
+
+
 Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre, O=Uso pessoal, C=BR`,
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).

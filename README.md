@@ -25,8 +25,9 @@ O que faz:
   Navegação, Mídia, Telefone, Apps e Ajustes. Temas claro e escuro, tela deitada ou em pé.
 - **Telefone e tempo**: discador próprio (liga pelo sistema ou abre o app de telefone do carro) e,
   tocando no tempo, a previsão das próximas horas e dos próximos dias (Open-Meteo).
-- **Aba Navegação**: busca de endereço (Photon/OpenStreetMap), lugares guardados e recentes, mapa
-  com a posição do carro; escolha Google Maps ou Waze e a rota abre nele.
+- **Aba Navegação**: busca de endereço e de lugares perto (Photon, Overpass e Nominatim, sem chave),
+  lugares guardados e recentes, mapa com a posição do carro; escolha Google Maps, Waze ou o mapa
+  do próprio app. Sem o mapa no painel, a rota do app guia nesta tela.
 - **Automático**: liga o mapa no painel quando uma rota começa e devolve o painel original da BYD
   alguns segundos depois que ela termina (configurável: sempre / só na navegação / manual).
 - **Robustez no estilo do SealNav** (v0.2.0): conexão ADB única com novas tentativas no boot;
@@ -139,7 +140,10 @@ comportamento do DashCast. Nada escreve no CAN. Use por sua conta e risco; não 
   [Albert Sans](https://github.com/usted/Albert-Sans) (SIL OFL 1.1, licenças em
   `app/src/main/assets/licencas/`), empacotadas no app — nada é baixado ao usar.
 - Ícones [Material Icons](https://fonts.google.com/icons) (Apache-2.0) no discador e no painel. Tempo: [Open-Meteo](https://open-meteo.com)
-  (posição arredondada a ~10 km). Busca de endereços: [Photon](https://photon.komoot.io) (OpenStreetMap).
+  (posição arredondada a ~10 km). Busca: [Photon](https://photon.komoot.io) (endereço; posição com 4 casas,
+  cerca de 11 m), [Overpass](https://overpass-api.de) (posto, estacionamento e eletroposto num raio de 8 km)
+  e [Nominatim](https://nominatim.openstreetmap.org) só se o Photon não responder. Os três são OpenStreetMap,
+  sem chave. Overpass e Nominatim esperam 1,1 s entre pedidos.
 - SealNav — estudado só por comportamento e protocolo (sala limpa, ver `docs/SEALNAV_RE.md`); nenhum
   código, imagem, voz, chave ou servidor dele é usado.
 
@@ -148,9 +152,11 @@ Licença: [MIT](LICENSE). Não é afiliado à BYD nem ao SealNav.
 ### Rota nativa (em desenvolvimento, issue #14)
 
 Na aba Navegação escolha **Painel Livre**, busque o endereço e toque no resultado. Casa, Trabalho e
-recentes usam a mesma escolha. A linha da rota e a próxima manobra aparecem no mapa do painel;
-Maps e Waze continuam disponíveis. No modo manual, toque também em Mostrar no painel.
-Para encerrar, toque no cartão de rota ativa na aba Navegação e em **Encerrar**.
+recentes usam a mesma escolha. A linha da rota e a próxima manobra aparecem no mapa do painel
+quando ele está ligado. No modo manual (ou se o painel não subir), o guia fica na central: manobra
+em destaque, mapa seguindo o carro, atalho da Home e botão do dock. Maps e Waze continuam
+disponíveis e, no modo manual, abrem na central. Para encerrar, toque no cartão da rota ou no
+banner da manobra e em **Encerrar**.
 
 O cálculo nativo usa o [OSRM público](https://project-osrm.org/) por HTTPS, sem chave. Envia ao
 `router.project-osrm.org` as **coordenadas precisas de origem e destino** (necessárias para calcular

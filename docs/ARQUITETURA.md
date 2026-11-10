@@ -52,7 +52,10 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | | `Maneuver.kt` | Tipos de manobra com ângulo e código de ícone do CAN da BYD (Fase 4) |
 | | `NavRepository.kt` | `state: StateFlow<NavState>` (rota ativa, fonte, ícone, simulação) |
 | | `NavSimulator.kt` | Rota de teste pelo mesmo parser; em debug injeta GPS falso |
-| | `Places.kt` | Busca Photon, Casa/Trabalho/recentes (SharedPreferences JSON), abre a rota no Maps/Waze por intent |
+| | `Places.kt` | Casa/Trabalho/recentes e abertura da rota. A busca passa por `PlaceProvider` |
+| | `CentralGuide.kt` | **Kotlin puro.** Quando a central guia (modo manual ou sem projeção), câmera, Home e dock |
+| | `search/PlaceProvider.kt` | **Kotlin puro.** Pedido, categoria e resultado. HERE (#28) entra como outra implementação |
+| | `search/OpenPlaceSearch.kt` | **Kotlin puro.** Photon (viés e bbox), Overpass (categoria, mais perto primeiro) e Nominatim se o Photon falhar |
 | `info` | `WeatherRepository.kt` | Open-Meteo (posição arredondada a 0,1°, no máximo a cada 15 min; sem dados, 1 vez por minuto): `weather` (cartão) e `forecast` (tela de previsão) do mesmo pedido |
 | | `Forecast.kt` | **Kotlin puro.** `ForecastParser` (URL e leitura de agora, 24 h e 7 dias, rótulos "Agora"/"15h"/"Hoje"/"Amanhã"/"Sáb 25") e `ForecastText` |
 | | `MediaRepository.kt` | Sessão de mídia ativa (`MediaSessionManager`, usa o acesso às notificações) e controles |
@@ -339,7 +342,7 @@ uma orientação nativa ativa. Abrir uma rota externa com sucesso encerra a sess
 
 O cálculo usa a API HTTPS do OSRM público (`router.project-osrm.org`), perfil driving, `steps=true`,
 `geometries=geojson`, `overview=full`: envia **coordenadas precisas de origem e destino**, sem
-identificador pessoal/chave. Busca textual continua no Photon; se houver ambiguidade, é necessário
+identificador pessoal/chave. Busca textual usa o provedor aberto (Photon, com Nominatim só se ele falhar); se houver ambiguidade, é necessário
 escolher o resultado na busca. Serviço público, sem garantia de disponibilidade, trânsito ou rotas
 atualizadas. Para uso diário avaliar servidor próprio/provedor; não há modo offline nem voz.
 Referência do protocolo: https://project-osrm.org/docs/v5.24.0/api/ (Route/RouteStep/StepManeuver).
@@ -355,6 +358,14 @@ levar até o timeout para terminar. Fixes com mais de 60 s ou precisão pior que
 São heurísticas, **não map matching completo**: cruzamentos, túneis, pistas paralelas e retornos
 precisam de validação. Tempo estimado vem das durações OSRM, proporcional ao trecho restante;
 a chegada usa o relógio local, sem trânsito em tempo real.
+
+`CentralGuide` (issue #26) decide quando a central conduz a rota nativa: modo `manual`, ou a
+projeção não está ativa. Nesse caso a `LauncherActivity` abre a página de navegação, desenha o
+banner da manobra (e as duas seguintes, vindas de `RouteProgress.upcoming`) e faz a câmera seguir
+o carro até o motorista arrastar o mapa. A Home troca o toque do atalho para voltar a esse mapa; o
+dock troca o ícone de rota pela seta. Com o painel projetando em `nav` ou `always`, a central fica
+no resumo que já existia. Maps e Waze não mudam de app: no modo manual a rota não pede o painel,
+então eles abrem na central.
 
 `NativeRouteLayer` desenha a mesma linha azul no mapa da central e do painel, reaplicada após
 carregamento/troca do estilo. Os cartões existentes mostram a seta, distância, rua e chegada.

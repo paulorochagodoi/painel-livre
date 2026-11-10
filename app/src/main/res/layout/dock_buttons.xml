@@ -14,12 +14,30 @@
         android:contentDescription="@string/cluster_title"
         android:src="@drawable/au_gauge" />
 
-    <ImageView
+    <FrameLayout
         android:id="@+id/dockNavApp"
         style="@style/AuDockButton"
         android:layout_marginStart="12dp"
         android:contentDescription="@string/open_maps"
-        android:src="@drawable/au_route" />
+        android:padding="0dp">
+
+        <ImageView
+            android:id="@+id/dockNavIcon"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:padding="16dp"
+            android:src="@drawable/au_route"
+            android:tag="a_icon" />
+
+        <br.painellivre.cluster.ManeuverView
+            android:id="@+id/dockNavManeuver"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:padding="14dp"
+            android:visibility="gone" />
+    </FrameLayout>
 
     <ImageView
         android:id="@+id/dockClimate"

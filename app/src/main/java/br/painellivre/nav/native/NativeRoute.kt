@@ -18,7 +18,18 @@ data class RoutePoint(val lat: Double, val lon: Double) {
 data class RouteStep(val start: Int, val meters: Double, val seconds: Double, val maneuver: Maneuver,
                      val instruction: String, val street: String, val exit: Int?)
 data class NativeRoute(val points: List<RoutePoint>, val steps: List<RouteStep>)
-data class RouteProgress(val along: Double, val offRoute: Double, val remaining: Double, val arrived: Boolean, val nav: ParsedNav)
+
+/** Manobra depois da atual, para o banner da central. */
+data class GuideCue(val maneuver: Maneuver, val exit: Int?, val meters: Int, val instruction: String, val street: String)
+
+data class RouteProgress(
+    val along: Double,
+    val offRoute: Double,
+    val remaining: Double,
+    val arrived: Boolean,
+    val nav: ParsedNav,
+    val upcoming: List<GuideCue> = emptyList(),
+)
 
 /** Geometria e orientação OSRM, sem Android. A projeção fica limitada ao avanço já feito. */
 class RouteTracker(val route: NativeRoute) {
@@ -52,10 +63,15 @@ class RouteTracker(val route: NativeRoute) {
             val end = start + step.meters
             if (end <= progress) 0.0 else step.seconds * ((end-progress)/step.meters.coerceAtLeast(1.0)).coerceIn(0.0,1.0)
         }.roundToInt()
+        val upcoming = route.steps.filter { cumulative[it.start] > progress + 8 }.drop(1).take(2).map { step ->
+            val ahead = (cumulative[step.start] - progress).coerceAtLeast(0.0).roundToInt()
+            GuideCue(step.maneuver, step.exit, ahead, step.instruction, step.street)
+        }
         return RouteProgress(progress, best, remaining, arrived,
             ParsedNav(if (arrived) Maneuver.DESTINATION else next.maneuver, next.exit, distance,
                 meters(distance), if (arrived) "Você chegou" else next.instruction, next.street.ifBlank { null },
-                null, seconds, remaining.roundToInt(), meters(remaining.roundToInt())))
+                null, seconds, remaining.roundToInt(), meters(remaining.roundToInt())),
+            if (arrived) emptyList() else upcoming)
     }
     companion object {
         fun meters(value: Int) = if (value < 1000) "$value m" else String.format(Locale.forLanguageTag("pt-BR"), "%.1f km", value/1000.0)

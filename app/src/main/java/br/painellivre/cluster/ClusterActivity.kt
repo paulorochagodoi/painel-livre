@@ -30,6 +30,7 @@ import androidx.preference.PreferenceManager
 import br.painellivre.location.LocationRepository
 import br.painellivre.nav.NavRepository
 import br.painellivre.nav.NavState
+import br.painellivre.units.Units
 import br.painellivre.R
 import br.painellivre.nav.MapLook
 import br.painellivre.nav.MapStyler
@@ -276,6 +277,8 @@ open class ClusterActivity : ComponentActivity() {
         loadPrefs()
         if (::overlay.isInitialized) applySizes()
         if (key == Prefs.KEY_MAP_STYLE || key == Prefs.KEY_THEME) applyTheme(force = true)
+        // A unidade muda com a tela de Ajustes aberta na central; o painel continua no ar.
+        if (key != null && key.startsWith("unit_") && ::distanceText.isInitialized) render(NavRepository.state.value)
         postFrame()
     }
 
@@ -544,17 +547,19 @@ open class ClusterActivity : ComponentActivity() {
         maneuverView.bitmap = s.maneuverIcon
         maneuverView.maneuver = nav.maneuver
         maneuverView.roundaboutExit = nav.roundaboutExit
-        distanceText.text = nav.distanceText ?: ""
-        distanceText.visibility = if (nav.distanceText.isNullOrEmpty()) View.GONE else View.VISIBLE
+        val maneuver = Units.navDistance(nav.distanceMeters, nav.distanceText, prefs.units)
+        distanceText.text = maneuver ?: ""
+        distanceText.visibility = if (maneuver.isNullOrEmpty()) View.GONE else View.VISIBLE
         val street = nav.street
         streetText.text = street ?: nav.instruction ?: ""
         instructionText.text = if (street != null) shortInstruction(nav) else ""
         instructionText.visibility = if (instructionText.text.isNullOrEmpty()) View.GONE else View.VISIBLE
 
+        val remaining = Units.navDistance(nav.remainingMeters, nav.remainingDistanceText, prefs.units)
         etaValues[0]!!.text = nav.etaClock ?: "—"
         etaValues[1]!!.text = nav.remainingSeconds?.let { formatDuration(it) } ?: "—"
-        etaValues[2]!!.text = nav.remainingDistanceText ?: "—"
-        etaCard.visibility = if (nav.etaClock == null && nav.remainingSeconds == null && nav.remainingDistanceText == null) View.GONE else View.VISIBLE
+        etaValues[2]!!.text = remaining ?: "—"
+        etaCard.visibility = if (nav.etaClock == null && nav.remainingSeconds == null && remaining.isNullOrEmpty()) View.GONE else View.VISIBLE
         setStatus(if (s.simulated) "SIMULAÇÃO" else null)
     }
 

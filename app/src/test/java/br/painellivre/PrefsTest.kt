@@ -2,6 +2,7 @@ package br.painellivre
 
 import android.content.SharedPreferences
 import br.painellivre.cluster.SafeArea
+import br.painellivre.units.Units
 import br.painellivre.util.Prefs
 import java.lang.reflect.Proxy
 import org.junit.Assert.*
@@ -219,5 +220,35 @@ class PrefsTest {
         assertEquals("auto", p.theme)
         assertEquals("auto", p.panelSize)
         assertEquals("auto", p.mapStyle)
+    }
+
+    @Test fun unitsDefaultToMetricWithPsiAndRejectUnknownValues() {
+        val factory = prefs().units
+        assertEquals(Units.Choice.DEFAULT, factory)
+        assertEquals(Units.Distance.KM, factory.distance)
+        assertEquals(Units.ShortDistance.M, factory.shortDistance)
+        assertEquals(Units.Speed.KMH, factory.speed)
+        assertEquals(Units.Pressure.PSI, factory.pressure)
+        assertEquals(Units.Temperature.C, factory.temperature)
+        assertEquals(Units.Electric.KWH_100, factory.electric)
+        assertEquals(Units.Fuel.L_100, factory.fuel)
+        val chosen = prefs(
+            Prefs.KEY_UNIT_DISTANCE to "mi",
+            Prefs.KEY_UNIT_SHORT to "ft",
+            Prefs.KEY_UNIT_SPEED to "mph",
+            Prefs.KEY_UNIT_PRESSURE to "kpa",
+            Prefs.KEY_UNIT_TEMPERATURE to "f",
+            Prefs.KEY_UNIT_ELECTRIC to "mikwh",
+            Prefs.KEY_UNIT_FUEL to "mpg",
+        ).units
+        assertEquals(Units.Distance.MI, chosen.distance)
+        assertEquals(Units.ShortDistance.FT, chosen.shortDistance)
+        assertEquals(Units.Speed.MPH, chosen.speed)
+        assertEquals(Units.Pressure.KPA, chosen.pressure)
+        assertEquals(Units.Temperature.F, chosen.temperature)
+        assertEquals(Units.Electric.MI_PER_KWH, chosen.electric)
+        assertEquals(Units.Fuel.MPG, chosen.fuel)
+        assertEquals(Units.Pressure.PSI, prefs(Prefs.KEY_UNIT_PRESSURE to "libras").units.pressure)
+        assertEquals(Units.Distance.KM, prefs(Prefs.KEY_UNIT_DISTANCE to null).units.distance)
     }
 }

@@ -146,9 +146,10 @@ class DiagnosticsActivity : AppCompatActivity() {
     /** O que o app vai fazer com o código de tamanho do painel na próxima ativação, e por quê. */
     /** SDK (uid do app) e, se ligada, a leitura pelo ADB local (issue #16, só leitura). */
     private suspend fun carText(): String {
-        val sdk = VehicleData.read(this).diagnosticText()
+        val units = Prefs(this).units
+        val sdk = VehicleData.read(this).diagnosticText(units)
         val adb = if (Prefs(this).telemetryEnabled) {
-            TelemetryText.diagnostic(VehicleTelemetry.sweep(this, TelemetryCatalog.POLLED))
+            TelemetryText.diagnostic(VehicleTelemetry.sweep(this, TelemetryCatalog.POLLED), units)
         } else TelemetrySnapshot.Status.OFF.label
         return "$sdk\n\nPelo ADB local:\n$adb"
     }

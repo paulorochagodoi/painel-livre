@@ -1,5 +1,6 @@
 package br.painellivre.info
 
+import br.painellivre.units.Units
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
@@ -160,18 +161,19 @@ object ForecastParser {
 /** **Kotlin puro.** Textos curtos da tela de previsão. */
 object ForecastText {
 
-    /** "Sensação 27° · Umidade 60% · Vento 12 km/h" (some o que a resposta não trouxe). */
-    fun details(c: Forecast.Current): String = listOfNotNull(
-        c.feelsLikeC?.let { "Sensação $it°" },
+    /** "Sensação 27°C · Umidade 60% · Vento 12 km/h" (some o que a resposta não trouxe). */
+    fun details(c: Forecast.Current, units: Units.Choice = Units.Choice.DEFAULT): String = listOfNotNull(
+        c.feelsLikeC?.let { "Sensação ${Units.temperature(it.toDouble(), units, whole = true)}" },
         c.humidityPct?.let { "Umidade $it%" },
-        c.windKmh?.let { "Vento $it km/h" },
+        c.windKmh?.let { "Vento ${Units.speedKmh(it.toDouble(), units)}" },
     ).joinToString(" · ")
 
-    /** "Máx 30° · Mín 19° · Sol 06:01–18:22". */
-    fun today(d: Forecast.Day?): String {
+    /** "Máx 30°C · Mín 19°C · Sol 06:01–18:22". */
+    fun today(d: Forecast.Day?, units: Units.Choice = Units.Choice.DEFAULT): String {
         d ?: return ""
         val sun = if (d.sunrise != null && d.sunset != null) "Sol ${d.sunrise}–${d.sunset}" else null
-        return listOfNotNull("Máx ${d.maxC}°", "Mín ${d.minC}°", sun).joinToString(" · ")
+        fun temp(c: Int) = Units.temperature(c.toDouble(), units, whole = true)
+        return listOfNotNull("Máx ${temp(d.maxC)}", "Mín ${temp(d.minC)}", sun).joinToString(" · ")
     }
 
     /** Chance de chuva: abaixo de 10% não vale ocupar espaço. */

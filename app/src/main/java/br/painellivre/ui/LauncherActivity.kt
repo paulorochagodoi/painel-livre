@@ -68,6 +68,7 @@ import br.painellivre.ui.aura.AuraBackdropDrawable
 import br.painellivre.ui.aura.AuraColors
 import br.painellivre.ui.aura.AuraDims
 import br.painellivre.ui.aura.AuraFormat
+import br.painellivre.units.Units
 import br.painellivre.ui.aura.AuraPainter
 import br.painellivre.ui.aura.AuraScale
 import br.painellivre.ui.aura.CarReadouts
@@ -221,6 +222,12 @@ class LauncherActivity : AppCompatActivity() {
         refreshSetup()
         renderPlaces()
         renderFavorites()
+        // Volta de Ajustes: a unidade nova precisa aparecer sem esperar outra leitura.
+        findViewById<SongCarView>(R.id.carArt).units = prefs.units
+        renderClimate()
+        renderBattery()
+        renderWeather(WeatherRepository.weather.value)
+        renderNav(NavRepository.state.value)
         navMap?.onResume()
     }
 
@@ -342,9 +349,10 @@ class LauncherActivity : AppCompatActivity() {
     private fun renderWeather(w: WeatherRepository.Weather?) {
         val row = findViewById<View>(R.id.weatherRow)
         val inside = CarReadouts.climate(lastTelemetry)?.insideC
+        val units = prefs.units
         val parts = listOfNotNull(
-            w?.let { "${it.tempC}° · ${it.description}" },
-            inside?.let { getString(R.string.temp_inside, AuraFormat.tempWhole(it)) },
+            w?.let { "${AuraFormat.tempWhole(it.tempC.toDouble(), units)} · ${it.description}" },
+            inside?.let { getString(R.string.temp_inside, AuraFormat.tempWhole(it, units)) },
         )
         row.visibility = if (parts.isEmpty()) View.GONE else View.VISIBLE
         findViewById<TextView>(R.id.weatherText).text = parts.joinToString(" · ")
@@ -360,7 +368,10 @@ class LauncherActivity : AppCompatActivity() {
 
     private fun renderTelemetry(t: TelemetrySnapshot) {
         lastTelemetry = t
-        findViewById<SongCarView>(R.id.carArt).snapshot = t
+        findViewById<SongCarView>(R.id.carArt).apply {
+            units = prefs.units
+            snapshot = t
+        }
         renderChips(t)
         // Trava e resumo: só com leitura. Sem dado, somem (nunca "Travado" ou "Tudo fechado" chutado).
         val lock = CarReadouts.lock(t)
@@ -652,19 +663,25 @@ class LauncherActivity : AppCompatActivity() {
 
     private fun renderBattery() {
         val b = CarReadouts.battery(lastSdk, lastTelemetry)
+        val units = prefs.units
         // Atalho
         val big = findViewById<TextView>(R.id.tileBatteryBig)
         val small = findViewById<TextView>(R.id.tileBatterySmall)
         val bar = findViewById<ProgressBar>(R.id.tileBatteryBar)
+        val total = b.totalKm?.let { Units.distanceSplit(it.toDouble(), units) }
         if (b.hasAny) {
-            big.text = b.totalKm?.toString() ?: AuraFormat.percent(b.soc)
-            small.text = listOfNotNull(b.totalKm?.let { "km" }, b.soc?.takeIf { b.totalKm != null }?.let(AuraFormat::percent)).joinToString(" · ")
+            big.text = total?.number ?: AuraFormat.percent(b.soc)
+            small.text = listOfNotNull(total?.unit, b.soc?.takeIf { b.totalKm != null }?.let(AuraFormat::percent)).joinToString(" · ")
             bar.visibility = if (b.soc == null) View.GONE else View.VISIBLE
             bar.progress = b.soc?.toInt() ?: 0
             findViewById<TextView>(R.id.tileBatterySub).text = when {
                 b.charging && b.charge != null -> b.charge
-                b.evKm != null && b.fuelKm != null -> getString(R.string.range_split, b.evKm, b.fuelKm)
-                b.evKm != null -> getString(R.string.range_ev, b.evKm)
+                b.evKm != null && b.fuelKm != null -> getString(
+                    R.string.range_split,
+                    Units.distanceKm(b.evKm.toDouble(), units),
+                    Units.distanceKm(b.fuelKm.toDouble(), units),
+                )
+                b.evKm != null -> getString(R.string.range_ev, Units.distanceKm(b.evKm.toDouble(), units))
                 else -> getString(R.string.battery_title)
             }
         } else {
@@ -685,7 +702,7 @@ class LauncherActivity : AppCompatActivity() {
         if (!b.hasAny) return
         pop.findViewById<RingView>(R.id.popBatteryRing).percent = b.soc
         pop.findViewById<TextView>(R.id.popBatterySoc).text = AuraFormat.percent(b.soc)
-        pop.findViewById<TextView>(R.id.popBatteryTotal).text = b.totalKm?.let { "$it km" } ?: "—"
+        pop.findViewById<TextView>(R.id.popBatteryTotal).text = b.totalKm?.let { Units.distanceKm(it.toDouble(), units) } ?: "—"
         val charge = pop.findViewById<TextView>(R.id.popBatteryCharge)
         val chargeIcon = pop.findViewById<ImageView>(R.id.popBatteryChargeIcon)
         charge.text = b.charge ?: when (b.plugged) { false -> getString(R.string.charge_unplugged); else -> getString(R.string.charge_unknown) }
@@ -697,8 +714,8 @@ class LauncherActivity : AppCompatActivity() {
             findViewById<TextView>(R.id.statLabel).setText(label)
             findViewById<TextView>(R.id.statValue).text = value
         }
-        stat(R.id.popBatteryEv, R.drawable.au_bolt, R.string.range_ev_label, b.evKm?.let { "$it km" } ?: "—")
-        stat(R.id.popBatteryFuel, R.drawable.au_fuel, R.string.range_fuel_label, b.fuelKm?.let { "$it km" } ?: "—")
+        stat(R.id.popBatteryEv, R.drawable.au_bolt, R.string.range_ev_label, b.evKm?.let { Units.distanceKm(it.toDouble(), units) } ?: "—")
+        stat(R.id.popBatteryFuel, R.drawable.au_fuel, R.string.range_fuel_label, b.fuelKm?.let { Units.distanceKm(it.toDouble(), units) } ?: "—")
         // Linhas: só o que o carro informou.
         val rows = pop.findViewById<LinearLayout>(R.id.popBatteryRows)
         rows.removeAllViews()
@@ -767,32 +784,33 @@ class LauncherActivity : AppCompatActivity() {
         )
         // Atalho
         val big = findViewById<TextView>(R.id.tileClimateBig)
+        val units = prefs.units
         if (shown.driverC != null) {
-            big.text = AuraFormat.temp(shown.driverC); big.textSize = 30f
-            findViewById<TextView>(R.id.tileClimateSmall).text = shown.passengerC?.let { getString(R.string.climate_pass_short, AuraFormat.temp(it)) } ?: ""
+            big.text = AuraFormat.temp(shown.driverC, units); big.textSize = 30f
+            findViewById<TextView>(R.id.tileClimateSmall).text = shown.passengerC?.let { getString(R.string.climate_pass_short, AuraFormat.temp(it, units)) } ?: ""
         } else {
             big.setText(R.string.no_data); big.textSize = 22f
             findViewById<TextView>(R.id.tileClimateSmall).text = ""
         }
         findViewById<TextView>(R.id.tileClimateSub).text = shown.tileLine ?: if (c == null) carDataHint(short = true) else getString(R.string.read_only)
         // Dock e barra de status
-        findViewById<TextView>(R.id.dockTempDriverValue)?.text = AuraFormat.temp(shown.driverC)
-        findViewById<TextView>(R.id.dockTempPassengerValue)?.text = AuraFormat.temp(shown.passengerC)
+        findViewById<TextView>(R.id.dockTempDriverValue)?.text = AuraFormat.temp(shown.driverC, units)
+        findViewById<TextView>(R.id.dockTempPassengerValue)?.text = AuraFormat.temp(shown.passengerC, units)
         findViewById<View>(R.id.statusClimate).visibility = if (shown.driverC == null) View.GONE else View.VISIBLE
-        findViewById<TextView>(R.id.statusClimateText).text = AuraFormat.temp(shown.driverC)
+        findViewById<TextView>(R.id.statusClimateText).text = AuraFormat.temp(shown.driverC, units)
         // Janela
         val pop = popViews.getValue(PopoverState.Id.CLIMATE)
         pop.findViewById<View>(R.id.popClimateEmpty).visibility = if (c == null) View.VISIBLE else View.GONE
         pop.findViewById<TextView>(R.id.popClimateEmpty).text = carDataHint()
         pop.findViewById<View>(R.id.popClimateBody).visibility = View.VISIBLE
-        pop.findViewById<View>(R.id.popClimateDriver).findViewById<TextView>(R.id.tempValue).text = AuraFormat.temp(shown.driverC)
-        pop.findViewById<View>(R.id.popClimatePassenger).findViewById<TextView>(R.id.tempValue).text = AuraFormat.temp(shown.passengerC)
+        pop.findViewById<View>(R.id.popClimateDriver).findViewById<TextView>(R.id.tempValue).text = AuraFormat.temp(shown.driverC, units)
+        pop.findViewById<View>(R.id.popClimatePassenger).findViewById<TextView>(R.id.tempValue).text = AuraFormat.temp(shown.passengerC, units)
         pop.findViewById<TextView>(R.id.popClimateFanLabel).text =
             if (shown.fan != null) getString(R.string.fan_level, shown.fan) else getString(R.string.fan_unknown)
         pop.findViewById<LevelBars>(R.id.popClimateFan).level = shown.fan ?: 0
         pop.findViewById<TextView>(R.id.popClimateAir).apply {
-            text = listOfNotNull(shown.insideC?.let { getString(R.string.temp_inside, AuraFormat.tempWhole(it)) },
-                shown.outsideC?.let { getString(R.string.temp_outside, AuraFormat.tempWhole(it)) }).joinToString(" · ")
+            text = listOfNotNull(shown.insideC?.let { getString(R.string.temp_inside, AuraFormat.tempWhole(it, units)) },
+                shown.outsideC?.let { getString(R.string.temp_outside, AuraFormat.tempWhole(it, units)) }).joinToString(" · ")
             visibility = if (text.isNullOrEmpty()) View.GONE else View.VISIBLE
         }
         fun mode(id: Int, on: Boolean?) = pop.findViewById<View>(id).apply {
@@ -1040,19 +1058,22 @@ class LauncherActivity : AppCompatActivity() {
         val box = findViewById<View>(R.id.navActive)
         box.visibility = if (active) View.VISIBLE else View.GONE
         if (!active || nav == null) return
-        val eta = listOfNotNull(nav.etaClock?.let { getString(R.string.arrival, it) }, nav.remainingDistanceText).joinToString(" · ")
+        val units = prefs.units
+        val maneuverText = Units.navDistance(nav.distanceMeters, nav.distanceText, units)
+        val remaining = Units.navDistance(nav.remainingMeters, nav.remainingDistanceText, units)
+        val eta = listOfNotNull(nav.etaClock?.let { getString(R.string.arrival, it) }, remaining).joinToString(" · ")
         fun ManeuverView.show() { tint = true; color = colors.onAccent; bitmap = s.maneuverIcon; maneuver = nav.maneuver; roundaboutExit = nav.roundaboutExit }
         tileMan.show()
-        findViewById<TextView>(R.id.tileNavDistance).text = nav.distanceText ?: nav.instruction
-        findViewById<TextView>(R.id.tileNavSub).text = listOfNotNull(nav.street ?: nav.instruction.takeIf { nav.distanceText != null }, eta.ifEmpty { null }).joinToString(" · ")
+        findViewById<TextView>(R.id.tileNavDistance).text = maneuverText ?: nav.instruction
+        findViewById<TextView>(R.id.tileNavSub).text = listOfNotNull(nav.street ?: nav.instruction.takeIf { maneuverText != null }, eta.ifEmpty { null }).joinToString(" · ")
         pop.findViewById<ManeuverView>(R.id.popNavManeuver).show()
-        pop.findViewById<TextView>(R.id.popNavRouteTitle).text = listOfNotNull(nav.distanceText, nav.street ?: nav.instruction).joinToString(" · ")
+        pop.findViewById<TextView>(R.id.popNavRouteTitle).text = listOfNotNull(maneuverText, nav.street ?: nav.instruction).joinToString(" · ")
         pop.findViewById<TextView>(R.id.popNavRouteSub).text = listOfNotNull(eta.ifEmpty { null }, s.sourceLabel.ifEmpty { null }).joinToString(" · ")
         pop.findViewById<TextView>(R.id.popNavRouteAction).text =
             if (s.sourcePackage == NativeNavigation.PACKAGE) getString(R.string.route_end) else getString(R.string.route_open, s.sourceLabel.ifEmpty { getString(R.string.nav_title) })
         // Busca: cartão da rota atual.
         findViewById<ManeuverView>(R.id.navActiveManeuver).show()
-        findViewById<TextView>(R.id.navActiveDistance).text = nav.distanceText ?: ""
+        findViewById<TextView>(R.id.navActiveDistance).text = maneuverText ?: ""
         findViewById<TextView>(R.id.navActiveStreet).text = nav.street ?: nav.instruction
         findViewById<TextView>(R.id.navActiveEta).text = listOfNotNull(eta.ifEmpty { null }, s.sourceLabel.ifEmpty { null }).joinToString(" · ")
     }
@@ -1076,7 +1097,7 @@ class LauncherActivity : AppCompatActivity() {
         if (!::popViews.isInitialized) return
         val loc = LocationRepository.location.value
         fun text(p: Place?, legacy: String): String = when {
-            p != null -> p.distanceKm(loc)?.let(AuraFormat::km) ?: getString(R.string.fav_saved)
+            p != null -> p.distanceKm(loc)?.let { AuraFormat.km(it, prefs.units) } ?: getString(R.string.fav_saved)
             legacy.isNotBlank() -> getString(R.string.fav_saved)
             else -> getString(R.string.fav_set)
         }
@@ -1087,7 +1108,7 @@ class LauncherActivity : AppCompatActivity() {
         fun fav(id: Int, p: Place?, legacy: String, name: Int, icon: Int) = pop.findViewById<View>(id).apply {
             findViewById<ImageView>(R.id.favIcon).setImageResource(icon)
             findViewById<TextView>(R.id.favName).setText(name)
-            findViewById<TextView>(R.id.favDistance).text = p?.distanceKm(loc)?.let(AuraFormat::km) ?: ""
+            findViewById<TextView>(R.id.favDistance).text = p?.distanceKm(loc)?.let { AuraFormat.km(it, prefs.units) } ?: ""
             findViewById<TextView>(R.id.favSub).text = p?.address?.ifEmpty { p.name } ?: legacy.ifEmpty { getString(R.string.fav_tap_to_set) }
         }
         fav(R.id.popNavHome, home, prefs.homeAddress, R.string.go_home, R.drawable.au_home)
@@ -1402,7 +1423,7 @@ class LauncherActivity : AppCompatActivity() {
             h.address.text = p?.address?.ifEmpty { null } ?: if (p == null) h.itemView.context.getString(R.string.fav_tap_to_pick) else ""
             h.address.visibility = if (h.address.text.isNullOrEmpty()) View.GONE else View.VISIBLE
             val km = if (row.kind == "text") null else p?.distanceKm(from)
-            h.distance.text = km?.let(AuraFormat::km) ?: ""
+            h.distance.text = km?.let { AuraFormat.km(it, Prefs(h.itemView.context).units) } ?: ""
             h.itemView.setOnClickListener { onClick(row) }
             h.itemView.setOnLongClickListener { onLongClick(row) }
         }

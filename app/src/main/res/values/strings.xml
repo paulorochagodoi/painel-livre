@@ -110,8 +110,8 @@
     <string name="car_data_error">Leitura indisponível</string>
     <string name="car_data_all">Ver todos os dados</string>
     <string name="range_total">Autonomia total</string>
-    <string name="range_split">Elétrica %1$d km · Combustível %2$d km</string>
-    <string name="range_ev">Elétrica %1$d km</string>
+    <string name="range_split">Elétrica %1$s · Combustível %2$s</string>
+    <string name="range_ev">Elétrica %1$s</string>
     <string name="range_ev_label">Elétrica</string>
     <string name="range_fuel_label">Combustível</string>
     <string name="battery_readonly">Só leitura. Modo EV/HEV, carga e V2L se mudam no próprio carro.</string>

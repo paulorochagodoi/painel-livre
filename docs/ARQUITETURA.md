@@ -66,7 +66,8 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | `location` | `LocationRepository.kt` | GPS da central (`LocationManager`), mantém o rumo quando parado, injeção só em debug |
 | `ui` | `LauncherActivity.kt` | Tela central no padrão **Aura** ([INTERFACE-AURA.md](INTERFACE-AURA.md)): barra de status, herói (relógio, carro 3D com chips, trava/resumo), quatro atalhos com janelas ancoradas (Navegação, Bateria, Climatização, Mídia; Painel pelo dock), busca (NavSearch) com mapa, Apps, aviso de configuração; densidade própria do desenho 1280 × 720; `onNewIntent` com `HOME` fecha a janela e volta ao Início |
 | | `aura/AuraTokens.kt` | **Kotlin puro.** `AuraColors` (tokens claro/escuro da designer), `AuraDims`, `toPalette()` para as telas antigas |
-| | `aura/AuraFormat.kt` | **Kotlin puro.** Números BR (`22,0°`, `6,4 km`, `1h40`, `62%`) |
+| | `aura/AuraFormat.kt` | **Kotlin puro.** Números BR (`22,0°C`, `6,4 km`, `1h40`, `62%`); temperatura e distância delegam a `Units` |
+| `units` | `Units.kt` | **Kotlin puro.** Conversão e texto das unidades de Ajustes (issue #25). A origem continua km, m, km/h, kPa, °C |
 | | `aura/CarReadouts.kt` | **Kotlin puro.** Chips do carro, resumo, trava, clima, bateria e linha da carga — só leitura, sem dado nunca vira "fechado" |
 | | `aura/AuraLayout.kt` | **Kotlin puro.** `PopoverState` (uma janela por vez), `PopoverAnchor` (posição e seta), `AuraScale` (densidade) |
 | | `aura/AuraPainter.kt` | Pintura por `android:tag="a_…"` (tabela em INTERFACE-AURA.md) |
@@ -218,6 +219,13 @@ que os desenhos da BYD não cobrem. Medidas na foto do painel do Song Plus (1920
 | `inset_left/top/right/bottom` | `0` | ajuste fino da área segura (px, −400 a 400, somado ao padrão) |
 | `start_on_boot` | `true` | sobe o serviço no boot |
 | `nav_app` | `maps` | `maps` ou `waze` (busca, Casa/Trabalho) |
+| `unit_distance` | `km` | rota, autonomia e linha reta: `km` ou `mi` |
+| `unit_short` | `m` | manobra abaixo de 1 km: `m` ou `ft` |
+| `unit_speed` | `kmh` | `kmh` ou `mph` (vento na previsão) |
+| `unit_pressure` | `psi` | pneus: `psi` (padrão), `bar` ou `kpa`. O carro continua em kPa |
+| `unit_temperature` | `c` | clima, interior, exterior e previsão: `c` ou `f` |
+| `unit_electric` | `kwh100` | `kwh100` ou `mikwh` (formatador; sem leitura de consumo hoje) |
+| `unit_fuel` | `l100` | `l100` ou `mpg` (formatador; sem leitura de consumo hoje) |
 | `car_photo` | — | URI da foto do carro (no lugar da ilustração) |
 | `panel_menu_follow` | `false` | seguir o menu de navegação do painel (issue #9, experimental) |
 | `debug_mode` | `false` | modo de debug (issue #9) |
@@ -250,7 +258,8 @@ rede ou espera de tempo real. Execute com JDK 17:
 | `PanelMenuReaderTest` | `Parcel` do carro (1–4, várias linhas, prévia ASCII, 0xffffd8e5, exceção, lixo), comando fixo só de leitura, SDK primeiro → ADB só com SecurityException e no Android 10, pausa do ADB após falha, `Follower` com leituras do ADB |
 | `PanelMenuTest` | valores do menu, constante do SDK x molde, desenho de cada modo, opcional/teste do debug, `Follower` (sem piscar, volta ao normal), só getters, nenhum código novo em `SAFE_COMMANDS` |
 | `DebugProbeTest` | registro desligado por padrão e limite, comando de coleta só leitura, seções, `settings`/`getprop`, diff, histórico de broadcasts, candidatos, linha de base e novidades, seções ausentes, esconder número/MAC |
-| `ForecastTest` | agora/horas/dias do Open-Meteo, buracos `null`, respostas ruins, rótulos em português, textos, URL com posição arredondada e limite de pedidos |
+| `ForecastTest` | agora/horas/dias do Open-Meteo, buracos `null`, respostas ruins, rótulos em português, textos, URL com posição arredondada e limite de pedidos; vento e temperatura na unidade escolhida |
+| `UnitsTest` | issue #25: padrão (km, m, km/h, psi, °C, kWh/100 km, L/100 km), fatores, clima, autonomia/consumo, pneus e o mesmo texto de manobra no painel e na navegação |
 
 `PanelAutomation` contém a decisão usada pelo `ClusterService`; as chamadas Android/ADB continuam
 no serviço. `kotlinx-coroutines-test` controla o tempo dos testes. Um teste reproduz a restauração

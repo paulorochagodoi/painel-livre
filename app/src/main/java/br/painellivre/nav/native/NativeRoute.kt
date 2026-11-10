@@ -2,9 +2,9 @@ package br.painellivre.nav.native
 
 import br.painellivre.nav.Maneuver
 import br.painellivre.nav.ParsedNav
+import br.painellivre.units.Units
 import org.json.JSONObject
 import java.net.URLDecoder
-import java.util.Locale
 import kotlin.math.*
 
 data class RoutePoint(val lat: Double, val lon: Double) {
@@ -58,7 +58,8 @@ class RouteTracker(val route: NativeRoute) {
                 null, seconds, remaining.roundToInt(), meters(remaining.roundToInt())))
     }
     companion object {
-        fun meters(value: Int) = if (value < 1000) "$value m" else String.format(Locale.forLanguageTag("pt-BR"), "%.1f km", value/1000.0)
+        /** Texto de reserva; a tela reformata com a unidade escolhida a partir dos metros. */
+        fun meters(value: Int) = Units.navDistance(value, null) ?: "$value m"
     }
 }
 

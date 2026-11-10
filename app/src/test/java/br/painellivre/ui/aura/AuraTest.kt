@@ -91,10 +91,10 @@ class AuraTest {
     // ── Números no formato brasileiro ───────────────────────────────────────
 
     @Test fun brazilianNumbers() {
-        assertEquals("22,0°", AuraFormat.temp(22.0))
-        assertEquals("23,5°", AuraFormat.temp(23.5))
+        assertEquals("22,0°C", AuraFormat.temp(22.0))
+        assertEquals("23,5°C", AuraFormat.temp(23.5))
         assertEquals("—", AuraFormat.temp(null))
-        assertEquals("24°", AuraFormat.tempWhole(23.6))
+        assertEquals("24°C", AuraFormat.tempWhole(23.6))
         assertEquals("6,4 km", AuraFormat.km(6.4))
         assertEquals("0,4 km", AuraFormat.km(0.42))
         assertEquals("12 km", AuraFormat.km(12.3))
@@ -180,8 +180,8 @@ class AuraTest {
         // ac_auto manda 2 no fio = ligado (CarCommands.onWire); 1 no fio = desligado (bug visto no carro em 29/10).
         val c = CarReadouts.climate(snapshot("ac_temp_driver" to 22, "ac_temp_pass" to 24, "ac_fan" to 3, "ac_auto" to 2,
             "ac_compressor" to 7, "seat_heat_driver" to 3, "seat_vent_pass" to 1))!!
-        assertEquals("22,0°", AuraFormat.temp(c.driverC))
-        assertEquals("24,0°", AuraFormat.temp(c.passengerC))
+        assertEquals("22,0°C", AuraFormat.temp(c.driverC))
+        assertEquals("24,0°C", AuraFormat.temp(c.passengerC))
         assertEquals(true, c.auto)
         assertNull(c.ac) // valor fora de 0/1: sem leitura confiável, o modo some
         assertEquals(2, c.driverSeat.heat)

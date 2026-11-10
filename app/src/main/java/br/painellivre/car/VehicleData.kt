@@ -1,6 +1,7 @@
 package br.painellivre.car
 
 import android.content.Context
+import br.painellivre.units.Units
 import br.painellivre.util.AppLog
 
 /**
@@ -20,12 +21,12 @@ object VehicleData {
         val odometerKm: Int?,
         val error: String? = null,
     ) {
-        fun diagnosticText(): String = listOf(
+        fun diagnosticText(units: Units.Choice = Units.Choice.DEFAULT): String = listOf(
             "Bateria: ${batteryPercent?.let { "$it %" } ?: "indisponível"}",
-            "Autonomia elétrica: ${evRangeKm?.let { "$it km" } ?: "indisponível"}",
+            "Autonomia elétrica: ${evRangeKm?.let { Units.distanceKm(it.toDouble(), units) } ?: "indisponível"}",
             "Combustível: ${fuelPercent?.let { "$it %" } ?: "indisponível"}",
-            "Autonomia a combustível: ${fuelRangeKm?.let { "$it km" } ?: "indisponível"}",
-            "Hodômetro: ${odometerKm?.let { "$it km" } ?: "indisponível"}",
+            "Autonomia a combustível: ${fuelRangeKm?.let { Units.distanceKm(it.toDouble(), units) } ?: "indisponível"}",
+            "Hodômetro: ${odometerKm?.let { Units.distanceKm(it.toDouble(), units) } ?: "indisponível"}",
             "Portas/travas: não lidas pelo SDK (ver a leitura pelo ADB local, issue #16)",
             error ?: "Leituras estatísticas disponíveis",
         ).joinToString("\n")

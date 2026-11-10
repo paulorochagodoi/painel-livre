@@ -4,6 +4,7 @@ import br.painellivre.info.Forecast
 import br.painellivre.info.ForecastParser
 import br.painellivre.info.ForecastText
 import br.painellivre.info.WeatherRepository
+import br.painellivre.units.Units
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -95,13 +96,20 @@ class ForecastTest {
 
     @Test fun texts() {
         val f = ForecastParser.parse(body)!!
-        assertEquals("Sensação 29° · Umidade 58% · Vento 12 km/h", ForecastText.details(f.current))
-        assertEquals("Máx 30° · Mín 19° · Sol 05:30–18:12", ForecastText.today(f.days[0]))
+        assertEquals("Sensação 29°C · Umidade 58% · Vento 12 km/h", ForecastText.details(f.current))
+        assertEquals("Máx 30°C · Mín 19°C · Sol 05:30–18:12", ForecastText.today(f.days[0]))
         assertEquals("", ForecastText.today(null))
-        assertEquals("Máx 1° · Mín 0°", ForecastText.today(Forecast.Day("d", "Hoje", 0, 0, 1, null, null, null)))
+        assertEquals("Máx 1°C · Mín 0°C", ForecastText.today(Forecast.Day("d", "Hoje", 0, 0, 1, null, null, null)))
         assertNull(ForecastText.rain(null))
         assertNull(ForecastText.rain(5))
         assertEquals("10%", ForecastText.rain(10))
+    }
+
+    @Test fun weatherTextFollowsTemperatureAndSpeed() {
+        val f = ForecastParser.parse(body)!!
+        val choice = Units.Choice(temperature = Units.Temperature.F, speed = Units.Speed.MPH)
+        assertEquals("Sensação 84°F · Umidade 58% · Vento 7,5 mph", ForecastText.details(f.current, choice))
+        assertEquals("Máx 86°F · Mín 66°F · Sol 05:30–18:12", ForecastText.today(f.days[0], choice))
     }
 
     /** Privacidade (README/AGENTS): só a posição arredondada a 0,1° vai na URL, nada além. */

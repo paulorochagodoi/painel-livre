@@ -7,7 +7,7 @@ import android.util.AttributeSet
 import androidx.appcompat.widget.AppCompatImageView
 import br.painellivre.R
 import br.painellivre.car.TelemetrySnapshot
-import java.util.Locale
+import br.painellivre.units.Units
 import kotlin.math.min
 
 /** Renders locais; anima somente a troca de vista e o pulso durante a carga. */
@@ -18,6 +18,9 @@ class SongCarView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     /** Cor do halo sob o carro; null = verde do tema (cockpit antigo). A tela Aura usa platform-glow. */
     var glow: Int? = null
         set(value) { field = value; glowShader = null; invalidate() }
+    /** Unidade dos pneus desenhados no carro (Ajustes). O valor guardado continua em kPa. */
+    var units: Units.Choice = Units.Choice.DEFAULT
+        set(value) { if (field == value) return; field = value; invalidate() }
     var snapshot: TelemetrySnapshot? = null
         set(value) {
             field = value
@@ -109,7 +112,7 @@ class SongCarView @JvmOverloads constructor(context: Context, attrs: AttributeSe
                 segment(CarOverlay.Mark(m.x-.025f,m.y,m.x+.025f,m.y), when(status) {
                     CarOverlay.Tyre.ALERT -> palette.warn; CarOverlay.Tyre.NORMAL -> palette.ok; else -> palette.text3
                 })
-                val text = state.pressures[k]?.let { String.format(Locale("pt", "BR"), "%.2f bar", it/100) } ?: "—"
+                val text = state.pressures[k]?.let { Units.pressureKpa(it, units) } ?: "—"
                 val label = c.save()
                 c.scale(1f/r.width(), 1f/r.height())
                 paint.textSize = 16f * resources.displayMetrics.scaledDensity

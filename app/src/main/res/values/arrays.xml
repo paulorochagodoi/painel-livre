@@ -100,6 +100,64 @@
         <item>10</item>
         <item>30</item>
     </string-array>
+    <string-array name="unit_distance_entries">
+        <item>Quilômetros (km)</item>
+        <item>Milhas (mi)</item>
+    </string-array>
+    <string-array name="unit_distance_values">
+        <item>km</item>
+        <item>mi</item>
+    </string-array>
+    <string-array name="unit_short_entries">
+        <item>Metros (m)</item>
+        <item>Pés (ft)</item>
+    </string-array>
+    <string-array name="unit_short_values">
+        <item>m</item>
+        <item>ft</item>
+    </string-array>
+    <string-array name="unit_speed_entries">
+        <item>km/h</item>
+        <item>mph</item>
+    </string-array>
+    <string-array name="unit_speed_values">
+        <item>kmh</item>
+        <item>mph</item>
+    </string-array>
+    <string-array name="unit_pressure_entries">
+        <item>psi</item>
+        <item>bar</item>
+        <item>kPa</item>
+    </string-array>
+    <string-array name="unit_pressure_values">
+        <item>psi</item>
+        <item>bar</item>
+        <item>kpa</item>
+    </string-array>
+    <string-array name="unit_temperature_entries">
+        <item>Celsius (°C)</item>
+        <item>Fahrenheit (°F)</item>
+    </string-array>
+    <string-array name="unit_temperature_values">
+        <item>c</item>
+        <item>f</item>
+    </string-array>
+    <string-array name="unit_electric_entries">
+        <item>kWh/100 km</item>
+        <item>mi/kWh</item>
+    </string-array>
+    <string-array name="unit_electric_values">
+        <item>kwh100</item>
+        <item>mikwh</item>
+    </string-array>
+    <string-array name="unit_fuel_entries">
+        <item>L/100 km</item>
+        <item>mpg (galão americano)</item>
+    </string-array>
+    <string-array name="unit_fuel_values">
+        <item>l100</item>
+        <item>mpg</item>
+    </string-array>
     <string-array name="panel_map_entries"><item>Seguir o painel</item><item>Cheio</item><item>Pequeno</item><item>Simples</item><item>OFF</item></string-array>
     <string-array name="panel_map_values"><item>follow</item><item>full</item><item>small</item><item>simple</item><item>off</item></string-array>
 </resources>

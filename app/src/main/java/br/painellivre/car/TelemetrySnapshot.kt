@@ -2,6 +2,7 @@ package br.painellivre.car
 
 import br.painellivre.car.TelemetryCatalog.Kind
 import br.painellivre.car.TelemetryCatalog.Signal
+import br.painellivre.units.Units
 import java.util.Locale
 
 /**
@@ -130,15 +131,15 @@ data class TelemetrySnapshot(
 object TelemetryText {
     private val BR = Locale("pt", "BR")
 
-    fun format(kind: Kind, v: Double): String = when (kind) {
+    fun format(kind: Kind, v: Double, units: Units.Choice = Units.Choice.DEFAULT): String = when (kind) {
         Kind.OPEN_FLAG -> if (v == 1.0) "aberta" else "fechada"
         Kind.LOCK -> if (v == 2.0) "trancado" else "destrancado"
         Kind.GUN -> when (v.toInt()) { 1 -> "sem cabo"; 2 -> "cabo AC"; 3 -> "cabo DC"; 4 -> "cabo AC+DC"; else -> "V2L" }
         Kind.BMS -> when (v.toInt()) { 1 -> "carregando"; 2 -> "carga completa"; 13 -> "pausada"; else -> "estado ${v.toInt()}" }
         Kind.PERCENT_FLOAT, Kind.PERCENT -> "${v.toInt()} %"
-        Kind.KM -> "${v.toInt()} km"
-        Kind.TEMP, Kind.TEMP_SET -> "${v.toInt()} °C"
-        Kind.KPA -> String.format(BR, "%.1f bar", v / 100.0)
+        Kind.KM -> Units.distanceKm(v, units)
+        Kind.TEMP, Kind.TEMP_SET -> Units.temperature(v, units, whole = true)
+        Kind.KPA -> Units.pressureKpa(v, units)
         Kind.KW_FLOAT -> String.format(BR, "%.1f kW", v)
         Kind.KW -> "${v.toInt()} kW"
         Kind.HOURS -> "${v.toInt()} h"
@@ -186,19 +187,20 @@ object TelemetryText {
     }
 
     /** Linhas do cartão "Carro" na central: clima, bancos, pneus, vidros. Só as que têm dado. */
-    fun details(s: TelemetrySnapshot): List<String> {
+    fun details(s: TelemetrySnapshot, units: Units.Choice = Units.Choice.DEFAULT): List<String> {
         val lines = mutableListOf<String>()
         val td = s.value("ac_temp_driver"); val tp = s.value("ac_temp_pass")
         val out = s.value("temp_out"); val inside = s.value("temp_in")
+        fun temp(v: Double) = Units.temperature(v, units, whole = true)
         val climate = listOfNotNull(
             when {
-                td != null && tp != null && td != tp -> "${td.toInt()}° / ${tp.toInt()}°"
-                td != null -> "${td.toInt()}°"
+                td != null && tp != null && td != tp -> "${temp(td)} / ${temp(tp)}"
+                td != null -> temp(td)
                 else -> null
             },
             s.value("ac_fan")?.takeIf { it > 0 }?.let { "ventilador ${it.toInt()}" },
-            inside?.let { "dentro ${it.toInt()}°" },
-            out?.let { "fora ${it.toInt()}°" },
+            inside?.let { "dentro ${temp(it)}" },
+            out?.let { "fora ${temp(it)}" },
         )
         if (climate.isNotEmpty()) lines += "Clima: " + climate.joinToString(" · ")
 
@@ -210,7 +212,9 @@ object TelemetryText {
 
         val tyres = listOf("fl", "fr", "rl", "rr").map { s.value("tyre_p_$it") }
         if (tyres.any { it != null }) {
-            lines += "Pneus (bar): " + tyres.joinToString(" ") { v -> v?.let { String.format(BR, "%.1f", it / 100.0) } ?: "—" }
+            lines += "Pneus (${units.pressure.label}): " + tyres.joinToString(" ") { v ->
+                v?.let { Units.pressureNumber(it, units) } ?: "—"
+            }
         }
 
         val windows = listOf("win_fl", "win_fr", "win_rl", "win_rr", "sunroof").mapNotNull { k ->
@@ -226,12 +230,12 @@ object TelemetryText {
         s.value(key)?.toInt()?.takeIf { it > 1 }?.let { "$label ${it - 1}" }
 
     /** Texto do Diagnóstico: um sinal por linha. */
-    fun diagnostic(s: TelemetrySnapshot): String = buildString {
+    fun diagnostic(s: TelemetrySnapshot, units: Units.Choice = Units.Choice.DEFAULT): String = buildString {
         append(s.message)
         if (s.readings.isNotEmpty()) append(" (protocolo ${s.protocol})")
         for (r in s.readings.values) {
             append('\n').append(r.signal.label).append(": ")
-            append(r.value?.let { format(r.signal.kind, it) } ?: "indisponível")
+            append(r.value?.let { format(r.signal.kind, it, units) } ?: "indisponível")
         }
     }
 }

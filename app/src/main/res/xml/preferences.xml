@@ -21,6 +21,68 @@
             app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
+    <PreferenceCategory
+        app:title="Unidades"
+        app:summary="Vale na tela, no painel e na navegação. O carro continua medindo do jeito de fábrica."
+        app:iconSpaceReserved="false">
+        <ListPreference
+            app:key="unit_distance"
+            app:title="Distância (rota e autonomia)"
+            app:defaultValue="km"
+            app:entries="@array/unit_distance_entries"
+            app:entryValues="@array/unit_distance_values"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <ListPreference
+            app:key="unit_short"
+            app:title="Distâncias curtas (manobra)"
+            app:defaultValue="m"
+            app:entries="@array/unit_short_entries"
+            app:entryValues="@array/unit_short_values"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <ListPreference
+            app:key="unit_speed"
+            app:title="Velocidade"
+            app:defaultValue="kmh"
+            app:entries="@array/unit_speed_entries"
+            app:entryValues="@array/unit_speed_values"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <ListPreference
+            app:key="unit_pressure"
+            app:title="Pressão dos pneus"
+            app:defaultValue="psi"
+            app:entries="@array/unit_pressure_entries"
+            app:entryValues="@array/unit_pressure_values"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <ListPreference
+            app:key="unit_temperature"
+            app:title="Temperatura"
+            app:defaultValue="c"
+            app:entries="@array/unit_temperature_entries"
+            app:entryValues="@array/unit_temperature_values"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <ListPreference
+            app:key="unit_electric"
+            app:title="Consumo elétrico"
+            app:defaultValue="kwh100"
+            app:entries="@array/unit_electric_entries"
+            app:entryValues="@array/unit_electric_values"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+        <ListPreference
+            app:key="unit_fuel"
+            app:title="Consumo de combustível"
+            app:defaultValue="l100"
+            app:entries="@array/unit_fuel_entries"
+            app:entryValues="@array/unit_fuel_values"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
     <PreferenceCategory app:title="Painel de instrumentos" app:iconSpaceReserved="false">
         <ListPreference
             app:key="panel_content"

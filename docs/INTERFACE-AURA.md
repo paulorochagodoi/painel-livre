@@ -53,7 +53,7 @@ manifesto não mudou (o tema Aura entra por `setTheme` no código).
 | Dock | `aura_dock.xml` + `dock_buttons.xml` + `dock_temp_*.xml` | Início · motorista (lida) · Painel, app de navegação, Clima, Telefone, Apps, Ajustes, Mídia · passageiro (lida). Em pé, sem as temperaturas |
 | Popover (`.au-pop` + seta) | `PopoverFrame` (desenho, sombra, seta, altura máx. 420) | Posição pela regra pura `PopoverAnchor` |
 | `state.ui.open` | `PopoverState` | Uma janela por vez |
-| `Aura.fmt.dec` / textos | `AuraFormat` | `22,0°`, `6,4 km`, `1h40`, `62%` |
+| `Aura.fmt.dec` / textos | `AuraFormat` → `Units` | `22,0°C`, `6,4 km`, `1h40`, `62%`. A escala (°C/°F, km/mi, psi…) vem de Ajustes → Unidades |
 
 ### Tags do `AuraPainter`
 

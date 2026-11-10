@@ -14,6 +14,7 @@ import br.painellivre.R
 import br.painellivre.info.Forecast
 import br.painellivre.info.ForecastText
 import br.painellivre.info.WeatherRepository
+import br.painellivre.units.Units
 import br.painellivre.location.LocationRepository
 import br.painellivre.ui.aura.AuraBackdropDrawable
 import br.painellivre.ui.aura.AuraColors
@@ -57,6 +58,11 @@ class WeatherActivity : AppCompatActivity() {
         if (LocationRepository.location.value == null) message(getString(R.string.weather_no_gps))
     }
 
+    override fun onResume() {
+        super.onResume()
+        render(WeatherRepository.forecast.value)
+    }
+
     private fun load(force: Boolean) {
         if (loading) return
         val loc = LocationRepository.location.value
@@ -83,11 +89,12 @@ class WeatherActivity : AppCompatActivity() {
         findViewById<View>(R.id.wxMessage).visibility = View.GONE
         findViewById<View>(R.id.wxContent).visibility = View.VISIBLE
         val c = f.current
+        val units = Prefs(this).units
         findViewById<ImageView>(R.id.wxIcon).setImageDrawable(WeatherIconDrawable(WeatherRepository.kindOf(c.code), c.isDay, palette))
-        findViewById<TextView>(R.id.wxTemp).text = "${c.tempC}°"
+        findViewById<TextView>(R.id.wxTemp).text = Units.temperature(c.tempC.toDouble(), units, whole = true)
         findViewById<TextView>(R.id.wxDesc).text = WeatherRepository.describe(c.code)
-        findViewById<TextView>(R.id.wxDetails).text = ForecastText.details(c)
-        findViewById<TextView>(R.id.wxToday).text = ForecastText.today(f.days.firstOrNull { it.label == "Hoje" })
+        findViewById<TextView>(R.id.wxDetails).text = ForecastText.details(c, units)
+        findViewById<TextView>(R.id.wxToday).text = ForecastText.today(f.days.firstOrNull { it.label == "Hoje" }, units)
         renderHours(f.hours)
         renderDays(f.days)
     }
@@ -96,6 +103,7 @@ class WeatherActivity : AppCompatActivity() {
         val row = findViewById<LinearLayout>(R.id.wxHours)
         row.removeAllViews()
         val gap = (10 * density).toInt()
+        val units = Prefs(this).units
         hours.forEach { h ->
             val cell = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -106,7 +114,7 @@ class WeatherActivity : AppCompatActivity() {
             }
             cell.addView(text(h.label, 15f, "t2"))
             cell.addView(icon(WeatherRepository.kindOf(h.code), h.isDay, 40))
-            cell.addView(text("${h.tempC}°", 22f, "t1"))
+            cell.addView(text(Units.temperature(h.tempC.toDouble(), units, whole = true), 22f, "t1"))
             cell.addView(text(ForecastText.rain(h.rainPct) ?: " ", 13f, "accent"))
             row.addView(cell, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = gap })
         }
@@ -118,6 +126,7 @@ class WeatherActivity : AppCompatActivity() {
         list.removeAllViews()
         val lo = days.minOfOrNull { it.minC }
         val hi = days.maxOfOrNull { it.maxC }
+        val units = Prefs(this).units
         days.forEach { d ->
             val line = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -127,9 +136,9 @@ class WeatherActivity : AppCompatActivity() {
             line.addView(text(d.label, 18f, "t1"), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
             line.addView(icon(WeatherRepository.kindOf(d.code), true, 34))
             line.addView(text(ForecastText.rain(d.rainPct) ?: "", 14f, "accent").apply { gravity = Gravity.END }, fixed(64))
-            line.addView(text("${d.minC}°", 18f, "t2").apply { gravity = Gravity.END }, fixed(56))
+            line.addView(text(Units.temperature(d.minC.toDouble(), units, whole = true), 18f, "t2").apply { gravity = Gravity.END }, fixed(72))
             line.addView(RangeBar(d.minC, d.maxC, lo ?: d.minC, hi ?: d.maxC), fixed(140).apply { height = (6 * density).toInt(); marginStart = (12 * density).toInt(); marginEnd = (12 * density).toInt() })
-            line.addView(text("${d.maxC}°", 18f, "t1"), fixed(56))
+            line.addView(text(Units.temperature(d.maxC.toDouble(), units, whole = true), 18f, "t1"), fixed(72))
             list.addView(line)
         }
         palette.apply(list, density)

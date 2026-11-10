@@ -2,6 +2,7 @@ package br.painellivre.car
 
 import br.painellivre.car.Autoservice.Reply
 import br.painellivre.car.TelemetryCatalog.Kind
+import br.painellivre.units.Units
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -268,15 +269,28 @@ class TelemetryTest {
         )
         val lines = TelemetryText.details(s)
         assertEquals(listOf(
-            "Clima: 22° / 24° · fora 31°",
+            "Clima: 22°C / 24°C · fora 31°C",
             "Bancos: vent. motorista 2",
-            "Pneus (bar): 2,9 2,8 — 2,9",
+            "Pneus (psi): 41,6 41,2 — 42,1",
             "Abertos: vidro dianteiro direito 40 %",
         ), lines)
         assertTrue(TelemetryText.details(snapshot("tyre_p_fl" to NO_DATA)).isEmpty())
         assertTrue(TelemetryText.details(snapshot("win_fl" to ZERO)).isEmpty())
         assertEquals(listOf("Vidros fechados"), TelemetryText.details(snapshot(
             "win_fl" to ZERO, "win_fr" to ZERO, "win_rl" to ZERO, "win_rr" to ZERO)))
+    }
+
+    @Test fun detailLinesFollowTheChosenUnits() {
+        val s = snapshot(
+            "ac_temp_driver" to word(22), "ac_temp_pass" to word(24), "temp_out" to word(31),
+            "tyre_p_fl" to word(287), "tyre_p_fr" to word(284), "tyre_p_rr" to word(290),
+        )
+        val lines = TelemetryText.details(s, Units.Choice(
+            temperature = Units.Temperature.F,
+            pressure = Units.Pressure.BAR,
+        ))
+        assertEquals("Clima: 72°F / 75°F · fora 88°F", lines[0])
+        assertEquals("Pneus (bar): 2,9 2,8 — 2,9", lines[1])
     }
 
     @Test fun debugLineShowsAddressRawAndConfidence() {

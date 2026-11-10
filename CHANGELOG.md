@@ -4,6 +4,23 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
+## Não lançado — unidades na interface (issue #25)
+
+Sem mudança de `versionCode`/`versionName` (o release fica com o Paulo).
+
+- **Ajustes → Unidades:** distância da rota e da autonomia (km/mi), manobra curta (m/ft),
+  velocidade (km/h/mph), pressão dos pneus (bar/psi/kPa), temperatura (°C/°F), consumo elétrico
+  (kWh/100 km ou mi/kWh) e combustível (L/100 km ou mpg). Padrão de fábrica: km, m, km/h, **psi**,
+  °C, kWh/100 km, L/100 km.
+- O conversor `Units` é a única conta. A Aura (clima, autonomia, tempo, pneus no carro, busca),
+  os cartões do painel (manobra e restante) e a navegação chamam a mesma função. O carro, o CAN
+  e o parser continuam em km, metros, km/h, kPa e °C.
+- Não há leitura de consumo no catálogo de telemetria: a preferência fica guardada e o formatador
+  pronto, sem inventar um número na tela.
+- Regressão JVM na main da 0.5.7, **antes** desta mudança: **274 testes, 0 falhas, 26 classes**.
+  **Depois:** **284 testes, 0 falhas, 27 classes** (+10: `UnitsTest` e os casos de clima, pneus,
+  tempo, autonomia e a mesma distância no painel e na navegação). `assembleDebug` gera o APK.
+
 ## 0.5.7 (versionCode 13), comandos instantâneos + bancos/porta-malas confirmados (29/10/2026)
 
 Branch `fix/ac-audio-tela-cheia`, PR #23 (sem merge). Paulo ainda sentia ~1 s entre toques na 0.5.6.

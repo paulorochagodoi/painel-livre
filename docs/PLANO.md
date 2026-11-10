@@ -608,3 +608,11 @@ Teste da v0.5.5-teste no carro de Paulo, DiLink 3.0, `adb` em `172.26.89.229:555
   banco/porta-malas (esperado: nenhum Toast de bloqueio, nenhum efeito real no carro, já que
   continuam hipótese); atalho de temperatura no dock abrindo a Climatização em vez de lista.
 - [ ] Issue #24 (Waze no painel) é diagnóstico separado, não faz parte desta rodada.
+
+## Issue #25 — Unidades (não lançado)
+
+Ajustes ganhou a seção Unidades. O conversor `Units` formata clima, autonomia, tempo, pneus,
+manobra e restante da rota. O padrão é métrico com pressão em psi. O carro não muda de unidade.
+Consumo elétrico e de combustível têm preferência e formatador; ainda não há sinal lido para
+mostrar na tela. Sem bump de versão. Conferir no carro: trocar cada item em Ajustes e ver o
+mesmo número na central, no cartão do painel e na navegação.

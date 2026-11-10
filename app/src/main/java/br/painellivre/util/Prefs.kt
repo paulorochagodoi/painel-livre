@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.preference.PreferenceManager
 import br.painellivre.cluster.SafeArea
+import br.painellivre.units.Units
 
 /** Acesso tipado às preferências (as chaves batem com res/xml/preferences.xml). */
 class Prefs internal constructor(private val sp: SharedPreferences) {
@@ -93,6 +94,21 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
     val telemetryPanel: Boolean get() = sp.getBoolean(KEY_TELEMETRY_PANEL, false)
     /** Segundos entre leituras dos dados do carro (5–60). */
     val telemetryIntervalSec: Int get() = sp.getString(KEY_TELEMETRY_INTERVAL, "10")?.toIntOrNull()?.coerceIn(5, 60) ?: 10
+
+    /**
+     * Unidades da interface (issue #25). Valor desconhecido volta ao padrão de fábrica
+     * (km, m, km/h, psi, °C, kWh/100 km, L/100 km). Não altera o que o carro mede.
+     */
+    val units: Units.Choice
+        get() = Units.Choice(
+            distance = Units.Distance.from(sp.getString(KEY_UNIT_DISTANCE, null)),
+            shortDistance = Units.ShortDistance.from(sp.getString(KEY_UNIT_SHORT, null)),
+            speed = Units.Speed.from(sp.getString(KEY_UNIT_SPEED, null)),
+            pressure = Units.Pressure.from(sp.getString(KEY_UNIT_PRESSURE, null)),
+            temperature = Units.Temperature.from(sp.getString(KEY_UNIT_TEMPERATURE, null)),
+            electric = Units.Electric.from(sp.getString(KEY_UNIT_ELECTRIC, null)),
+            fuel = Units.Fuel.from(sp.getString(KEY_UNIT_FUEL, null)),
+        )
     /** Ações de broadcast extras que o debug escuta (digitadas pelo motorista). */
     var debugActions: Set<String>
         get() = sp.getStringSet(KEY_DEBUG_ACTIONS, null)?.toSet() ?: emptySet()
@@ -149,6 +165,13 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
         const val KEY_TELEMETRY = "telemetry"
         const val KEY_TELEMETRY_PANEL = "telemetry_panel"
         const val KEY_TELEMETRY_INTERVAL = "telemetry_interval"
+        const val KEY_UNIT_DISTANCE = "unit_distance"
+        const val KEY_UNIT_SHORT = "unit_short"
+        const val KEY_UNIT_SPEED = "unit_speed"
+        const val KEY_UNIT_PRESSURE = "unit_pressure"
+        const val KEY_UNIT_TEMPERATURE = "unit_temperature"
+        const val KEY_UNIT_ELECTRIC = "unit_electric"
+        const val KEY_UNIT_FUEL = "unit_fuel"
         private const val KEY_DEBUG_ACTIONS = "debug_actions"
         private const val KEY_PROJECTION_POWERED = "projection_powered"
         private const val KEY_PANEL_GEOMETRY = "panel_geometry"

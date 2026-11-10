@@ -29,6 +29,8 @@ object TelemetryCatalog {
         BMS,                // 1 carregando, 2 terminou, 13 pausado
         PERCENT_FLOAT(true),
         PERCENT,
+        /** 0–100 como porcentagem; 101–1000 como décimos (BMS ×10). */
+        PERCENT_TENTHS,
         KM,
         TEMP,               // °C
         TEMP_SET,           // °C ajustado no ar-condicionado
@@ -64,9 +66,22 @@ object TelemetryCatalog {
         val canFid: Int? = null,
         /** false = só na leitura completa do modo de debug. */
         val poll: Boolean = true,
+        /**
+         * Outro endereço já documentado, usado só se o principal não tiver valor.
+         * Nunca é porta/trava/tampa: um 0/1 errado viraria "aberta" na tela.
+         */
+        val alternates: List<Alternate> = emptyList(),
     ) {
         fun fidFor(protocol: Autoservice.Protocol) = if (protocol == Autoservice.Protocol.CAN && canFid != null) canFid else fid
         fun command(fid: Int = this.fid) = Autoservice.command(tx, dev, fid)
+    }
+
+    /** Endereço extra, ainda só leitura (transação 5 ou 7). */
+    data class Alternate(val dev: Int, val fid: Int, val tx: Int, val kind: Kind) {
+        init {
+            require(tx in Autoservice.READ_TRANSACTIONS) { "alternativa com transação $tx" }
+            require(dev in Autoservice.DEVICE_RANGE) { "dispositivo $dev" }
+        }
     }
 
     private const val AC = 1000
@@ -101,7 +116,8 @@ object TelemetryCatalog {
         Signal("charge_h", "Tempo restante (horas)", Group.CHARGE, CHARGING, 0x32300028, INT, Kind.HOURS, C, "Instrument.CHARGING_CHARGE_REST_HOUR_DD"),
         Signal("charge_min", "Tempo restante (minutos)", Group.CHARGE, CHARGING, 0x32300030, INT, Kind.MINUTES, C, "Instrument.CHARGING_CHARGE_REST_MINUTE_DD"),
 
-        Signal("soc", "Bateria", Group.BATTERY, STATISTIC, 0x4A505038, FLOAT, Kind.PERCENT_FLOAT, C, "Statistic.STATISTIC_ELEC_PERCENTAGE", canFid = 1033543720),
+        Signal("soc", "Bateria", Group.BATTERY, STATISTIC, 0x4A505038, FLOAT, Kind.PERCENT_FLOAT, C, "Statistic.STATISTIC_ELEC_PERCENTAGE", canFid = 1033543720,
+            alternates = listOf(Alternate(STATISTIC, 0x44700028, INT, Kind.PERCENT_TENTHS))),
         Signal("ev_range", "Autonomia elétrica", Group.BATTERY, STATISTIC, 0x4A50203E, INT, Kind.KM, C, "Statistic.STATISTIC_ELEC_DRIVING_RANGE", canFid = 1033203771),
         Signal("fuel_range", "Autonomia a combustível", Group.BATTERY, STATISTIC, 0x4A504038, INT, Kind.KM, C, "Statistic.STATISTIC_FUEL_DRIVING_RANGE"),
         Signal("fuel_pct", "Combustível", Group.BATTERY, STATISTIC, 0x4A507040, INT, Kind.PERCENT, C, "Statistic.STATISTIC_FUEL_PERCENTAGE"),

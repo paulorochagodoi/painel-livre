@@ -52,7 +52,6 @@ import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import java.lang.ref.WeakReference
-import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.min
 
@@ -322,6 +321,8 @@ open class ClusterActivity : ComponentActivity() {
     private lateinit var telemetryCard: LinearLayout
     private lateinit var carStatus: CarStatusView
     private lateinit var telemetryText: TextView
+    /** Borda de alerta só em porta/tampa/carga; a linha de bateria usa a borda normal. */
+    private var telemetryAlert = false
 
     private fun buildOverlay() {
         // O carro fica fixo no ponto focal da câmera (a câmera segue o carro), então é uma View
@@ -401,7 +402,7 @@ open class ClusterActivity : ComponentActivity() {
         tbtCard.background = cardBg(r)
         etaCard.background = cardBg(r)
         // Aviso do carro (porta aberta, tampa de carga): borda `warn`, texto em palavras.
-        telemetryCard.background = cardBg(r, look.warn)
+        telemetryCard.background = cardBg(r, if (telemetryAlert) look.warn else look.cardStroke)
         carStatus.palette = colors.toPalette()
         telemetryText.setTextColor(look.ink)
         tbtIconBox.background = GradientDrawable().apply { setColor(look.accent); cornerRadius = r * 0.8f }
@@ -524,17 +525,21 @@ open class ClusterActivity : ComponentActivity() {
     }
 
     private fun renderTelemetry(t: TelemetrySnapshot?) {
-        val text = t?.takeIf { it.status == TelemetrySnapshot.Status.OK && it.notable }?.let(TelemetryText::panel)
+        val line = t?.takeIf { it.status == TelemetrySnapshot.Status.OK }?.let(TelemetryText::cluster)
+        telemetryAlert = line?.second == true
+        val text = line?.first
         telemetryCard.visibility = if (text == null) View.GONE else View.VISIBLE
-        carStatus.snapshot = if (text == null) null else t
+        carStatus.visibility = if (telemetryAlert) View.VISIBLE else View.GONE
+        carStatus.snapshot = if (telemetryAlert) t else null
         telemetryText.text = text ?: ""
+        if (h > 0) telemetryCard.background = cardBg(h * ClusterLook.RADIUS, if (telemetryAlert) look.warn else look.cardStroke)
     }
 
     private fun ViewGroup.children() = (0 until childCount).map { getChildAt(it) }
 
     private fun render(s: NavState) {
-        val nav = s.nav
-        if (!s.active || nav == null) {
+        val card = ClusterCue.from(s)
+        if (!card.visible) {
             tbtCard.visibility = View.GONE
             etaCard.visibility = View.GONE
             setStatus(if (!smoother.hasFix) "Aguardando GPS" else null)
@@ -542,29 +547,20 @@ open class ClusterActivity : ComponentActivity() {
         }
         tbtCard.visibility = View.VISIBLE
         maneuverView.bitmap = s.maneuverIcon
-        maneuverView.maneuver = nav.maneuver
-        maneuverView.roundaboutExit = nav.roundaboutExit
-        distanceText.text = nav.distanceText ?: ""
-        distanceText.visibility = if (nav.distanceText.isNullOrEmpty()) View.GONE else View.VISIBLE
-        val street = nav.street
-        streetText.text = street ?: nav.instruction ?: ""
-        instructionText.text = if (street != null) shortInstruction(nav) else ""
-        instructionText.visibility = if (instructionText.text.isNullOrEmpty()) View.GONE else View.VISIBLE
+        maneuverView.maneuver = card.maneuver
+        maneuverView.roundaboutExit = card.roundaboutExit
+        distanceText.text = card.distance
+        distanceText.visibility = if (card.showDistance) View.VISIBLE else View.GONE
+        streetText.text = card.street
+        val line = ClusterCue.instructionLine(card)
+        instructionText.text = line
+        instructionText.visibility = if (line.isEmpty()) View.GONE else View.VISIBLE
 
-        etaValues[0]!!.text = nav.etaClock ?: "—"
-        etaValues[1]!!.text = nav.remainingSeconds?.let { formatDuration(it) } ?: "—"
-        etaValues[2]!!.text = nav.remainingDistanceText ?: "—"
-        etaCard.visibility = if (nav.etaClock == null && nav.remainingSeconds == null && nav.remainingDistanceText == null) View.GONE else View.VISIBLE
-        setStatus(if (s.simulated) "SIMULAÇÃO" else null)
-    }
-
-    /** "Vire à direita", "Pegue a 2ª saída"… — o verbo da instrução, sem a rua. */
-    private fun shortInstruction(nav: br.painellivre.nav.ParsedNav): String {
-        val instr = nav.instruction ?: return ""
-        val street = nav.street ?: return instr
-        val cut = instr.indexOf(street)
-        val head = if (cut > 0) instr.substring(0, cut) else instr
-        return head.trim().removeSuffix(" na").removeSuffix(" no").removeSuffix(" para").removeSuffix(" em").trim().trimEnd(',')
+        etaValues[0]!!.text = card.etaClock
+        etaValues[1]!!.text = card.etaTime
+        etaValues[2]!!.text = card.etaDistance
+        etaCard.visibility = if (card.showEta) View.VISIBLE else View.GONE
+        setStatus(if (card.simulated) "SIMULAÇÃO" else null)
     }
 
     private fun setStatus(text: String?) {
@@ -572,11 +568,6 @@ open class ClusterActivity : ComponentActivity() {
         statusText.visibility = if (text == null) View.GONE else View.VISIBLE
     }
 
-    private fun formatDuration(sec: Int): String {
-        val hh = sec / 3600
-        val mm = (sec % 3600) / 60
-        return if (hh > 0) String.format(Locale.ROOT, "%d h %02d min", hh, mm) else "$mm min"
-    }
 
     // ── Mapa e câmera por quadro ────────────────────────────────────────────
 

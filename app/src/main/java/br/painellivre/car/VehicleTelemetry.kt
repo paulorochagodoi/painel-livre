@@ -53,6 +53,7 @@ object VehicleTelemetry {
     @Volatile private var environment: Autoservice.Environment? = null
     private val resolved = HashMap<String, Int?>()
     private var lastStatus: TelemetrySnapshot.Status? = null
+    private var lastDigest: String? = null
 
     /** Estado atual enquanto quem coleta estiver ativo; liga e desliga o polling sozinho. */
     fun observe(ctx: Context): Flow<TelemetrySnapshot> = flow {
@@ -81,7 +82,7 @@ object VehicleTelemetry {
                 continue
             }
             if (_state.value.status == TelemetrySnapshot.Status.OFF) _state.value = TelemetrySnapshot(TelemetrySnapshot.Status.WAITING)
-            val snap = simulated?.takeIf { BuildConfig.DEBUG } ?: sweep(app, TelemetryCatalog.POLLED)
+            val snap = simulated?.takeIf { BuildConfig.DEBUG } ?: sweep(app, TelemetryCatalog.POLLED, prefs.telemetryOverrides)
             publish(snap)
             // Serviço inexistente ou bloqueado não muda sozinho: tenta de novo bem devagar.
             val wait = when (snap.status) {
@@ -100,10 +101,21 @@ object VehicleTelemetry {
             lastStatus = s.status
             if (s.status != TelemetrySnapshot.Status.OFF) AppLog.i("Telemetria: ${s.message}")
         }
+        if (s.status == TelemetrySnapshot.Status.OK) {
+            val digest = TelemetryText.digest(s)
+            if (digest != lastDigest) {
+                lastDigest = digest
+                AppLog.i("Telemetria: $digest")
+            }
+        } else lastDigest = null
     }
 
-    /** Uma varredura dos [signals]. Nunca lança: falha vira um estado. */
-    suspend fun sweep(ctx: Context, signals: List<TelemetryCatalog.Signal>): TelemetrySnapshot = mutex.withLock {
+    /** Uma varredura dos [signals]. Nunca lança: falha vira um estado. [overridesText] só entra no modo de debug. */
+    suspend fun sweep(
+        ctx: Context,
+        signals: List<TelemetryCatalog.Signal>,
+        overridesText: String = "",
+    ): TelemetrySnapshot = mutex.withLock {
         val env = environment ?: when (val r = SelfAdb.shell(ctx, Autoservice.ENVIRONMENT_COMMAND)) {
             is SelfAdb.Result.Error -> return@withLock TelemetrySnapshot(TelemetrySnapshot.Status.NO_ADB, "Sem ADB local: ${r.message}")
             is SelfAdb.Result.Ok -> Autoservice.Environment.parse(r.output).also {
@@ -115,17 +127,17 @@ object VehicleTelemetry {
         if (!env.descriptorOk) {
             return@withLock TelemetrySnapshot(TelemetrySnapshot.Status.BLOCKED, "${TelemetrySnapshot.Status.BLOCKED.label} (${env.serviceLine})")
         }
-        val fids = signals.map { TelemetryCatalog.resolveFid(it, env.protocol, symbolValue(it.symbol)) }
-        val commands = signals.mapIndexed { i, s -> s.command(fids[i]) }
-        val out = when (val r = SelfAdb.shell(ctx, Autoservice.batch(commands))) {
+        val resolved = signals.associate { it.key to symbolValue(it.symbol) }
+        val plan = TelemetryPlan.probes(signals, env.protocol, resolved, TelemetryOverrides.parse(overridesText))
+        val out = when (val r = SelfAdb.shell(ctx, Autoservice.batch(plan.map { it.command() }))) {
             is SelfAdb.Result.Error -> return@withLock TelemetrySnapshot(TelemetrySnapshot.Status.NO_ADB, "Sem ADB local: ${r.message}")
             is SelfAdb.Result.Ok -> r.output
         }
-        val parts = Autoservice.splitBatch(out, signals.size)
-        val readings = signals.mapIndexed { i, s -> s.key to TelemetrySnapshot.reading(s, fids[i], Autoservice.parse(parts[i])) }.toMap()
-        if (readings.values.all { it.reply is Autoservice.Reply.NoService }) {
+        val replies = Autoservice.splitBatch(out, plan.size).map { Autoservice.parse(it) }
+        if (replies.isNotEmpty() && replies.all { it is Autoservice.Reply.NoService }) {
             return@withLock TelemetrySnapshot(TelemetrySnapshot.Status.NO_SERVICE)
         }
+        val readings = TelemetryPlan.assemble(signals, plan, replies)
         TelemetrySnapshot(TelemetrySnapshot.Status.OK, readings = readings, atMillis = System.currentTimeMillis(), protocol = env.protocol)
     }
 
@@ -142,8 +154,10 @@ object VehicleTelemetry {
      * endereço, resposta crua e valor, para conferir no carro. Funciona com a opção desligada.
      */
     suspend fun debugReadAll(ctx: Context) {
+        val overrides = Prefs(ctx).telemetryOverrides
         DebugLog.add("carro", "lendo ${TelemetryCatalog.SIGNALS.size} sinais (só leitura, transações 5/7)…")
-        val s = sweep(ctx.applicationContext, TelemetryCatalog.SIGNALS)
+        if (overrides.isNotBlank()) DebugLog.add("carro", "endereços de debug: $overrides")
+        val s = sweep(ctx.applicationContext, TelemetryCatalog.SIGNALS, overrides)
         DebugLog.add("carro", "${s.message}${if (s.readings.isNotEmpty()) " · protocolo ${s.protocol}" else ""}")
         environment?.serviceLine?.let { DebugLog.add("carro", "serviço: $it") }
         for (g in TelemetryCatalog.Group.values()) {

@@ -49,17 +49,25 @@ class NavNotificationListener : NotificationListenerService() {
         val text = ex.getCharSequence(Notification.EXTRA_TEXT)?.toString()
         val big = ex.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
         val sub = ex.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
+            ?: ex.getCharSequence(Notification.EXTRA_INFO_TEXT)?.toString()
+        val lines = ex.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)?.map { it.toString() } ?: emptyList()
 
-        val signature = "${sbn.key}|$title|$text|$big|$sub"
+        val signature = "${sbn.key}|$title|$text|$big|$sub|${lines.joinToString("|")}"
         if (signature == lastSignature) return
         lastSignature = signature
 
-        val parsed = NavParser.parse(title, text, big, sub)
+        val parsed = NavParser.parse(title, text, big, sub, lines)
         if (parsed == null) {
             AppLog.i("Notificação de ${sbn.packageName} sem orientação reconhecível (título=${title?.length ?: 0} car.)")
             return
         }
         drivingKey = sbn.key
+        val who = when (sbn.packageName) {
+            NavRepository.PKG_WAZE -> "Waze"
+            NavRepository.PKG_MAPS, NavRepository.PKG_MAPS_REVANCED -> "Google Maps"
+            else -> sbn.packageName
+        }
+        AppLog.i("Manobra de $who: ${parsed.distanceText ?: "sem distância"} · ${parsed.instruction.take(80)}")
         NavRepository.update(sbn.packageName, parsed, loadLargeIcon(n))
     }
 

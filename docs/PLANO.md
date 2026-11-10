@@ -21,6 +21,32 @@ e de entender, igual a ele; a única diferença é a rota vir do Google Maps ou 
 
 ---
 
+## Issues #6, #16 e #24 — roteiro curto no carro (não feito pelo agente)
+
+Só leitura. Carro parado em P para a telemetria. Não rodar transação 6, não mandar `settings put`
+nem código 1 do AutoContainer. A versão do APK continua 0.5.7.
+
+1. ADB local já usado pelo app. No notebook, se precisar conferir o serviço:
+   `adb shell service list | grep autoservice` (tem que citar `android.gui.BYDAutoServer`).
+2. Ajustes → Ler dados do carro ligado. Modo de debug → Abrir o registro → **Ler dados do carro**.
+   No log, a linha `Telemetria: bateria … · tanque … · elétrico … · combustível … · portas …`.
+   `0xffffd8e5` é "indisponível", não zero.
+3. Comparar com o painel original: SOC, tanque, autonomia elétrica e a combustível. Abrir e fechar
+   uma porta (parado) e ver o carro na central e o aviso no mapa do painel. Clima, bancos, pneus,
+   tampa e carga: só olhar; não é para comandar vidro nem teto.
+4. Se um número não bater, no debug preencher **Endereços de leitura** (ex.: `soc=1014:0x4A505038:7`)
+   e ler de novo. Anotar o que o log mostrou. Leituras de referência, sem escrever:
+   `adb shell service call autoservice 5 i32 1011 i32 555745336` (câmbio; 1 = P na issue #16) e
+   `adb shell service call autoservice 7 i32 1014 i32 1246777400` (SOC que o SealNav lê).
+5. Rota: deixar **desligado** "Mover o app de navegação para o painel". Conceder notificações.
+   Iniciar uma rota no Waze ou no Maps **na central**. O painel (mapa integrado) deve mostrar seta,
+   distância e a próxima rua. O log diz `Manobra de Waze:` ou `Manobra de Google Maps:`.
+   `adb shell dumpsys display | grep fission` confirma o display 1 (1920×720). O Waze não deve ser
+   a activity retomada nesse display (`dumpsys activity activities`).
+
+Validação local desta etapa: suíte JVM 274 testes / 0 falhas antes; 291 / 0 falhas depois.
+`assembleDebug` gerou `PainelLivre-v0.5.7-debug.apk`. Sem acesso ao carro.
+
 ## Central — issues #7, #3, #4 (2026-10-23, não lançado)
 
 - **#7 launcher**: "Usar como tela inicial" conferido e com plano B sem ADB, Início volta à aba

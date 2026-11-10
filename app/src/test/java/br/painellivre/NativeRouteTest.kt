@@ -46,9 +46,10 @@ class NativeRouteTest {
         assertTrue(url.contains("steps=true&geometries=geojson"))
     }
     @Test fun explicitNativeChoiceOverridesExperimentalExternalPanel() {
-        assertNull(PanelContent.externalPackage("navigation", "native"))
-        assertNull(PanelContent.externalPackage("navigation", "waze", nativeRoute = true))
-        assertEquals(PanelContent.WAZE, PanelContent.externalPackage("navigation", "waze"))
+        assertNull(PanelContent.externalPackage("navigation", "native", mirrorNavApp = true))
+        assertNull(PanelContent.externalPackage("navigation", "waze", nativeRoute = true, mirrorNavApp = true))
+        assertNull(PanelContent.externalPackage("navigation", "waze"))
+        assertEquals(PanelContent.WAZE, PanelContent.externalPackage("navigation", "waze", mirrorNavApp = true))
         assertTrue(PanelContent.showOnRouteRequest("nav"))
         assertFalse(PanelContent.showOnRouteRequest("manual"))
     }

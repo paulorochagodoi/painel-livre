@@ -7,7 +7,9 @@ import br.painellivre.cluster.SafeArea
 
 /** Acesso tipado às preferências (as chaves batem com res/xml/preferences.xml). */
 class Prefs internal constructor(private val sp: SharedPreferences) {
-    constructor(context: Context) : this(PreferenceManager.getDefaultSharedPreferences(context.applicationContext)) { migratePanelMenu(); migrateCommands() }
+    constructor(context: Context) : this(PreferenceManager.getDefaultSharedPreferences(context.applicationContext)) {
+        migratePanelMenu(); migrateCommands(); migrateTelemetry()
+    }
 
     /** "nav" = só durante a navegação, "always" = sempre, "manual" = só pelos botões. */
     val panelContent: String get() = sp.getString(KEY_PANEL_CONTENT, "integrated") ?: "integrated"
@@ -87,12 +89,30 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
     fun carCommandAllowed(key: String): Boolean =
         br.painellivre.car.CarCommands.CATALOG.any { it.key == key && it.confirmed } &&
             sp.getBoolean("car_command_$key", true)
-    /** Ler dados do carro pelo `autoservice` via ADB local (issue #16). Experimental, desligado. */
-    val telemetryEnabled: Boolean get() = sp.getBoolean(KEY_TELEMETRY, false)
-    /** Aviso compacto no painel (porta aberta, carregando). Desligado por padrão. */
-    val telemetryPanel: Boolean get() = sp.getBoolean(KEY_TELEMETRY_PANEL, false)
+    /**
+     * Primeira atualização desta leva liga a leitura (issues #6 e #16). Quem desligar depois permanece
+     * desligado: a migração não roda de novo.
+     */
+    internal fun migrateTelemetry() {
+        if (sp.getInt("telemetry_migration", 0) >= 1) return
+        sp.edit().putBoolean(KEY_TELEMETRY, true).putBoolean(KEY_TELEMETRY_PANEL, true)
+            .putInt("telemetry_migration", 1).commit()
+    }
+
+    /** Ler dados do carro pelo `autoservice` via ADB local (issue #16). Ligado; só leitura. */
+    val telemetryEnabled: Boolean get() = sp.getBoolean(KEY_TELEMETRY, true)
+    /** Aviso no painel: porta/carga, ou bateria e alcance quando não há alerta. */
+    val telemetryPanel: Boolean get() = sp.getBoolean(KEY_TELEMETRY_PANEL, true)
     /** Segundos entre leituras dos dados do carro (5–60). */
     val telemetryIntervalSec: Int get() = sp.getString(KEY_TELEMETRY_INTERVAL, "10")?.toIntOrNull()?.coerceIn(5, 60) ?: 10
+    /**
+     * Endereços extras do debug (`soc=1014:0x4A505038:7`). Ignorado com o modo de debug desligado,
+     * para um texto antigo não mudar a leitura normal.
+     */
+    val telemetryOverrides: String
+        get() = if (debugMode) sp.getString(KEY_TELEMETRY_OVERRIDES, "") ?: "" else ""
+    /** Leva o app de navegação ao display do painel. Desligado: a manobra vem da notificação. */
+    val mirrorNavApp: Boolean get() = sp.getBoolean(KEY_MIRROR_NAV, false)
     /** Ações de broadcast extras que o debug escuta (digitadas pelo motorista). */
     var debugActions: Set<String>
         get() = sp.getStringSet(KEY_DEBUG_ACTIONS, null)?.toSet() ?: emptySet()
@@ -149,6 +169,8 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
         const val KEY_TELEMETRY = "telemetry"
         const val KEY_TELEMETRY_PANEL = "telemetry_panel"
         const val KEY_TELEMETRY_INTERVAL = "telemetry_interval"
+        const val KEY_TELEMETRY_OVERRIDES = "telemetry_overrides"
+        const val KEY_MIRROR_NAV = "mirror_nav_app"
         private const val KEY_DEBUG_ACTIONS = "debug_actions"
         private const val KEY_PROJECTION_POWERED = "projection_powered"
         private const val KEY_PANEL_GEOMETRY = "panel_geometry"

@@ -84,6 +84,29 @@ class PrefsTest {
         assertEquals(2, data["car_commands_migration"]) // idempotente
     }
 
+    @Test fun migracaoTelemetriaLigaUmaVezERespeitaDesligamento() {
+        val data = mutableMapOf<String, Any?>("telemetry" to false, "telemetry_panel" to false)
+        val p = Prefs(storage(data))
+        p.migrateTelemetry()
+        assertTrue(p.telemetryEnabled)
+        assertTrue(p.telemetryPanel)
+        assertEquals(1, data["telemetry_migration"])
+        data["telemetry"] = false
+        data["telemetry_panel"] = false
+        p.migrateTelemetry()
+        assertFalse(p.telemetryEnabled)
+        assertFalse(p.telemetryPanel)
+    }
+
+    @Test fun overridesOnlyApplyWhileDebugIsOn() {
+        assertEquals("", prefs(Prefs.KEY_TELEMETRY_OVERRIDES to "soc=1014:1:5").telemetryOverrides)
+        assertEquals(
+            "soc=1014:1:5",
+            prefs(Prefs.KEY_DEBUG_MODE to true, Prefs.KEY_TELEMETRY_OVERRIDES to "soc=1014:1:5").telemetryOverrides,
+        )
+        assertTrue(prefs(Prefs.KEY_MIRROR_NAV to true).mirrorNavApp)
+    }
+
     @Test fun migracaoMenuLigaAntigoFalseERespeitaDesligamentoPosterior() {
         val data = mutableMapOf<String, Any?>(Prefs.KEY_PANEL_MENU_FOLLOW to false)
         val p = Prefs(storage(data))
@@ -130,11 +153,15 @@ class PrefsTest {
         assertTrue(p.panelMenuFollow)
     }
 
-    @Test fun telemetryIsOffByDefaultAndIntervalIsBounded() {
-        // Issue #16: a leitura pelo autoservice e o aviso no painel só ligam pelo motorista.
+    @Test fun telemetryIsOnByDefaultAndIntervalIsBounded() {
+        // Issues #6/#16: a leitura só de leitura vem ligada; o motorista pode desligar.
         val p = prefs()
-        assertFalse(p.telemetryEnabled)
-        assertFalse(p.telemetryPanel)
+        assertTrue(p.telemetryEnabled)
+        assertTrue(p.telemetryPanel)
+        assertFalse(prefs(Prefs.KEY_TELEMETRY to false).telemetryEnabled)
+        assertFalse(prefs(Prefs.KEY_TELEMETRY_PANEL to false).telemetryPanel)
+        assertFalse(p.mirrorNavApp)
+        assertEquals("", p.telemetryOverrides)
         assertEquals(10, p.telemetryIntervalSec)
         assertTrue(prefs(Prefs.KEY_TELEMETRY to true).telemetryEnabled)
         assertTrue(prefs(Prefs.KEY_TELEMETRY_PANEL to true).telemetryPanel)

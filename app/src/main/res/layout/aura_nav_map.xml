@@ -19,4 +19,63 @@
         android:padding="16dp"
         android:src="@drawable/au_locate"
         android:tag="a_raised_md" />
+
+    <!-- Guia da rota nativa quando o mapa não está no painel: manobra em destaque. -->
+    <LinearLayout
+        android:id="@+id/navGuide"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="88dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:tag="a_raised_md"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <br.painellivre.cluster.ManeuverView
+                android:id="@+id/navGuideManeuver"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:importantForAccessibility="no"
+                android:padding="8dp"
+                android:tag="a_badge_on" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/navGuideDistance"
+                    style="@style/AuNumM" />
+
+                <TextView
+                    android:id="@+id/navGuideStreet"
+                    style="@style/AuBody" />
+
+                <TextView
+                    android:id="@+id/navGuideEta"
+                    style="@style/AuCaption"
+                    android:tag="a_accent" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/navGuideNext"
+            style="@style/AuCaption"
+            android:layout_marginTop="6dp"
+            android:visibility="gone" />
+    </LinearLayout>
 </FrameLayout>

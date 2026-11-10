@@ -16,7 +16,7 @@ busca, apps, discador e previsão) e, desde a rodada 2, no **painel de instrumen
   Catálogo, fontes, limites e hipóteses em [COMANDOS.md](COMANDOS.md).
 - **Nada inventado.** Sem endereços, rádios ou músicas de exemplo. Sem dado, o chip some ou diz
   "Sem dado"; nunca "Fechado"/"Travado" chutado. Sem mídia: "Nada tocando". Casa/Trabalho sem
-  endereço: "Definir". Categorias da busca fazem uma busca de verdade (Photon) pelo termo.
+  endereço: "Definir". Categorias da busca pedem pontos OSM perto do carro (Overpass), não uma lista pronta.
 - **Estado nunca só pela cor**: chip = ícone + peça + estado em palavras; aberto em `warn`.
 - **Uma janela por vez**, ancorada no atalho, fecha no X, tocando fora, no mesmo atalho, em Início
   ou no voltar. Entrada de 180 ms (fade + 10 dp); com "remover animações" do Android, aparece direto.
@@ -45,7 +45,7 @@ manifesto não mudou (o tema Aura entra por `setTheme` no código).
 | VehicleStatus (carro de cima 2D) | **carro 3D atual** `SongCarView` + `CarOverlay` em `aura_car.xml`, chips em `AnchoredLayout` | 3/4 padrão; vista de cima quando há destaque; bocal na traseira direita (.84, .15). Chips: Portas, Vidros, Capô, Porta-malas, Carregamento e Pneus |
 | ShortcutTiles | `aura_tiles.xml` + `tile_nav/battery/climate/media.xml` | Ordem fixa; tile aberto com borda `accent` |
 | NavPanel | `pop_nav.xml` | Rota ativa (Encerrar na nativa, Abrir no Maps/Waze), campo, Casa/Trabalho (km em linha reta), categorias |
-| NavSearch | `aura_nav.xml` (+ `aura_nav_side/map`) | Busca Photon, Painel Livre/Maps/Waze, rota atual, lugares, mapa MapLibre com a rota nativa e Centralizar |
+| NavSearch | `aura_nav.xml` (+ `aura_nav_side/map`) | Busca (Photon/Overpass), Painel Livre/Maps/Waze, rota atual, lugares, mapa MapLibre com a rota nativa, Centralizar e, sem mapa no painel, o banner da manobra |
 | BatteryPanel | `pop_battery.xml` | Anel %, autonomia total, elétrica/combustível, carga, cabo, tempo, combustível no tanque, potência, 12 V; "Ver todos os dados" |
 | ClimatePanel | `pop_climate.xml` | Temperatura de cada lado, ventilação, interna/externa, modos (só com leitura 0/1), bancos aquecer/ventilar com nível |
 | MediaPanel | `pop_media.xml` | Sessão de mídia real; anterior/tocar/próxima; volume da mídia do Android; Abrir app |
@@ -118,8 +118,9 @@ registro do debug, Diagnóstico, comportamento do painel de instrumentos (rota n
 segura; visual Aura na rodada 2), discador (só as cores) e previsão (só as cores).
 
 **Novos** (todos com dado real): botão Claro/Escuro; categorias Recarga/Combustível/Estacionamento
-(busca Photon); volume da mídia (o mesmo das teclas de volume do Android); Centralizar no mapa;
-chip Pneus.
+(busca de pontos perto, Overpass); volume da mídia (o mesmo das teclas de volume do Android); Centralizar no mapa;
+chip Pneus. Sem o mapa no painel, a rota nativa mostra o banner da manobra no mapa da central;
+a Home abre esse mapa e o dock mostra a seta.
 
 **Só visual que saiu da central**: o carro 2D pequeno do cartão "Carro" (`CarStatusView` continua no
 painel), o ícone de velocímetro da saudação e o fundo "estúdio" (`BackdropDrawable`, ainda no código).

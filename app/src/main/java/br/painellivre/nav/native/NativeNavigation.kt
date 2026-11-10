@@ -9,6 +9,7 @@ import br.painellivre.cluster.ClusterService
 import br.painellivre.location.LocationRepository
 import br.painellivre.nav.NavRepository
 import br.painellivre.nav.Places
+import br.painellivre.nav.search.PlaceSearchResult
 import br.painellivre.util.AppLog
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,8 @@ object NativeNavigation {
     const val PACKAGE = "br.painellivre"
     private val _route = MutableStateFlow<NativeRoute?>(null)
     val route = _route.asStateFlow()
+    private val _progress = MutableStateFlow<RouteProgress?>(null)
+    val progress = _progress.asStateFlow()
     private var service: LifecycleService? = null
     private var request: Job? = null
     private var tracker: RouteTracker? = null
@@ -37,6 +40,7 @@ object NativeNavigation {
                 if (!usable(loc)) return@collect
                 val now = android.os.SystemClock.elapsedRealtime()
                 val progress = track.update(RoutePoint(loc.latitude, loc.longitude))
+                _progress.value = progress
                 val recalculate = fixes.shouldRecalculate(progress.offRoute, now, request?.isActive == true)
                 if (progress.offRoute > 60) {
                     if (recalculate) {
@@ -71,12 +75,16 @@ object NativeNavigation {
                 val direct = RouteDestination.point(query)
                 val target = direct ?: run {
                     val results = Places.search(query, LocationRepository.location.value)
+                    if (results.status == PlaceSearchResult.Status.UNAVAILABLE) {
+                        notice(owner, "Não foi possível buscar o endereço. Confira a internet")
+                        return@launch
+                    }
                     // Texto ambíguo volta à busca; nunca escolhe um endereço arbitrário.
-                    if (results.size != 1) {
+                    if (results.places.size != 1) {
                         notice(owner, "Escolha o endereço na busca do Painel Livre")
                         return@launch
                     }
-                    results.single().let { RoutePoint(it.lat, it.lon) }
+                    results.places.single().let { RoutePoint(it.lat, it.lon) }
                 }
                 destination = target
                 calculateRoute(owner, target)
@@ -116,7 +124,9 @@ object NativeNavigation {
         tracker = RouteTracker(result)
         _route.value = result
         val fix = LocationRepository.location.value ?: loc
-        publish(tracker!!.update(RoutePoint(fix.latitude, fix.longitude)).nav)
+        val first = tracker!!.update(RoutePoint(fix.latitude, fix.longitude))
+        _progress.value = first
+        publish(first.nav)
         ClusterService.start(owner, ClusterService.ACTION_ROUTE_REQUEST)
         AppLog.i("Rota nativa pronta; pedido enviado ao painel")
     }
@@ -137,7 +147,7 @@ object NativeNavigation {
 
     fun stop() { request?.cancel(); request = null; stopState() }
     private fun stopState() {
-        tracker = null; destination = null; fixes.reset(); _route.value = null
+        tracker = null; destination = null; fixes.reset(); _route.value = null; _progress.value = null
         NavRepository.end(PACKAGE)
     }
     private fun usable(loc: Location): Boolean =

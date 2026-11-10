@@ -168,6 +168,9 @@
     <string name="fav_tap_to_pick">Toque para escolher na busca</string>
     <string name="open_app">Abrir %1$s</string>
     <string name="search_in">Buscar no %1$s</string>
+    <string name="search_failed">Não foi possível buscar agora. Confira a internet e tente de novo.</string>
+    <string name="guide_next">Depois: %1$s</string>
+    <string name="guide_return">Voltar ao guia</string>
     <string name="home_set">Casa definida: %1$s</string>
     <string name="work_set">Trabalho definido: %1$s</string>
     <string name="app_not_installed">%1$s não está instalado</string>

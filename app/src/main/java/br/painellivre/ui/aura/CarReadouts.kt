@@ -1,5 +1,6 @@
 package br.painellivre.ui.aura
 
+import br.painellivre.car.CarCommands
 import br.painellivre.car.TelemetrySnapshot
 import br.painellivre.car.VehicleData
 import br.painellivre.ui.cockpit.CarOverlay
@@ -123,10 +124,12 @@ object CarReadouts {
         val ac: Boolean?,
         val recirc: Boolean?,
         val defrost: Boolean?,
+        /** Energia geral do ar (issue #20: toggle sem diálogo). */
+        val on: Boolean?,
         val driverSeat: Seat,
         val passengerSeat: Seat,
     ) {
-        val hasAny get() = listOf(driverC, passengerC, fan, insideC, outsideC, auto, ac, recirc, defrost,
+        val hasAny get() = listOf(driverC, passengerC, fan, insideC, outsideC, auto, ac, recirc, defrost, on,
             driverSeat.heat, driverSeat.vent, passengerSeat.heat, passengerSeat.vent).any { it != null }
 
         /** Linha do atalho: "Automático · Ventilação 3 · A/C", só com o que foi lido. */
@@ -139,8 +142,21 @@ object CarReadouts {
 
     fun climate(snapshot: TelemetrySnapshot?): Climate? {
         val s = usable(snapshot) ?: return null
-        fun flag(key: String): Boolean? = s.value(key)?.let { if (it == 1.0) true else if (it == 0.0) false else null }
-        fun seat(key: String): Int? = s.value(key)?.toInt()?.let { (it - 1).coerceAtLeast(0) }
+        // O carro responde o valor cru do fio (ex.: AUTO manda 1=desliga/2=liga); decodificar com o
+        // mesmo onWire de CarCommands antes de interpretar como ligado/desligado (bug visto no carro em 29/10).
+        fun flag(key: String): Boolean? {
+            val raw = s.value(key) ?: return null
+            val spec = CarCommands.CATALOG.firstOrNull { it.key == key }
+            val decoded = if (spec != null) CarCommands.fromWire(spec, raw) else raw
+            return if (decoded == 1.0) true else if (decoded == 0.0) false else null
+        }
+        fun seat(key: String): Int? {
+            val raw = s.value(key) ?: return null
+            val spec = CarCommands.CATALOG.firstOrNull { it.key == key }
+            // Fio 1=off, 2=nível1, 3=nível2 → lógico 0/1/2 via onWire (confirmado no carro 29/10).
+            return if (spec != null && spec.onWire.isNotEmpty()) CarCommands.fromWire(spec, raw).toInt()
+            else raw.toInt().let { (it - 1).coerceAtLeast(0) }
+        }
         val c = Climate(
             driverC = s.value("ac_temp_driver"),
             passengerC = s.value("ac_temp_pass"),
@@ -151,6 +167,7 @@ object CarReadouts {
             ac = flag("ac_compressor"),
             recirc = flag("ac_recirc"),
             defrost = flag("ac_defrost"),
+            on = flag("ac_on"),
             driverSeat = Seat(seat("seat_heat_driver"), seat("seat_vent_driver")),
             passengerSeat = Seat(seat("seat_heat_pass"), seat("seat_vent_pass")),
         )

@@ -177,7 +177,8 @@ class AuraTest {
     }
 
     @Test fun climateIsReadOnlyAndOnlyWhatWasRead() {
-        val c = CarReadouts.climate(snapshot("ac_temp_driver" to 22, "ac_temp_pass" to 24, "ac_fan" to 3, "ac_auto" to 1,
+        // ac_auto manda 2 no fio = ligado (CarCommands.onWire); 1 no fio = desligado (bug visto no carro em 29/10).
+        val c = CarReadouts.climate(snapshot("ac_temp_driver" to 22, "ac_temp_pass" to 24, "ac_fan" to 3, "ac_auto" to 2,
             "ac_compressor" to 7, "seat_heat_driver" to 3, "seat_vent_pass" to 1))!!
         assertEquals("22,0°", AuraFormat.temp(c.driverC))
         assertEquals("24,0°", AuraFormat.temp(c.passengerC))
@@ -187,6 +188,7 @@ class AuraTest {
         assertEquals(0, c.passengerSeat.vent)
         assertNull(c.passengerSeat.heat)
         assertEquals("Automático · Ventilação 3", c.tileLine)
+        assertEquals(false, CarReadouts.climate(snapshot("ac_auto" to 1))!!.auto)
     }
 
     @Test fun batteryPrefersSdkThenTelemetry() {
@@ -234,6 +236,16 @@ class AuraTest {
         assertEquals(24, wide.left)
         assertEquals(76, wide.caretX)
         assertEquals(40, PopoverAnchor.place(30, 400, 1280, 24, 40).caretX) // seta longe do canto redondo
+    }
+
+    @Test fun homeThemeReclaimsTheStatusBarToFillTheScreen() {
+        // issue #22: sem windowFullscreen o Android reserva a barra de status e a Home não
+        // preenche a tela inteira; a barra nativa inferior do carro não é nossa, então não entra aqui.
+        val root = listOf(File("src/main/res"), File("app/src/main/res")).first { it.exists() }
+        val aura = File(root, "values/aura.xml").readText()
+        val style = Regex("(?s)<style name=\"Theme\\.PainelLivre\\.Aura\"[^>]*>.*?</style>").find(aura)
+            ?: error("Theme.PainelLivre.Aura não achado")
+        assertTrue(style.value.contains("<item name=\"android:windowFullscreen\">true</item>"))
     }
 
     @Test fun screenScalesToTheBaseDrawing() {

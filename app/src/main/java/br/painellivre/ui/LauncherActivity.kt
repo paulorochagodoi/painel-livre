@@ -421,7 +421,7 @@ class LauncherActivity : AppCompatActivity() {
                 tag = when (chip.level) { CarReadouts.Level.WARN -> "a_warn"; CarReadouts.Level.ACCENT -> "a_accent"; CarReadouts.Level.UNKNOWN -> "a_muted"; else -> "a_ink" }
             }
             v.contentDescription = "${chip.label}: ${chip.value}"
-            if (chip.id == "trunk") v.setOnClickListener { chooseCommand("trunk") }
+            if (chip.id == "trunk") v.setOnClickListener { toggleTrunk() }
             painter.apply(v)
             box.addView(v)
         }
@@ -453,8 +453,9 @@ class LauncherActivity : AppCompatActivity() {
         }
         click(R.id.dockClimate) { togglePopover(PopoverState.Id.CLIMATE) }
         click(R.id.dockMedia) { togglePopover(PopoverState.Id.MEDIA) }
-        click(R.id.dockTempDriver) { chooseCommand("ac_temp_driver") }
-        click(R.id.dockTempPassenger) { chooseCommand("ac_temp_pass") }
+        // Atalho só mostra o que o carro informa; tocar abre a Climatização (onde dá para ajustar).
+        click(R.id.dockTempDriver) { togglePopover(PopoverState.Id.CLIMATE) }
+        click(R.id.dockTempPassenger) { togglePopover(PopoverState.Id.CLIMATE) }
         // Discador próprio: a DiLink nem sempre tem app para ACTION_DIAL (issue #3).
         click(R.id.tabPhone) { closePopover(); startActivity(Intent(this, DialerActivity::class.java)) }
         click(R.id.tabApps) { closePopover(); showPage(if (page == PAGE_APPS) PAGE_HOME else PAGE_APPS) }
@@ -515,16 +516,22 @@ class LauncherActivity : AppCompatActivity() {
         clim.findViewById<View>(R.id.seatPassenger).findViewById<TextView>(R.id.seatLabel).setText(R.string.seat_passenger)
         clim.findViewById<LevelBars>(R.id.popClimateFan).apply { count = 7; rising = true }
 
-        listOf(R.id.popClimateDriver to "ac_temp_driver", R.id.popClimatePassenger to "ac_temp_pass",
-            R.id.popClimateFan to "ac_fan", R.id.modeAuto to "ac_auto", R.id.modeAc to "ac_compressor",
-            R.id.modeRecirc to "ac_recirc", R.id.modeDefrost to "ac_defrost").forEach { (id, key) ->
-            clim.findViewById<View>(id).setOnClickListener { chooseCommand(key) }
+        // Temperatura sobe/desce um grau por toque nos botões −/+ do cartão; o resto é toque único,
+        // sem diálogo (issue #20; a lista de 15 valores saiu num achado extra do teste de 29/10).
+        listOf(R.id.popClimateDriver to "ac_temp_driver", R.id.popClimatePassenger to "ac_temp_pass").forEach { (id, key) ->
+            val card = clim.findViewById<View>(id)
+            card.findViewById<View>(R.id.tempDown).setOnClickListener { stepTemp(key, up = false) }
+            card.findViewById<View>(R.id.tempUp).setOnClickListener { stepTemp(key, up = true) }
         }
+        mapOf(R.id.modeAuto to "ac_auto", R.id.modeAc to "ac_compressor", R.id.modeRecirc to "ac_recirc", R.id.modeDefrost to "ac_defrost")
+            .forEach { (id, key) -> clim.findViewById<View>(id).setOnClickListener { toggleClimate(key) } }
+        clim.findViewById<View>(R.id.fanDown).setOnClickListener { stepFan(up = false) }
+        clim.findViewById<View>(R.id.fanUp).setOnClickListener { stepFan(up = true) }
         clim.findViewById<TextView>(R.id.popClimateState).text = "Ligar / desligar"
-        clim.findViewById<View>(R.id.popClimateState).setOnClickListener { chooseCommand("ac_on") }
+        clim.findViewById<View>(R.id.popClimateState).setOnClickListener { toggleClimate("ac_on") }
         listOf(R.id.seatDriver to "driver", R.id.seatPassenger to "pass").forEach { (id, side) ->
-            clim.findViewById<View>(id).findViewById<View>(R.id.seatHeat).setOnClickListener { chooseCommand("seat_heat_$side") }
-            clim.findViewById<View>(id).findViewById<View>(R.id.seatVent).setOnClickListener { chooseCommand("seat_vent_$side") }
+            clim.findViewById<View>(id).findViewById<View>(R.id.seatHeat).setOnClickListener { toggleSeat("seat_heat_$side") }
+            clim.findViewById<View>(id).findViewById<View>(R.id.seatVent).setOnClickListener { toggleSeat("seat_vent_$side") }
         }
         val media = popViews.getValue(PopoverState.Id.MEDIA)
         media.findViewById<View>(R.id.popMediaClose).setOnClickListener { closePopover() }
@@ -734,28 +741,50 @@ class LauncherActivity : AppCompatActivity() {
 
     private fun renderClimate() {
         val c = CarReadouts.climate(lastTelemetry)
+        // UI otimista: solta o valor que estávamos mostrando "na marra" assim que a telemetria
+        // real chegar no mesmo valor (pedido do Paulo, 29/10 à tarde: comandos instantâneos).
+        optimisticClimate.entries.removeAll { (key, value) -> realClimateValue(c, key) == value }
+        fun ov(key: String, real: Double?): Double? = optimisticClimate[key] ?: real
+        val shown = CarReadouts.Climate(
+            driverC = ov("ac_temp_driver", c?.driverC),
+            passengerC = ov("ac_temp_pass", c?.passengerC),
+            fan = ov("ac_fan", c?.fan?.toDouble())?.toInt(),
+            insideC = c?.insideC,
+            outsideC = c?.outsideC,
+            auto = ov("ac_auto", realClimateValue(c, "ac_auto"))?.let { it == 1.0 },
+            ac = ov("ac_compressor", realClimateValue(c, "ac_compressor"))?.let { it == 1.0 },
+            recirc = ov("ac_recirc", realClimateValue(c, "ac_recirc"))?.let { it == 1.0 },
+            defrost = ov("ac_defrost", realClimateValue(c, "ac_defrost"))?.let { it == 1.0 },
+            on = ov("ac_on", realClimateValue(c, "ac_on"))?.let { it == 1.0 },
+            driverSeat = CarReadouts.Seat(
+                ov("seat_heat_driver", c?.driverSeat?.heat?.toDouble())?.toInt(),
+                ov("seat_vent_driver", c?.driverSeat?.vent?.toDouble())?.toInt(),
+            ),
+            passengerSeat = CarReadouts.Seat(
+                ov("seat_heat_pass", c?.passengerSeat?.heat?.toDouble())?.toInt(),
+                ov("seat_vent_pass", c?.passengerSeat?.vent?.toDouble())?.toInt(),
+            ),
+        )
         // Atalho
         val big = findViewById<TextView>(R.id.tileClimateBig)
-        if (c?.driverC != null) {
-            big.text = AuraFormat.temp(c.driverC); big.textSize = 30f
-            findViewById<TextView>(R.id.tileClimateSmall).text = c.passengerC?.let { getString(R.string.climate_pass_short, AuraFormat.temp(it)) } ?: ""
+        if (shown.driverC != null) {
+            big.text = AuraFormat.temp(shown.driverC); big.textSize = 30f
+            findViewById<TextView>(R.id.tileClimateSmall).text = shown.passengerC?.let { getString(R.string.climate_pass_short, AuraFormat.temp(it)) } ?: ""
         } else {
             big.setText(R.string.no_data); big.textSize = 22f
             findViewById<TextView>(R.id.tileClimateSmall).text = ""
         }
-        findViewById<TextView>(R.id.tileClimateSub).text = c?.tileLine ?: if (c == null) carDataHint(short = true) else getString(R.string.read_only)
+        findViewById<TextView>(R.id.tileClimateSub).text = shown.tileLine ?: if (c == null) carDataHint(short = true) else getString(R.string.read_only)
         // Dock e barra de status
-        findViewById<TextView>(R.id.dockTempDriverValue)?.text = AuraFormat.temp(c?.driverC)
-        findViewById<TextView>(R.id.dockTempPassengerValue)?.text = AuraFormat.temp(c?.passengerC)
-        findViewById<View>(R.id.statusClimate).visibility = if (c?.driverC == null) View.GONE else View.VISIBLE
-        findViewById<TextView>(R.id.statusClimateText).text = AuraFormat.temp(c?.driverC)
+        findViewById<TextView>(R.id.dockTempDriverValue)?.text = AuraFormat.temp(shown.driverC)
+        findViewById<TextView>(R.id.dockTempPassengerValue)?.text = AuraFormat.temp(shown.passengerC)
+        findViewById<View>(R.id.statusClimate).visibility = if (shown.driverC == null) View.GONE else View.VISIBLE
+        findViewById<TextView>(R.id.statusClimateText).text = AuraFormat.temp(shown.driverC)
         // Janela
         val pop = popViews.getValue(PopoverState.Id.CLIMATE)
         pop.findViewById<View>(R.id.popClimateEmpty).visibility = if (c == null) View.VISIBLE else View.GONE
         pop.findViewById<TextView>(R.id.popClimateEmpty).text = carDataHint()
         pop.findViewById<View>(R.id.popClimateBody).visibility = View.VISIBLE
-        val shown = c ?: CarReadouts.Climate(null, null, null, null, null, null, null, null, null,
-            CarReadouts.Seat(null, null), CarReadouts.Seat(null, null))
         pop.findViewById<View>(R.id.popClimateDriver).findViewById<TextView>(R.id.tempValue).text = AuraFormat.temp(shown.driverC)
         pop.findViewById<View>(R.id.popClimatePassenger).findViewById<TextView>(R.id.tempValue).text = AuraFormat.temp(shown.passengerC)
         pop.findViewById<TextView>(R.id.popClimateFanLabel).text =
@@ -821,42 +850,115 @@ class LauncherActivity : AppCompatActivity() {
         packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
     }.getOrNull()
 
-    /** Tocar/pausar dentro da interface; sem sessão, retoma o último app de mídia sem abri-lo. */
+    /** Valor lógico que um controle de clima recebeu no último toque (UI otimista), até a telemetria
+     * confirmar (`renderClimate` apaga quando o valor real bate) ou o `send` ser rejeitado na hora.
+     * Sem isso a tela só mudaria no próximo ciclo de telemetria (`telemetry_interval`, segundos) —
+     * o carro continuaria parecendo lento mesmo com o envio instantâneo (achado do Paulo, 29/10 à
+     * tarde). `realClimateValue` lê o mesmo conjunto de chaves direto da telemetria, sem otimismo. */
+    private val optimisticClimate = mutableMapOf<String, Double>()
+    private val climateOptimisticKeys = setOf(
+        "ac_temp_driver", "ac_temp_pass", "ac_on", "ac_fan", "ac_auto", "ac_compressor", "ac_recirc", "ac_defrost",
+        "seat_heat_driver", "seat_vent_driver", "seat_heat_pass", "seat_vent_pass",
+    )
+    private fun realClimateValue(c: CarReadouts.Climate?, key: String): Double? = when (key) {
+        "ac_auto" -> c?.auto?.let { if (it) 1.0 else 0.0 }
+        "ac_compressor" -> c?.ac?.let { if (it) 1.0 else 0.0 }
+        "ac_recirc" -> c?.recirc?.let { if (it) 1.0 else 0.0 }
+        "ac_defrost" -> c?.defrost?.let { if (it) 1.0 else 0.0 }
+        "ac_on" -> c?.on?.let { if (it) 1.0 else 0.0 }
+        "ac_fan" -> c?.fan?.toDouble()
+        "ac_temp_driver" -> c?.driverC
+        "ac_temp_pass" -> c?.passengerC
+        "seat_heat_driver" -> c?.driverSeat?.heat?.toDouble()
+        "seat_vent_driver" -> c?.driverSeat?.vent?.toDouble()
+        "seat_heat_pass" -> c?.passengerSeat?.heat?.toDouble()
+        "seat_vent_pass" -> c?.passengerSeat?.vent?.toDouble()
+        else -> null
+    }
+
+    /** Tocar/pausar dentro da interface; sem sessão, retoma o último app de mídia sem abri-lo.
+     * Cada toque dispara o envio na hora, sem esperar a releitura do toque anterior (pedido do
+     * Paulo, 29/10 à tarde: o carro sentia ~1 s entre toques). Um envio em andamento nunca é
+     * rejeitado: o último comando desejado fica pendente e sai assim que esse envio terminar —
+     * como agora o envio só espera o `send` (não a releitura), essa fila dura o tempo de um
+     * `service call`, não mais o round-trip inteiro do readback. */
     private var commandBusy = false
+    private var pendingCommand: Pair<String, Double>? = null
     private fun command(key: String, value: Double) {
-        if (commandBusy) {
-            br.painellivre.util.AppLog.i("Comando $key = $value: rejeitado, outro comando em andamento")
-            Toast.makeText(this, "Aguarde o comando anterior", Toast.LENGTH_SHORT).show()
-            return
-        }
+        if (key in climateOptimisticKeys) { optimisticClimate[key] = value; renderClimate() }
+        if (commandBusy) { pendingCommand = key to value; return }
         commandBusy = true
-        popViews[PopoverState.Id.CLIMATE]?.findViewById<TextView>(R.id.popClimateState)?.text = "Aguarde…"
+        val media = br.painellivre.ui.aura.CommandFeedback.isMedia(key)
+        if (!media) popViews[PopoverState.Id.CLIMATE]?.findViewById<TextView>(R.id.popClimateState)?.text = "Aguarde…"
         lifecycleScope.launch {
             try {
                 val message = br.painellivre.car.CarCommandRuntime.execute(this@LauncherActivity, key, value)
-                Toast.makeText(this@LauncherActivity, message, Toast.LENGTH_LONG).show()
-                popViews[PopoverState.Id.CLIMATE]?.findViewById<TextView>(R.id.popClimateState)?.text = message
+                if (key in climateOptimisticKeys && message.startsWith("Rejeitado")) {
+                    // Não chegou a mandar de verdade: desfaz o otimismo na hora, sem esperar telemetria.
+                    optimisticClimate.remove(key); renderClimate()
+                }
+                if (br.painellivre.ui.aura.CommandFeedback.showMessage(key, message)) {
+                    Toast.makeText(this@LauncherActivity, message, Toast.LENGTH_LONG).show()
+                }
+                if (!media) popViews[PopoverState.Id.CLIMATE]?.findViewById<TextView>(R.id.popClimateState)?.text = message
                 renderVolume()
-            } finally { commandBusy = false }
+            } finally {
+                commandBusy = false
+                pendingCommand?.let { (k, v) -> pendingCommand = null; command(k, v) }
+            }
         }
     }
 
-    private fun chooseCommand(key: String) {
-        val spec = br.painellivre.car.CarCommands.CATALOG.first { it.key == key }
-        if (!spec.confirmed) {
-            Toast.makeText(this, "Comando ainda não confirmado; controle bloqueado", Toast.LENGTH_LONG).show()
+    /** Estado atual do modo de clima (null = sem leitura), com o toque mais recente por cima
+     * (UI otimista) até a telemetria confirmar. */
+    private fun climateFlag(key: String): Boolean? =
+        (optimisticClimate[key] ?: realClimateValue(CarReadouts.climate(lastTelemetry), key))?.let { it == 1.0 }
+
+    /** AUTO/A-C/recirculação/desembaçador/energia: um toque alterna ligado/desligado, sem diálogo (issue #20). */
+    private fun toggleClimate(key: String) {
+        command(key, br.painellivre.car.CarCommands.toggleValue(climateFlag(key)))
+    }
+
+    /** Porta-malas: toque alterna abrir/fechar, sem diálogo (issue #20, achado extra de 29/10). O Spec
+     * continua hipótese (sem evidência corroborada, docs/COMANDOS.md E5): CarCommands bloqueia o envio
+     * até confirmar no carro parado, igual aos outros comandos ainda não confirmados. */
+    /** Porta-malas: só ABRIR (val=1) confirmado no carro em P; fechar ainda sem contrato — não inventar. */
+    private fun toggleTrunk() {
+        val open = lastTelemetry?.takeIf { it.status == TelemetrySnapshot.Status.OK }?.isOpen("trunk")
+        if (open == true) {
+            Toast.makeText(this, "Fechar porta-malas ainda não confirmado", Toast.LENGTH_SHORT).show()
             return
         }
-        val values = (0..((spec.max - spec.min) / spec.step).toInt()).map { spec.min + it * spec.step }
-        fun label(v: Double) = when {
-            key.startsWith("ac_temp_") -> AuraFormat.temp(v) + "C"
-            spec.max == 1.0 -> if (v == 0.0) "Desligar" else "Ligar"
-            else -> v.toInt().toString()
-        }
-        androidx.appcompat.app.AlertDialog.Builder(this).setTitle(spec.label)
-            .setItems(values.map(::label).toTypedArray()) { _, index ->
-                command(key, values[index])
-            }.setNegativeButton("Cancelar", null).show()
+        command("trunk", 1.0)
+    }
+
+    /** Nível atual do banco (aquecer/ventilar, 0..3), com o toque mais recente por cima (achado
+     * extra de 29/10, UI otimista do pedido de comandos instantâneos). */
+    private fun seatLevel(key: String): Int? =
+        (optimisticClimate[key] ?: realClimateValue(CarReadouts.climate(lastTelemetry), key))?.toInt()
+
+    /** Aquecimento/ventilação do banco: toque alterna off ↔ nível 1 (confirmado no carro 29/10;
+     * fio 1/2/3 via onWire; max 2 níveis). */
+    private fun toggleSeat(key: String) {
+        command(key, if ((seatLevel(key) ?: 0) > 0) 0.0 else 1.0)
+    }
+
+    /** Ventilação sobe ou desce um nível por toque, sem lista modal (issue #20). Cada toque manda
+     * na hora (sem debounce): vários toques rápidos somam a partir do último valor pedido
+     * (`optimisticClimate`), e `command` enfileira o desejo mais recente se um envio já estiver em
+     * andamento — nunca espera a releitura do anterior (pedido do Paulo, 29/10 à tarde). */
+    private fun stepFan(up: Boolean) {
+        val known = optimisticClimate["ac_fan"] ?: realClimateValue(CarReadouts.climate(lastTelemetry), "ac_fan")
+        command("ac_fan", br.painellivre.car.CarCommands.fanStep(known?.toInt(), up))
+    }
+
+    /** Temperatura (motorista/passageiro) sobe ou desce um grau por toque, sem lista modal e sem
+     * debounce (issue #20, achado extra de 29/10: a lista de 15 valores ainda abria; comandos
+     * devem ser instantâneos). */
+    private fun stepTemp(key: String, up: Boolean) {
+        val spec = br.painellivre.car.CarCommands.CATALOG.first { it.key == key }
+        val known = optimisticClimate[key] ?: realClimateValue(CarReadouts.climate(lastTelemetry), key)
+        command(key, br.painellivre.car.CarCommands.stepValue(spec, known, up))
     }
 
     private fun playOrResume() {

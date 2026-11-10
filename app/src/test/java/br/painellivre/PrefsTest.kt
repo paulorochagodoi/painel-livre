@@ -59,6 +59,31 @@ class PrefsTest {
         }
     }
 
+    @Test fun migracao2LiberaBancosEPortaMalasConfirmadosSemMexerNoQueJaEstavaDesligado() {
+        // Simula instalação que passou só pela migração 1 (bancos/porta-malas ainda hipótese → false).
+        val data = mutableMapOf<String, Any?>(
+            "car_commands_migration" to 1,
+            "car_commands_enabled" to true,
+            "car_command_ac_on" to false, // desligamento explícito do usuário
+            "car_command_seat_heat_driver" to false,
+            "car_command_seat_vent_driver" to false,
+            "car_command_seat_heat_pass" to false,
+            "car_command_seat_vent_pass" to false,
+            "car_command_trunk" to false,
+        )
+        val p = Prefs(storage(data))
+        p.migrateCommands()
+        assertEquals(2, data["car_commands_migration"])
+        assertTrue(p.carCommandAllowed("seat_heat_driver"))
+        assertTrue(p.carCommandAllowed("seat_vent_driver"))
+        assertTrue(p.carCommandAllowed("seat_heat_pass"))
+        assertTrue(p.carCommandAllowed("seat_vent_pass"))
+        assertTrue(p.carCommandAllowed("trunk"))
+        assertFalse(p.carCommandAllowed("ac_on")) // preservado
+        p.migrateCommands()
+        assertEquals(2, data["car_commands_migration"]) // idempotente
+    }
+
     @Test fun migracaoMenuLigaAntigoFalseERespeitaDesligamentoPosterior() {
         val data = mutableMapOf<String, Any?>(Prefs.KEY_PANEL_MENU_FOLLOW to false)
         val p = Prefs(storage(data))

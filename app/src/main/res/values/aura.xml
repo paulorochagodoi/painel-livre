@@ -8,6 +8,9 @@
         <item name="android:fontFamily">@font/albert_sans_medium</item>
         <item name="fontFamily">@font/albert_sans_medium</item>
         <item name="android:windowBackground">@android:color/black</item>
+        <!-- issue #22: sem isso, o Android reserva a barra de status e a Home não preenche a tela
+             inteira da central. A barra nativa inferior do carro (fora da nossa janela) permanece. -->
+        <item name="android:windowFullscreen">true</item>
     </style>
 
     <!-- Tipografia: Sora para números grandes, Albert Sans para o resto. -->

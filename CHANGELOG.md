@@ -4,6 +4,13 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
+## Não lançado — central em retrato (issue #32)
+
+- Em retrato, a tela inicial reserva uma faixa para relógio e resumo, um espaço separado para
+  o aviso de configuração e uma área central para o carro. Os atalhos ficam em duas colunas.
+- A troca de orientação conserva a página da central, a consulta de navegação e a seleção de
+  Casa ou Trabalho em andamento. A projeção do painel usa o display e o layout próprios.
+
 ## 0.5.7 (versionCode 13), comandos instantâneos + bancos/porta-malas confirmados (29/10/2026)
 
 Branch `fix/ac-audio-tela-cheia`, PR #23 (sem merge). Paulo ainda sentia ~1 s entre toques na 0.5.6.

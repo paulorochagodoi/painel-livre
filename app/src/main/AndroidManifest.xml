@@ -47,8 +47,7 @@
             android:launchMode="singleTask"
             android:configChanges="keyboardHidden|uiMode"
             android:windowSoftInputMode="adjustNothing"
-            android:resumeWhilePausing="true"
-            android:stateNotNeeded="true">
+            android:resumeWhilePausing="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

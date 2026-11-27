@@ -166,7 +166,11 @@ class LauncherActivity : AppCompatActivity() {
             requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), REQ_LOCATION)
         }
         applyTheme(force = true)
-        showPage(PAGE_HOME)
+        val restoredPage = savedInstanceState?.getInt(STATE_PAGE) ?: PAGE_HOME
+        showPage(restoredPage)
+        if (restoredPage == PAGE_NAV) {
+            setPickMode(savedInstanceState?.getString(STATE_PICK_MODE), focus = false)
+        }
         consumeRouteSearch()
 
         lifecycleScope.launch {
@@ -212,6 +216,12 @@ class LauncherActivity : AppCompatActivity() {
         closePopover()
         showPage(PAGE_NAV)
         findViewById<EditText>(R.id.navSearch).setText(query)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putInt(STATE_PAGE, page)
+        outState.putString(STATE_PICK_MODE, pickMode)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onResume() {
@@ -1221,13 +1231,13 @@ class LauncherActivity : AppCompatActivity() {
         }
     }
 
-    private fun setPickMode(kind: String?) {
+    private fun setPickMode(kind: String?, focus: Boolean = true) {
         pickMode = kind
         val banner = findViewById<TextView>(R.id.navPickBanner)
         banner.visibility = if (kind == null) View.GONE else View.VISIBLE
         if (kind != null) {
             banner.setText(if (kind == "home") R.string.pick_home else R.string.pick_work)
-            focusSearch()
+            if (focus) focusSearch()
         }
     }
 
@@ -1252,7 +1262,7 @@ class LauncherActivity : AppCompatActivity() {
         navMap = mv
         navCar = car
         mv.onCreate(null)
-        mv.onStart()
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) mv.onStart()
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) mv.onResume()
         mv.getMapAsync { m ->
             navMapLibre = m
@@ -1413,6 +1423,8 @@ class LauncherActivity : AppCompatActivity() {
         private const val PAGE_HOME = 0
         private const val PAGE_NAV = 1
         private const val PAGE_APPS = 2
+        private const val STATE_PAGE = "aura_page"
+        private const val STATE_PICK_MODE = "aura_pick_mode"
         private val BR = Locale("pt", "BR")
 
         /** Centro de cada chip na área do carro (680 × 360): perto da peça na vista de cima. */

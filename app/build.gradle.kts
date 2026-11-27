@@ -22,8 +22,8 @@ android {
         // de runtime do Android 10 é o que a central da BYD espera.
         minSdk = 28
         targetSdk = 29
-        versionCode = 13
-        versionName = "0.5.7"
+        versionCode = 14
+        versionName = "0.5.8"
         // Central DiLink 3 = Snapdragon (ARM64). Corta as libs nativas x86 do MapLibre do release.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }

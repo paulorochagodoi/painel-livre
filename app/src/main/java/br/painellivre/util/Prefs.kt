@@ -28,6 +28,11 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
         get() = sp.getString(KEY_NAV_APP, "maps") ?: "maps"
         set(v) = sp.edit().putString(KEY_NAV_APP, v).apply()
 
+    /** Prova de conceito Petal (docs/PETAL_POC.md): busca e rota pelo Petal, com reserva no Photon/OSRM. Desligado. */
+    val petalEnabled: Boolean get() = sp.getBoolean(KEY_PETAL_ENABLED, false)
+    /** Tiles raster do Petal no mapa da central e do painel (só com [petalEnabled]). Desligado. */
+    val petalTiles: Boolean get() = petalEnabled && sp.getBoolean(KEY_PETAL_TILES, false)
+
     /** Tema da central e do mapa: "auto" (dia/noite pela hora), "day" ou "night". */
     var theme: String
         get() = sp.getString(KEY_THEME, "auto") ?: "auto"
@@ -146,6 +151,8 @@ class Prefs internal constructor(private val sp: SharedPreferences) {
         const val KEY_AUTO_HEAL = "auto_heal"
         const val KEY_DEBUG_MODE = "debug_mode"
         const val KEY_PANEL_MENU_FOLLOW = "panel_menu_follow"
+        const val KEY_PETAL_ENABLED = "petal_enabled"
+        const val KEY_PETAL_TILES = "petal_tiles"
         const val KEY_TELEMETRY = "telemetry"
         const val KEY_TELEMETRY_PANEL = "telemetry_panel"
         const val KEY_TELEMETRY_INTERVAL = "telemetry_interval"

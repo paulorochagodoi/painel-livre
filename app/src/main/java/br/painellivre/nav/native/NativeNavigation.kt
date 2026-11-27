@@ -13,8 +13,6 @@ import br.painellivre.util.AppLog
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.net.HttpURLConnection
-import java.net.URL
 
 /** Vive no serviço, não na Activity: sair da central não interrompe a orientação. */
 object NativeNavigation {
@@ -103,15 +101,9 @@ object NativeNavigation {
         }
         fixes.requested(android.os.SystemClock.elapsedRealtime())
         notice(owner, "Calculando rota no mapa nativo…")
-        val result = withContext(Dispatchers.IO) {
-            val connection = URL(OsrmRoute.url(RoutePoint(loc.latitude, loc.longitude), target)).openConnection() as HttpURLConnection
-            try {
-                connection.connectTimeout = 10_000; connection.readTimeout = 15_000
-                connection.setRequestProperty("User-Agent", "PainelLivre/rota-nativa")
-                require(connection.responseCode == 200)
-                OsrmRoute.parse(connection.inputStream.bufferedReader().use { it.readText() })
-            } finally { connection.disconnect() }
-        }
+        val routed = br.painellivre.nav.petal.MapProviders.route(RoutePoint(loc.latitude, loc.longitude), target)
+        val result = routed.route
+        if (routed.provider != "OSRM") AppLog.i("Rota nativa calculada pelo ${routed.provider}")
         currentCoroutineContext().ensureActive()
         tracker = RouteTracker(result)
         _route.value = result

@@ -41,21 +41,28 @@ object Places {
     private const val KEY_WORK = "place_work"
     private const val KEY_RECENTS = "place_recents"
 
-    suspend fun search(query: String, near: Location?): List<Place> = withContext(Dispatchers.IO) {
+    /** Busca pelo provedor escolhido em Ajustes (Photon por padrão; Petal opcional, com reserva no Photon). */
+    suspend fun search(query: String, near: Location?): List<Place> =
+        br.painellivre.nav.petal.MapProviders.search(query, near)
+
+    suspend fun searchPhoton(query: String, near: Location?): List<Place> = try {
+        searchPhotonOrThrow(query, near)
+    } catch (t: Throwable) {
+        if (t is kotlinx.coroutines.CancellationException) throw t
+        AppLog.w("Busca de endereço falhou: ${t.javaClass.simpleName}")
+        emptyList()
+    }
+
+    suspend fun searchPhotonOrThrow(query: String, near: Location?): List<Place> = withContext(Dispatchers.IO) {
         val q = URLEncoder.encode(query.trim(), "UTF-8")
         val bias = near?.let { String.format(Locale.ROOT, "&lat=%.2f&lon=%.2f", it.latitude, it.longitude) } ?: ""
         val url = "https://photon.komoot.io/api/?q=$q&limit=8$bias"
-        try {
-            val body = (URL(url).openConnection() as HttpURLConnection).run {
-                connectTimeout = 8_000; readTimeout = 8_000
-                setRequestProperty("User-Agent", "PainelLivre (app aberto para BYD)")
-                inputStream.bufferedReader().use { it.readText() }.also { disconnect() }
-            }
-            parsePhoton(body)
-        } catch (t: Throwable) {
-            AppLog.w("Busca de endereço falhou: ${t.javaClass.simpleName}")
-            emptyList()
+        val body = (URL(url).openConnection() as HttpURLConnection).run {
+            connectTimeout = 8_000; readTimeout = 8_000
+            setRequestProperty("User-Agent", "PainelLivre (app aberto para BYD)")
+            try { inputStream.bufferedReader().use { it.readText() } } finally { disconnect() }
         }
+        parsePhoton(body)
     }
 
     fun parsePhoton(body: String): List<Place> {

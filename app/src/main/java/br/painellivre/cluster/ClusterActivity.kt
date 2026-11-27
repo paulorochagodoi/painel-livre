@@ -197,7 +197,7 @@ open class ClusterActivity : ComponentActivity() {
                 isAttributionEnabled = false
             }
             setFpsCap(maxFps)
-            m.setStyle(Style.Builder().fromUri(styleUri())) { onStyleReady() }
+            m.setStyle(br.painellivre.nav.petal.MapTiles.builder(this, styleUri())) { onStyleReady() }
         }
 
         lifecycleScope.launch {
@@ -245,7 +245,7 @@ open class ClusterActivity : ComponentActivity() {
 
     private fun styleUri(): String {
         val name = prefs.mapStyle.takeIf { it != "auto" } ?: if (colors.dark) "dark" else "positron"
-        return STYLE_BASE + name
+        return br.painellivre.nav.petal.MapTiles.styleFor(this, STYLE_BASE + name)
     }
 
     /** Tema Aura claro/escuro (mesma preferência da central): cores dos cartões, da rota e do mapa. */
@@ -259,7 +259,7 @@ open class ClusterActivity : ComponentActivity() {
         val uri = styleUri()
         if (uri != styleLoaded) {
             styleLoaded = uri
-            map?.setStyle(Style.Builder().fromUri(uri)) { onStyleReady() }
+            map?.setStyle(br.painellivre.nav.petal.MapTiles.builder(this, uri)) { onStyleReady() }
         }
     }
 
@@ -275,7 +275,7 @@ open class ClusterActivity : ComponentActivity() {
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         loadPrefs()
         if (::overlay.isInitialized) applySizes()
-        if (key == Prefs.KEY_MAP_STYLE || key == Prefs.KEY_THEME) applyTheme(force = true)
+        if (key == Prefs.KEY_MAP_STYLE || key == Prefs.KEY_THEME || key == Prefs.KEY_PETAL_ENABLED || key == Prefs.KEY_PETAL_TILES) applyTheme(force = true)
         postFrame()
     }
 

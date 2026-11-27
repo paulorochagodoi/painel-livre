@@ -24,6 +24,8 @@ mídia/rádio) estando no mapa voltava para o Início e só lá abria o balão.
   fechar porta-malas seguem bloqueados).
 - Testes: `CentralScreenTest` (10 testes: AC e rádio no mapa não trocam de tela, fechar mantém a tela,
   todos os controles × todas as telas, âncora fora do Início, guarda no código da Activity).
+- APK de teste `PainelLivre-v0.5.9-release.apk` (commit c05b1ed), SHA-256
+  `ea0ceec2629822253c77404af4974dcf72f0a96a3e8961d7d089a4433ca84723`.
 
 ## 0.5.8 (versionCode 14) — central em retrato (issue #32, prévia de teste)
 

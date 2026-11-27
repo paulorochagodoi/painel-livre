@@ -4,6 +4,27 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
+## 0.5.9 (versionCode 15) — balão dos controles por cima da tela atual (prévia de teste)
+
+Feita sobre a 0.5.8 (que funcionou bem no carro). Relato do Paulo: tocar no ar-condicionado (e na
+mídia/rádio) estando no mapa voltava para o Início e só lá abria o balão.
+
+- **Causa:** `LauncherActivity.showPopover` chamava `showPage(PAGE_HOME)` para qualquer balão que não
+  fosse o do painel, porque a seta do balão só sabia apontar para os atalhos grandes do Início
+  (`anchorOf`). Isso valia para todos os controles: clima (botão do dock e temperaturas do motorista e
+  do passageiro, com os bancos dentro), mídia/rádio, bateria e navegação. A troca para o Início também
+  escondia o mapa e descartava a escolha de Casa/Trabalho em andamento.
+- **Correção única:** novo `CentralScreen` (Kotlin puro, `aura/AuraLayout.kt`) guarda a tela atual e o
+  balão aberto; abrir ou fechar um controle nunca troca de tela. O balão continua na camada de janelas
+  da Activity (`popLayer`, por cima de qualquer página) e se ancora no botão tocado (atalho do Início
+  ou botão do dock). Fora do Início, um atalho grande é trocado pelo botão equivalente do dock.
+- Ao girar a tela (#32), o balão aberto é reaberto na mesma tela. Em pé, o dock não tem as
+  temperaturas: o balão do clima aberto por elas passa a apontar para o botão do ar.
+- Comandos ao carro sem nenhuma mudança (envio na hora, trava de P, lista fechada, registro; vidros e
+  fechar porta-malas seguem bloqueados).
+- Testes: `CentralScreenTest` (10 testes: AC e rádio no mapa não trocam de tela, fechar mantém a tela,
+  todos os controles × todas as telas, âncora fora do Início, guarda no código da Activity).
+
 ## 0.5.8 (versionCode 14) — central em retrato (issue #32, prévia de teste)
 
 - Em retrato, a tela inicial reserva uma faixa para relógio e resumo, um espaço separado para

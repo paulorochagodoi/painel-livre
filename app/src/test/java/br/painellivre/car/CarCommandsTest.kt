@@ -174,9 +174,10 @@ class CarCommandsTest {
         assertTrue(ui.contains("setOnClickListener { toggleSeat(\"seat_heat_\$side\") }"))
         assertTrue(ui.contains("setOnClickListener { toggleSeat(\"seat_vent_\$side\") }"))
         assertTrue(ui.contains("if (chip.id == \"trunk\") v.setOnClickListener { toggleTrunk() }"))
-        // Os atalhos do dock de temperatura só mostram leitura; tocar abre a Climatização (sem lista).
-        assertTrue(ui.contains("click(R.id.dockTempDriver) { togglePopover(PopoverState.Id.CLIMATE) }"))
-        assertTrue(ui.contains("click(R.id.dockTempPassenger) { togglePopover(PopoverState.Id.CLIMATE) }"))
+        // Os atalhos do dock de temperatura só mostram leitura; tocar abre a Climatização (sem lista),
+        // por cima da tela atual e com a seta no próprio botão (0.5.9).
+        assertTrue(ui.contains("click(R.id.dockTempDriver) { togglePopover(PopoverState.Id.CLIMATE, CentralScreen.Anchor.DOCK_TEMP_DRIVER) }"))
+        assertTrue(ui.contains("click(R.id.dockTempPassenger) { togglePopover(PopoverState.Id.CLIMATE, CentralScreen.Anchor.DOCK_TEMP_PASSENGER) }"))
     }
     @Test fun nenhumDialogoOuListaDeEscolhaSobrouParaComandosDoCarro() {
         // Extra 3 do teste no carro de 29/10: varredura total. Os únicos AlertDialog que sobram no

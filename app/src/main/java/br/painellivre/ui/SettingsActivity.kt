@@ -75,8 +75,31 @@ class SettingsActivity : AppCompatActivity() {
             }
             onClick("debug_open") { startActivity(Intent(requireContext(), DebugActivity::class.java)) }
             onClick("diagnostics") { startActivity(Intent(requireContext(), DiagnosticsActivity::class.java)) }
+            findPreference<Preference>("petal_key_status")?.summary = br.painellivre.nav.petal.MapProviders.keySource(requireContext())
+            onClick("petal_compare") { comparePetal() }
             onClick("become_home") { becomeHome() }
             onClick("restore_home") { run { SystemSetup.restoreHome(requireContext()) } }
+        }
+
+        /** Prova de conceito Petal: pede o texto da busca e mostra Photon/OSRM e Petal lado a lado. */
+        private fun comparePetal() {
+            val ctx = requireContext()
+            val input = android.widget.EditText(ctx).apply {
+                setText(R.string.petal_compare_default)
+                setSelection(text.length)
+            }
+            AlertDialog.Builder(ctx).setTitle("Comparar Photon/OSRM × Petal").setView(input)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton("Comparar") { _, _ ->
+                    val query = input.text.toString().trim()
+                    if (query.isEmpty()) return@setPositiveButton
+                    Toast.makeText(ctx, "Comparando…", Toast.LENGTH_SHORT).show()
+                    run {
+                        br.painellivre.location.LocationRepository.start(ctx)
+                        br.painellivre.nav.petal.MapProviders.compare(ctx, query,
+                            br.painellivre.location.LocationRepository.location.value)
+                    }
+                }.show()
         }
 
         /** Sem ADB, cai na tela "Tela inicial" do Android ou no seletor com "Sempre" (issue #7). */

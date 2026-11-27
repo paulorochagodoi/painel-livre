@@ -165,6 +165,37 @@
             app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="Mapas: prova de conceito Petal" app:iconSpaceReserved="false">
+        <Preference
+            app:key="petal_about"
+            app:title="Só para teste técnico"
+            app:summary="Os termos da Huawei não permitem usar o Petal em carro nem em navegação. Fica desligado por padrão; Photon e OSRM continuam sendo o padrão e a reserva."
+            app:selectable="false"
+            app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat
+            app:key="petal_enabled"
+            app:title="Usar Petal na busca e na rota"
+            app:summary="Tenta o Petal primeiro (ETA com trânsito) e volta ao Photon/OSRM se ele falhar."
+            app:defaultValue="false"
+            app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat
+            app:key="petal_tiles"
+            app:dependency="petal_enabled"
+            app:title="Mapa do Petal (tiles raster)"
+            app:summary="Troca o desenho do mapa da central e do painel pelos tiles do Petal. Sem tema escuro."
+            app:defaultValue="false"
+            app:iconSpaceReserved="false" />
+        <Preference
+            app:key="petal_key_status"
+            app:title="Chave do Petal"
+            app:iconSpaceReserved="false" />
+        <Preference
+            app:key="petal_compare"
+            app:title="Comparar Photon/OSRM × Petal"
+            app:summary="Mesma busca e mesma rota nos dois, lado a lado: resultados, distância, tempo com e sem trânsito e latência. Também vai para o registro do debug."
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
     <PreferenceCategory app:title="Testes e ajuda" app:iconSpaceReserved="false">
         <Preference
             app:key="simulate"

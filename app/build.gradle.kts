@@ -12,6 +12,14 @@ val keystoreProps = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
+// Prova de conceito Petal (docs/PETAL_POC.md): a chave fica em local.properties (fora do git),
+// linha `petal.apiKey=...`, ou na variável de ambiente PETAL_API_KEY. Sem chave, compila vazio.
+val petalApiKey: String = Properties().run {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+    getProperty("petal.apiKey") ?: System.getenv("PETAL_API_KEY") ?: ""
+}.trim()
+
 android {
     namespace = "br.painellivre"
     compileSdk = 34
@@ -23,7 +31,8 @@ android {
         minSdk = 28
         targetSdk = 29
         versionCode = 13
-        versionName = "0.5.7"
+        versionName = "0.5.7-poc-petal"
+        buildConfigField("String", "PETAL_API_KEY", "\"${petalApiKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         // Central DiLink 3 = Snapdragon (ARM64). Corta as libs nativas x86 do MapLibre do release.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }

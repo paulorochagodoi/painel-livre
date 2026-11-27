@@ -24,3 +24,6 @@ keystore.properties
 # Saída de descompilação / estudo de APKs
 re-out/
 jadx-out/
+
+# Prova de conceito Petal: chave da API só na máquina (docs/PETAL_POC.md)
+petal_api_key.txt

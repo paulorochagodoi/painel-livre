@@ -267,7 +267,7 @@ class LauncherActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.themeText).text = c.label
         renderCarArt()
         renderAll()
-        navMapLibre?.setStyle(Style.Builder().fromUri(mapStyleUri())) { MapStyler.widenRoads(it); NativeRouteLayer.draw(it, colors) }
+        navMapLibre?.setStyle(br.painellivre.nav.petal.MapTiles.builder(this, mapStyleUri())) { MapStyler.widenRoads(it); NativeRouteLayer.draw(it, colors) }
         navCar?.setImageDrawable(carArrow())
         (findViewById<RecyclerView>(R.id.appsGrid).adapter as? AppsAdapter)?.let { @Suppress("NotifyDataSetChanged") it.notifyDataSetChanged() }
     }
@@ -306,7 +306,8 @@ class LauncherActivity : AppCompatActivity() {
         iv.invalidate()
     }
 
-    private fun mapStyleUri() = "https://tiles.openfreemap.org/styles/" + if (colors.dark) "dark" else "positron"
+    private fun mapStyleUri() = br.painellivre.nav.petal.MapTiles.styleFor(this,
+        "https://tiles.openfreemap.org/styles/" + if (colors.dark) "dark" else "positron")
 
     // ── Barra de status e herói ─────────────────────────────────────────────
 
@@ -1259,7 +1260,7 @@ class LauncherActivity : AppCompatActivity() {
             m.uiSettings.isAttributionEnabled = false
             m.uiSettings.isLogoEnabled = false
             m.uiSettings.isCompassEnabled = false
-            m.setStyle(Style.Builder().fromUri(mapStyleUri())) {
+            m.setStyle(br.painellivre.nav.petal.MapTiles.builder(this, mapStyleUri())) {
                 MapStyler.widenRoads(it)
                 NativeRouteLayer.draw(it, colors)
                 updateNavMap()

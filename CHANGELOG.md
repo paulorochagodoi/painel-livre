@@ -4,6 +4,21 @@ Os APKs de release são assinados com a chave local do projeto (`CN=Painel Livre
 certificado SHA-256 `7290204a…13d9`) e instalam um por cima do outro. Eles não ficam no repositório.
 A v0.4.1 foi a primeira instalada e testada no carro (23/10/2026); as demais validações foram no emulador (`docs/AMBIENTE.md`).
 
+## Prova de conceito — 0.5.7-poc-petal (sem release), Petal Maps opcional (27/11/2026)
+
+Branch `poc/petal-maps`, PR em rascunho. Não é versão para o carro: o versionCode continua 13 e o
+número 0.5.9 está reservado para a correção do balão dos controles.
+
+- O Petal entra como provedor **opcional** de busca (Site Kit REST), de rota/ETA com trânsito
+  (Directions REST, `durationInTraffic`) e de tiles raster. Fica desligado por padrão, em Ajustes →
+  "Mapas: prova de conceito Petal". Photon, OSRM e OpenFreeMap continuam sendo o padrão e a reserva automática.
+- A chave vem do `local.properties` (`petal.apiKey`) ou do arquivo `petal_api_key.txt` na pasta do
+  app. Nunca vai para o git.
+- A comparação lado a lado (resultados, distância, tempo com e sem trânsito, latência) aparece em
+  Ajustes e no registro do debug.
+- Os termos da Huawei proíbem uso em carro e em navegação: isto é só um teste técnico (`docs/PETAL_POC.md`).
+- Testes: 274 → 289, com `PetalApiTest` e `ProviderComparisonTest`.
+
 ## 0.5.7 (versionCode 13), comandos instantâneos + bancos/porta-malas confirmados (29/10/2026)
 
 Branch `fix/ac-audio-tela-cheia`, PR #23 (sem merge). Paulo ainda sentia ~1 s entre toques na 0.5.6.

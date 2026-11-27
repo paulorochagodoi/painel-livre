@@ -179,4 +179,5 @@
     <string name="setup_notif_missing">Falta o acesso às notificações. Toque em OK e ligue o Painel Livre na lista.</string>
     <string name="no_app_for_this">Nenhum app para abrir isto</string>
     <string name="central_blocked">A central bloqueou: %1$s</string>
+    <string name="petal_compare_default">Shopping ABC Santo André</string>
 </resources>

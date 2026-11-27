@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Aviso de configuração (quando falta permissão): em pé, centralizado abaixo do
-     relógio, para não cobrir os chips do carro. -->
+<!-- Aviso de configuração (quando falta permissão): em pé, ocupa uma linha própria abaixo do relógio e do resumo. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/setupCard"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:layout_gravity="top|center_horizontal"
-    android:layout_marginStart="0dp"
-    android:layout_marginTop="196dp"
+    android:layout_gravity="center_horizontal"
+    android:layout_marginStart="24dp"
+    android:layout_marginTop="20dp"
+    android:layout_marginEnd="24dp"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:paddingStart="14dp"

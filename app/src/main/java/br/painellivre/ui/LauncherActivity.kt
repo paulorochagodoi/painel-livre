@@ -71,6 +71,7 @@ import br.painellivre.ui.aura.AuraFormat
 import br.painellivre.ui.aura.AuraPainter
 import br.painellivre.ui.aura.AuraScale
 import br.painellivre.ui.aura.CarReadouts
+import br.painellivre.ui.aura.CentralScreen
 import br.painellivre.ui.aura.EqualizerView
 import br.painellivre.ui.aura.LevelBars
 import br.painellivre.ui.aura.PopoverAnchor
@@ -115,11 +116,13 @@ class LauncherActivity : AppCompatActivity() {
     private var themeApplied = false
     private var adbOk: Boolean? = null
     private var adbTesting = false
-    private var page = PAGE_HOME
+    // Tela atual (Início / Mapa / Apps) e o balão aberto por cima dela: abrir um controle não troca de tela.
+    private val screen = CentralScreen()
+    private val page get() = screen.page
     private val density get() = resources.displayMetrics.density
 
-    // Janelas flutuantes (só uma por vez).
-    private val popovers = PopoverState()
+    // Janelas flutuantes (só uma por vez), na camada da Activity, por cima de qualquer tela.
+    private val popovers get() = screen.popovers
     private lateinit var popViews: Map<PopoverState.Id, View>
     private val popWidths = HashMap<PopoverState.Id, Int>()
 
@@ -166,8 +169,13 @@ class LauncherActivity : AppCompatActivity() {
             requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), REQ_LOCATION)
         }
         applyTheme(force = true)
-        showPage(PAGE_HOME)
+        val restoredPage = savedInstanceState?.getInt(STATE_PAGE) ?: PAGE_HOME
+        showPage(restoredPage)
+        if (restoredPage == PAGE_NAV) {
+            setPickMode(savedInstanceState?.getString(STATE_PICK_MODE), focus = false)
+        }
         consumeRouteSearch()
+        restorePopover(savedInstanceState)
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -212,6 +220,14 @@ class LauncherActivity : AppCompatActivity() {
         closePopover()
         showPage(PAGE_NAV)
         findViewById<EditText>(R.id.navSearch).setText(query)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putInt(STATE_PAGE, page)
+        outState.putString(STATE_PICK_MODE, pickMode)
+        outState.putString(STATE_POPOVER, screen.open?.name)
+        outState.putString(STATE_ANCHOR, screen.anchor?.name)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onResume() {
@@ -430,10 +446,10 @@ class LauncherActivity : AppCompatActivity() {
     // ── Atalhos e janelas ───────────────────────────────────────────────────
 
     private fun setupHome() {
-        click(R.id.tileNav) { togglePopover(PopoverState.Id.NAV) }
-        click(R.id.tileBattery) { togglePopover(PopoverState.Id.BATTERY) }
-        click(R.id.tileClimate) { togglePopover(PopoverState.Id.CLIMATE) }
-        click(R.id.tileMedia) { togglePopover(PopoverState.Id.MEDIA) }
+        click(R.id.tileNav) { togglePopover(PopoverState.Id.NAV, CentralScreen.Anchor.TILE_NAV) }
+        click(R.id.tileBattery) { togglePopover(PopoverState.Id.BATTERY, CentralScreen.Anchor.TILE_BATTERY) }
+        click(R.id.tileClimate) { togglePopover(PopoverState.Id.CLIMATE, CentralScreen.Anchor.TILE_CLIMATE) }
+        click(R.id.tileMedia) { togglePopover(PopoverState.Id.MEDIA, CentralScreen.Anchor.TILE_MEDIA) }
         click(R.id.tileMediaPlay) { playOrResume() }
         click(R.id.tileMediaNext) { command("media_next", 1.0) }
         click(R.id.carChips) { startActivity(Intent(this, DiagnosticsActivity::class.java)) }
@@ -445,17 +461,17 @@ class LauncherActivity : AppCompatActivity() {
 
     private fun setupDock() {
         click(R.id.dockHome) { closePopover(); showPage(PAGE_HOME) }
-        click(R.id.dockPanel) { togglePopover(PopoverState.Id.PANEL) }
+        click(R.id.dockPanel) { togglePopover(PopoverState.Id.PANEL, CentralScreen.Anchor.DOCK_PANEL) }
         click(R.id.dockNavApp) {
             closePopover()
             if (prefs.navApp == "native") showPage(PAGE_NAV)
             else if (!Places.openApp(this, prefs.navApp)) toast(getString(R.string.app_missing))
         }
-        click(R.id.dockClimate) { togglePopover(PopoverState.Id.CLIMATE) }
-        click(R.id.dockMedia) { togglePopover(PopoverState.Id.MEDIA) }
+        click(R.id.dockClimate) { togglePopover(PopoverState.Id.CLIMATE, CentralScreen.Anchor.DOCK_CLIMATE) }
+        click(R.id.dockMedia) { togglePopover(PopoverState.Id.MEDIA, CentralScreen.Anchor.DOCK_MEDIA) }
         // Atalho só mostra o que o carro informa; tocar abre a Climatização (onde dá para ajustar).
-        click(R.id.dockTempDriver) { togglePopover(PopoverState.Id.CLIMATE) }
-        click(R.id.dockTempPassenger) { togglePopover(PopoverState.Id.CLIMATE) }
+        click(R.id.dockTempDriver) { togglePopover(PopoverState.Id.CLIMATE, CentralScreen.Anchor.DOCK_TEMP_DRIVER) }
+        click(R.id.dockTempPassenger) { togglePopover(PopoverState.Id.CLIMATE, CentralScreen.Anchor.DOCK_TEMP_PASSENGER) }
         // Discador próprio: a DiLink nem sempre tem app para ACTION_DIAL (issue #3).
         click(R.id.tabPhone) { closePopover(); startActivity(Intent(this, DialerActivity::class.java)) }
         click(R.id.tabApps) { closePopover(); showPage(if (page == PAGE_APPS) PAGE_HOME else PAGE_APPS) }
@@ -548,14 +564,17 @@ class LauncherActivity : AppCompatActivity() {
         panel.findViewById<View>(R.id.panelSettings).setOnClickListener { closePopover(); startActivity(Intent(this, SettingsActivity::class.java)) }
     }
 
-    private fun togglePopover(id: PopoverState.Id) {
-        if (popovers.open == id) closePopover() else showPopover(id)
+    /**
+     * Toque num controle (atalho do Início ou botão do dock): abre o balão por cima da tela atual —
+     * Início, mapa ou apps —, ou fecha se já era o dele. Nunca troca de tela (0.5.9; ver CentralScreen).
+     */
+    private fun togglePopover(id: PopoverState.Id, from: CentralScreen.Anchor) {
+        if (popovers.open == id) closePopover() else showPopover(id, from)
     }
 
-    /** Abre a janela [id] ancorada no atalho dela (a do painel, no botão do dock). Fecha a anterior. */
-    private fun showPopover(id: PopoverState.Id) {
-        if (id != PopoverState.Id.PANEL && page != PAGE_HOME) showPage(PAGE_HOME)
-        popovers.show(id)
+    /** Abre a janela [id] ancorada no botão [from] (ou no equivalente do dock fora do Início). Fecha a anterior. */
+    private fun showPopover(id: PopoverState.Id, from: CentralScreen.Anchor) {
+        screen.showControl(id, from)
         val frame = findViewById<PopoverFrame>(R.id.popover)
         val layer = findViewById<FrameLayout>(R.id.popLayer)
         val content = popViews.getValue(id)
@@ -583,7 +602,7 @@ class LauncherActivity : AppCompatActivity() {
         if (popovers.open != id) return
         val frame = findViewById<PopoverFrame>(R.id.popover)
         val layer = findViewById<FrameLayout>(R.id.popLayer)
-        val anchor = findViewById<View>(anchorOf(id))
+        val anchor = anchorView(screen.visibleAnchor() ?: CentralScreen.Anchor.DOCK_HOME)
         val la = IntArray(2).also(layer::getLocationInWindow)
         val aa = IntArray(2).also(anchor::getLocationInWindow)
         val margin = (AuraDims.SPACE_5 * density).toInt()
@@ -609,17 +628,36 @@ class LauncherActivity : AppCompatActivity() {
         } else { frame.alpha = 1f; frame.translationY = 0f }
     }
 
-    private fun anchorOf(id: PopoverState.Id) = when (id) {
-        PopoverState.Id.NAV -> R.id.tileNav
-        PopoverState.Id.BATTERY -> R.id.tileBattery
-        PopoverState.Id.CLIMATE -> R.id.tileClimate
-        PopoverState.Id.MEDIA -> R.id.tileMedia
-        PopoverState.Id.PANEL -> R.id.dockPanel
+    /** View do botão onde a seta aponta; se ele não estiver na tela (ex.: dock em pé sem temperatura), o equivalente do dock. */
+    private fun anchorView(a: CentralScreen.Anchor): View =
+        findViewById<View>(anchorId(a))?.takeIf { it.isShown }
+            ?: findViewById<View>(anchorId(CentralScreen.fallbackFor(a)))?.takeIf { it.isShown }
+            ?: findViewById(R.id.dockHome)
+
+    private fun anchorId(a: CentralScreen.Anchor): Int = when (a) {
+            CentralScreen.Anchor.TILE_NAV -> R.id.tileNav
+            CentralScreen.Anchor.TILE_BATTERY -> R.id.tileBattery
+            CentralScreen.Anchor.TILE_CLIMATE -> R.id.tileClimate
+            CentralScreen.Anchor.TILE_MEDIA -> R.id.tileMedia
+            CentralScreen.Anchor.DOCK_HOME -> R.id.dockHome
+            CentralScreen.Anchor.DOCK_PANEL -> R.id.dockPanel
+            CentralScreen.Anchor.DOCK_NAV_APP -> R.id.dockNavApp
+            CentralScreen.Anchor.DOCK_CLIMATE -> R.id.dockClimate
+            CentralScreen.Anchor.DOCK_MEDIA -> R.id.dockMedia
+            CentralScreen.Anchor.DOCK_TEMP_DRIVER -> R.id.dockTempDriver
+            CentralScreen.Anchor.DOCK_TEMP_PASSENGER -> R.id.dockTempPassenger
+    }
+
+    /** Depois de girar a tela (#32), reabre o balão que estava aberto, na mesma tela. */
+    private fun restorePopover(saved: Bundle?) {
+        val id = saved?.getString(STATE_POPOVER)?.let { n -> PopoverState.Id.values().firstOrNull { it.name == n } } ?: return
+        val from = saved.getString(STATE_ANCHOR)?.let { n -> CentralScreen.Anchor.values().firstOrNull { it.name == n } } ?: return
+        findViewById<View>(R.id.popLayer).post { if (popovers.open == null) showPopover(id, from) }
     }
 
     /** Fecha a janela aberta (toque fora, X, Início, voltar). true se havia uma. */
     private fun closePopover(): Boolean {
-        if (!popovers.close()) return false
+        if (!screen.close()) return false
         val frame = findViewById<PopoverFrame>(R.id.popover)
         frame.animate().cancel()
         frame.removeAllViews()
@@ -1095,7 +1133,7 @@ class LauncherActivity : AppCompatActivity() {
     }
 
     private fun showPage(p: Int) {
-        page = p
+        screen.goTo(p)
         findViewById<View>(R.id.viewHome).visibility = if (p == PAGE_HOME) View.VISIBLE else View.GONE
         findViewById<View>(R.id.viewNav).visibility = if (p == PAGE_NAV) View.VISIBLE else View.GONE
         findViewById<View>(R.id.viewApps).visibility = if (p == PAGE_APPS) View.VISIBLE else View.GONE
@@ -1221,13 +1259,13 @@ class LauncherActivity : AppCompatActivity() {
         }
     }
 
-    private fun setPickMode(kind: String?) {
+    private fun setPickMode(kind: String?, focus: Boolean = true) {
         pickMode = kind
         val banner = findViewById<TextView>(R.id.navPickBanner)
         banner.visibility = if (kind == null) View.GONE else View.VISIBLE
         if (kind != null) {
             banner.setText(if (kind == "home") R.string.pick_home else R.string.pick_work)
-            focusSearch()
+            if (focus) focusSearch()
         }
     }
 
@@ -1252,7 +1290,7 @@ class LauncherActivity : AppCompatActivity() {
         navMap = mv
         navCar = car
         mv.onCreate(null)
-        mv.onStart()
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) mv.onStart()
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) mv.onResume()
         mv.getMapAsync { m ->
             navMapLibre = m
@@ -1410,9 +1448,13 @@ class LauncherActivity : AppCompatActivity() {
 
     companion object {
         private const val REQ_LOCATION = 10
-        private const val PAGE_HOME = 0
-        private const val PAGE_NAV = 1
-        private const val PAGE_APPS = 2
+        private const val PAGE_HOME = CentralScreen.HOME
+        private const val PAGE_NAV = CentralScreen.NAV
+        private const val PAGE_APPS = CentralScreen.APPS
+        private const val STATE_PAGE = "aura_page"
+        private const val STATE_POPOVER = "aura_popover"
+        private const val STATE_ANCHOR = "aura_popover_anchor"
+        private const val STATE_PICK_MODE = "aura_pick_mode"
         private val BR = Locale("pt", "BR")
 
         /** Centro de cada chip na área do carro (680 × 360): perto da peça na vista de cima. */

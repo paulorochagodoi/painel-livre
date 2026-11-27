@@ -68,7 +68,7 @@ Android 10 é o que a DiLink 3 espera), compileSdk 34.
 | | `aura/AuraTokens.kt` | **Kotlin puro.** `AuraColors` (tokens claro/escuro da designer), `AuraDims`, `toPalette()` para as telas antigas |
 | | `aura/AuraFormat.kt` | **Kotlin puro.** Números BR (`22,0°`, `6,4 km`, `1h40`, `62%`) |
 | | `aura/CarReadouts.kt` | **Kotlin puro.** Chips do carro, resumo, trava, clima, bateria e linha da carga — só leitura, sem dado nunca vira "fechado" |
-| | `aura/AuraLayout.kt` | **Kotlin puro.** `PopoverState` (uma janela por vez), `PopoverAnchor` (posição e seta), `AuraScale` (densidade) |
+| | `aura/AuraLayout.kt` | **Kotlin puro.** `PopoverState` (uma janela por vez), `CentralScreen` (tela atual + balão; abrir controle não troca de tela, 0.5.9), `PopoverAnchor` (posição e seta), `AuraScale` (densidade) |
 | | `aura/AuraPainter.kt` | Pintura por `android:tag="a_…"` (tabela em INTERFACE-AURA.md) |
 | | `aura/AuraViews.kt` | `PopoverFrame`, `AnchoredLayout` (chips), `RingView`, `LevelBars`, `EqualizerView`, `AuraBackdropDrawable` |
 | | `DialerActivity.kt` | Discador interno (aba Telefone): teclado, Rediscar, App do carro; liga pela ordem de `CallPlan` e passa ao próximo caminho se a central recusar |
@@ -244,6 +244,7 @@ rede ou espera de tempo real. Execute com JDK 17:
 | `PoseSmootherTest` | posição, rumo, limites de previsão e ruído de GPS |
 | `FreezeWatchTest` | vigia, orçamento de recuperação e convivência (`YieldPolicy`) |
 | `CockpitTest` | Photon, tema e códigos do tempo |
+| `CentralScreenTest` | 0.5.9: AC, rádio/mídia, bancos e demais controles abrem o balão por cima do mapa/Apps sem trocar de tela; fechar mantém a tela; guarda na Activity |
 | `AuraTest` | interface Aura: cores contra o `tokens.json`, contraste, tema, números BR, chips/resumo/trava/clima/bateria só de leitura, uma janela por vez, âncora da janela, escala |
 | `HomeChoiceTest` | saída do `resolve-activity` (nosso, BYD, seletor, erro), launcher original, resultado do `set-home-activity`, próximo passo, restauração, estado do alias e quando ligá-lo, alias HOME **desligado** no manifesto e nenhum outro componente com `HOME` |
 | `DialerTest` | teclado, limite, limpeza de número colado, mínimo de 3 dígitos, `tel:` com `#`, formato brasileiro, ordem dos caminhos de chamada (inclusive "nenhum app"), conta HFP primeiro e `ACTION_CALL` desviado só de reserva, caminhos diretos, conferência sem nova tentativa, escolha da conta Bluetooth, quem atende o `ACTION_CALL`, pedido de permissão e escolha do app do carro |

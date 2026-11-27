@@ -26,8 +26,16 @@ busca, apps, discador e previsão) e, desde a rodada 2, no **painel de instrumen
 O Aura é desenhado em 1280 × 720. Em vez de `scale()` (que estragaria o mapa e o teclado), a
 `LauncherActivity` usa densidade própria (`AuraScale.densityDpi`): 1 dp do layout = 1 px do desenho.
 Ex.: 1920 × 1080 → 240 dpi; com a barra do sistema (1920 × 1024) a altura manda (228 dpi) e sobra
-largura, que os atalhos e o dock absorvem. Em pé a referência é 720 × 1280 (`layout-port/`). O
-manifesto não mudou (o tema Aura entra por `setTheme` no código).
+largura, que os atalhos e o dock absorvem.
+
+Em retrato a referência é 720 × 1280 (`layout-port/`). A central coloca relógio e resumo no topo,
+com uma linha separada para o aviso de configuração. O carro ocupa o espaço entre o aviso e
+os atalhos em duas colunas. Na Navegação, a busca fica acima do mapa e o dock segue acessível.
+Ao girar a central, o Android recria a tela com o layout da nova orientação e recupera a página,
+o texto da busca e a seleção de Casa ou Trabalho. O painel usa seu próprio display.
+
+Capturas do emulador Android 10: [Início em retrato](telas/aura-central-retrato-inicio.png) e
+[Navegação em retrato](telas/aura-central-retrato-navegacao.png).
 
 ## Mapeamento Aura → Android
 

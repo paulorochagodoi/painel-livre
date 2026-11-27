@@ -608,3 +608,10 @@ Teste da v0.5.5-teste no carro de Paulo, DiLink 3.0, `adb` em `172.26.89.229:555
   banco/porta-malas (esperado: nenhum Toast de bloqueio, nenhum efeito real no carro, já que
   continuam hipótese); atalho de temperatura no dock abrindo a Climatização em vez de lista.
 - [ ] Issue #24 (Waze no painel) é diagnóstico separado, não faz parte desta rodada.
+
+## Issue #32 — central em retrato
+
+- [x] Layout de retrato dedicado para a tela inicial, reaproveitando os atalhos e controles da Aura.
+- [x] Restauração da página da central ao girar.
+- [ ] Conferir a rotação física no Android 10 do carro, com a central em Início e Navegação e
+  o painel projetado. Verificar a legibilidade e a continuidade da projeção ao voltar à paisagem.
